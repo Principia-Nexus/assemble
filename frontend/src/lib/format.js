@@ -16,9 +16,9 @@ export function fmtDate(iso) {
   return d.toLocaleDateString("en-US", { timeZone: iso.length === 10 ? "UTC" : TZ, month: "short", day: "numeric", year: "numeric" });
 }
 
-export function fmtTime(iso) {
+export function fmtTime(iso, withYear = false) {
   if (!iso) return "";
-  return new Date(iso).toLocaleString("en-US", { timeZone: TZ, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " PT";
+  return new Date(iso).toLocaleString("en-US", { timeZone: TZ, month: "short", day: "numeric", ...(withYear ? { year: "numeric" } : {}), hour: "numeric", minute: "2-digit" }) + " PT";
 }
 
 export const c2s = (c) => (c == null ? "" : c % 100 ? (c / 100).toFixed(2) : String(c / 100));

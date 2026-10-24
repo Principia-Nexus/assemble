@@ -29,7 +29,7 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
     }
     if (file.size > 200000) { setErrors([`"${file.name}" is larger than 200 KB. Paste the relevant part instead.`]); return; }
     const reader = new FileReader();
-    reader.onload = () => { setF({ ...f, text: String(reader.result), filename: file.name, label: f.label || file.name }); setErrors([]); };
+    reader.onload = () => { setF((prev) => ({ ...prev, text: String(reader.result), filename: file.name, label: prev.label || file.name })); setErrors([]); };
     reader.onerror = () => setErrors([`Could not read "${file.name}". Your other input is kept.`]);
     reader.readAsText(file);
   };

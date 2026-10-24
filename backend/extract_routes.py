@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 
 import logic as L
-from core import db, now_iso, new_id, current_user, log_event, STALE_MSG
+from core import db, now, now_iso, new_id, current_user, log_event, STALE_MSG, as_aware
 from project_routes import get_project, claim_rev, generate_candidate, org
 
 router = APIRouter(prefix="/api/project")
@@ -117,14 +117,14 @@ def locate(text, excerpt):
 
 
 def match_partner(name, it):
-    if not name:
+    n = (name or "").lower().replace("(synthetic)", "").strip()
+    if not n:
         return None
-    n = name.lower().replace("(synthetic)", "").strip()
     for p in it.get("partners") or []:
         pn = (p.get("name") or "").lower().replace("(synthetic)", "").strip()
         if pn and (pn == n or pn.split()[0] == n.split()[0]):
             return p["partner_id"], p["name"]
-    return None, name.strip()
+    return None, str(name).strip()
 
 
 def parse_value(kind, value, label):
@@ -141,13 +141,15 @@ def make_fact(src, raw, it):
     if field not in FIELDS:
         return None
     scope, kind, label = FIELDS[field]
-    week = raw.get("week") if isinstance(raw.get("week"), int) else None
-    site = (raw.get("site") or "").strip().upper() or None
+    s = lambda k: "" if raw.get(k) is None else str(raw.get(k)).strip()  # noqa: E731
+    wk = s("week")
+    week = int(wk) if wk.isdigit() else None
+    site = s("site").upper() or None
     pid, pname = (None, None)
     if scope == "partner":
-        pid, pname = match_partner(raw.get("partner"), it) or (None, None)
-    value = "" if raw.get("value") is None else str(raw.get("value")).strip()
-    excerpt = (raw.get("excerpt") or "").strip()[:300]
+        pid, pname = match_partner(s("partner"), it) or (None, None)
+    value = s("value")
+    excerpt = s("excerpt")[:300]
     issues = []
     if scope == "partner" and not pname:
         issues.append("No partner named for this fact.")
@@ -176,13 +178,14 @@ def make_fact(src, raw, it):
         "source_label": src["label"], "source_kind": src["kind"], "source_order": src["order"],
         "field": field, "label": label, "scope": scope, "partner_id": pid, "partner_name": pname, "site_id": site,
         "week": week, "target": target, "original_value": value, "value": value, "parsed": parsed,
-        "excerpt": excerpt, "location": loc, "note": (raw.get("note") or "")[:300],
+        "excerpt": excerpt, "location": loc, "note": s("note")[:300],
         "status": "invalid" if issues else "proposed", "issues": issues, "corrections": [], "created_at": now_iso(),
     }
 
 
 async def run_extraction(src, p, user):
-    await db.sources.update_one({"source_id": src["source_id"]}, {"$set": {"status": "reading", "error": None}})
+    await db.sources.update_one({"source_id": src["source_id"]},
+                                {"$set": {"status": "reading", "error": None, "reading_started_at": now_iso()}})
     try:
         raw = await asyncio.wait_for(call_llm(build_prompt(src, p["intake"])), timeout=LLM_TIMEOUT)
         data = parse_json(raw)
@@ -192,11 +195,19 @@ async def run_extraction(src, p, user):
         return await fail(src, p, user, f"The reader returned malformed output ({str(e)[:120]}). Your text is kept; try again.")
     except Exception as e:  # provider/network failures
         return await fail(src, p, user, f"Reading failed ({str(e)[:160]}). Your text is kept; try again.")
+    try:
+        # Organizer decisions (corrections, rejections, applied readings) on this source survive a re-read.
+        kept = {f["target"] async for f in db.facts.find(
+            {"source_id": src["source_id"], "status": {"$in": ["corrected", "rejected", "applied"]}}, {"target": 1})}
+        facts = [f for f in (make_fact(src, x, p["intake"]) for x in data["facts"] if isinstance(x, dict))
+                 if f and f["target"] not in kept]
+        lists = {k: [str(x)[:300] for x in (data.get(k) if isinstance(data.get(k), list) else []) if x][:30]
+                 for k in ("unknowns", "conflicts", "ignored_instructions")}
+    except Exception as e:
+        return await fail(src, p, user, f"The reader returned malformed facts ({str(e)[:120]}). Your text is kept; try again.")
     await db.facts.delete_many({"source_id": src["source_id"], "status": {"$in": ["proposed", "invalid"]}})
-    facts = [f for f in (make_fact(src, x, p["intake"]) for x in data["facts"] if isinstance(x, dict)) if f]
     if facts:
         await db.facts.insert_many([dict(f) for f in facts])
-    lists = {k: [str(x)[:300] for x in data.get(k) or [] if x][:30] for k in ("unknowns", "conflicts", "ignored_instructions")}
     await db.sources.update_one({"source_id": src["source_id"]}, {"$set": {
         "status": "read", "error": None, "read_at": now_iso(), "fact_count": len(facts), **lists}})
     await log_event(p["project_id"], org(user), "extract",
@@ -274,7 +285,9 @@ async def retry_source(source_id: str, user=Depends(current_user)):
     if not src:
         raise HTTPException(404, "Document not found.")
     if src["status"] == "reading":
-        raise HTTPException(409, "This document is already being read.")
+        started = src.get("reading_started_at")
+        if started and (now() - as_aware(started)).total_seconds() < LLM_TIMEOUT + 30:
+            raise HTTPException(409, "This document is already being read.")
     await run_extraction(src, p, user)
     return await readings_payload(p["project_id"])
 
@@ -285,6 +298,8 @@ async def correct_fact(fact_id: str, body: FactEdit, user=Depends(current_user))
     f = await db.facts.find_one({"fact_id": fact_id, "project_id": p["project_id"]}, {"_id": 0})
     if not f:
         raise HTTPException(404, "Reading not found.")
+    if f["status"] in ("applied", "rejected"):
+        raise HTTPException(409, f"This reading is {f['status']} and can no longer be corrected.")
     parsed, errs = parse_value(FIELDS[f["field"]][1], body.value, f["label"])
     if errs:
         raise HTTPException(422, errs)

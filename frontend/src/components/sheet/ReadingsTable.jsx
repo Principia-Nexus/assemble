@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ function FactLine({ f, current, onRead }) {
   const [edit, setEdit] = useState(false);
   const [val, setVal] = useState(f.value);
   const [err, setErr] = useState("");
+  useEffect(() => { setVal(f.value); }, [f.value]);
   const save = async () => {
     try { const { data } = await api.put(`/project/facts/${f.fact_id}`, { value: val }); onRead(data); setEdit(false); setErr(""); }
     catch (e) { setErr(errList(e).join(" ")); }

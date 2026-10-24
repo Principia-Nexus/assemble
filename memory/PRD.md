@@ -23,6 +23,13 @@
 - History drawer, per-visitor demo reset.
 - Canonical numbers verified: 156k fail (weeks 1 and 2), 168k pass at 4/4/4, 6/4/2 with a 2-slot gap, 172k Dogwood repair, 186k stress fail.
 
+## Implemented (Phase 2 + 3, 2026-06)
+- AI document reading (Claude Sonnet 5.5, `claude-sonnet-5-5` via EMERGENT_LLM_KEY) in `extract_routes.py`. Paste text or choose a text file (.txt/.md/.eml/.csv). Each fact gets a verbatim excerpt plus a verified line. A crew-size guard is applied. The latest dated source wins, with conflicts shown. Instructions inside documents are ignored and logged. Corrections keep the original, prior value, editor and time, and survive re-reads. "Use selected readings" updates the intake and recalculates the candidate (as a preview if links exist). Failures keep the input and offer a retry.
+- Synthetic sample docs (brief, Redwood quote, Redwood "week three only" email with an injection line) in `frontend/src/lib/samples.js`.
+- Organizer-only printable summary at /summary (browser print).
+- Acceptance record: /app/memory/ACCEPTANCE.md. Deployed URL is NOT RUN until the app is published.
+
 ## Backlog
-- P1 (Phase 2): AI extraction of brief/quote/email (Claude Sonnet 5.5 via universal key), with source excerpts and an organizer correction trail.
-- P2 (Phase 3): printable dated organizer summary; acceptance run on the deployed URL; UI simplification pass.
+- Publish, then re-run the acceptance checks on the live URL.
+- PDF text extraction (currently: paste the text yourself).
+- Optional: email delivery of review links (organizers share them manually by design).

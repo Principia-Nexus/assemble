@@ -20,7 +20,17 @@ function Section({ title, children, testId }) {
 
 function Contributions({ cur }) {
   return (
-    <table className="w-full text-sm">
+    <>
+    <ul className="space-y-2 text-sm sm:hidden print:hidden">
+      {cur.partners.map((p) => (
+        <li key={p.partner_id} className="border-t border-slate-200 pt-2">
+          <p className="font-semibold">{p.name} · <span className="font-mono">{money(p.terms.price_total_cents)}</span></p>
+          <p className="font-mono text-xs">{p.terms.sites.map((s) => `${s.site_id} (${s.week})`).join(", ")}</p>
+          <p className="text-xs text-slate-600">Advance {money(p.terms.advance_cents)} / balance {money(p.terms.balance_cents)} · {STATUS[p.status].label}</p>
+        </li>
+      ))}
+    </ul>
+    <table className="hidden w-full text-sm sm:table print:table">
       <thead><tr className="text-left font-mono text-[10px] uppercase text-slate-500"><th className="py-1">Crew</th><th>Sites (week)</th><th>Total</th><th>Advance / balance</th><th>Status</th></tr></thead>
       <tbody>
         {cur.partners.map((p) => (
@@ -34,6 +44,7 @@ function Contributions({ cur }) {
         ))}
       </tbody>
     </table>
+    </>
   );
 }
 
@@ -83,7 +94,7 @@ export default function Summary() {
           <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Assemble · organizer summary · not for partners {sheet.project.synthetic && <SyntheticTag />}</p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">{it.job_name || sheet.project.name}</h1>
           <p className="text-sm text-slate-600">Customer: {it.customer_name || "Unknown"} · Starts {fmtDate(it.start_date)} · {it.weeks ?? "?"} weeks · Ceiling {money(it.budget_ceiling_cents)}</p>
-          <p data-testid="summary-date" className="text-xs text-slate-500">Prepared {fmtTime(printedAt)}{cur ? ` · current plan v${cur.version.number}` : ""}{sheet.preview ? ` · amendment preview v${sheet.preview.version.number} open (not included)` : ""}</p>
+          <p data-testid="summary-date" className="text-xs text-slate-500">Prepared {fmtTime(printedAt, true)}{cur ? ` · current plan v${cur.version.number}` : ""}{sheet.preview ? ` · amendment preview v${sheet.preview.version.number} open (not included)` : ""}</p>
         </header>
         {!cur ? <p className="text-sm text-slate-500">No candidate plan yet.</p> : (
           <>

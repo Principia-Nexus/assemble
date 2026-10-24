@@ -33,7 +33,7 @@ export default function ExtractPanel({ sheet, act, busy }) {
   if (error) return <p className="text-sm text-red-700" data-testid="extract-load-error">{error}</p>;
   if (!data) return <p className="text-sm text-slate-500">Loading documents…</p>;
   return (
-    <div data-testid="extract-panel" className="space-y-4">
+    <div data-testid="extract-panel" className="space-y-4 pb-20">
       <ReadDocumentForm intake={sheet.intake} synthetic={sheet.project.synthetic} onRead={onRead} />
       <SourcesList sources={data.sources} onRead={onRead} />
       <ReadingsTable readings={data.readings} selected={selected} setSelected={setSelected} onRead={onRead} />
