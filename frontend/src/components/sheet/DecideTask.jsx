@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Plus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusPill } from "@/components/StatusPill";
@@ -74,6 +75,7 @@ export default function DecideTask(props) {
       <TaskHeader step={4} title="Decide next action" lead="Each partner's status against the exact terms they saw, open conditions, and any gap. Changes go through an amendment preview first.">
         {!sheet.preview && <Button onClick={() => act("post", "/project/preview", { rev: sheet.project.rev }, "Amendment preview opened")} disabled={busy} data-testid="decide-start-amendment-button">Start amendment preview</Button>}
         {!sheet.preview && <Button variant="outline" onClick={() => setShowForm(!showForm)} data-testid="decide-log-change-button">Log customer change</Button>}
+        <Button variant="ghost" asChild data-testid="decide-summary-link"><Link to="/summary"><FileText className="h-4 w-4" /> Printable summary</Link></Button>
       </TaskHeader>
       <div data-testid="decide-next-action" className="rounded-md border-l-4 border-slate-900 bg-white p-4 text-sm text-slate-800"><span className="eyebrow mr-2">Next</span>{nextAction(sheet)}</div>
       {showForm && !sheet.preview && <CustomerChangeForm sheet={sheet} act={act} busy={busy} onDone={() => setShowForm(false)} />}

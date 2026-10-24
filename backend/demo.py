@@ -107,7 +107,7 @@ async def ensure_demo_user(visitor_id, key):
 async def reset_sandbox(sid, organizer):
     for p in await db.projects.find({"sandbox_id": sid}, {"_id": 0, "project_id": 1}).to_list(10):
         pid = p["project_id"]
-        for coll in ("versions", "links", "responses", "change_requests", "events"):
+        for coll in ("versions", "links", "responses", "change_requests", "events", "sources", "facts"):
             await db[coll].delete_many({"project_id": pid})
     await db.projects.delete_many({"sandbox_id": sid})
     await db.users.update_many({"sandbox_id": sid}, {"$set": {"partner_access": []}})

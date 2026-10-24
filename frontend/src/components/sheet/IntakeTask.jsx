@@ -8,6 +8,8 @@ import { TaskHeader, ErrorList } from "./Stepper";
 import IntakeSites from "./IntakeSites";
 import IntakePartners from "./IntakePartners";
 import GapPanel from "./GapPanel";
+import ExtractPanel from "./ExtractPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const toForm = (it) => ({
   job_name: it.job_name || "", customer_name: it.customer_name || "", scope_summary: it.scope_summary || "",
@@ -38,6 +40,7 @@ export function F({ id, label, hint, className, ...props }) {
 export default function IntakeTask({ sheet, act, busy, goTo }) {
   const [form, setForm] = useState(() => toForm(sheet.intake));
   const [errors, setErrors] = useState([]);
+  const [tab, setTab] = useState(() => sessionStorage.getItem("assemble_intake_tab") || "form");
   const w = weeksOf(form);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const setCap = (i, v) => { const c = [...form.own_capacity]; c[i] = v; setForm({ ...form, own_capacity: c }); };
@@ -59,6 +62,18 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
         )}
       </TaskHeader>
       <ErrorList errors={errors} testId="intake-errors" />
+      <Tabs value={tab} onValueChange={(v) => { setTab(v); sessionStorage.setItem("assemble_intake_tab", v); }}>
+        <TabsList>
+          <TabsTrigger value="form" data-testid="intake-tab-form">Manual form</TabsTrigger>
+          <TabsTrigger value="read" data-testid="intake-tab-read">Read a document</TabsTrigger>
+        </TabsList>
+        <TabsContent value="read" className="mt-4">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="min-w-0"><ExtractPanel sheet={sheet} act={act} busy={busy} /></div>
+            <GapPanel gap={sheet.gap} />
+          </div>
+        </TabsContent>
+        <TabsContent value="form" className="mt-4">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
           <div className="rounded-md border border-slate-200 bg-white p-5">
@@ -92,6 +107,8 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
         </div>
         <GapPanel gap={sheet.gap} />
       </div>
+        </TabsContent>
+      </Tabs>
     </section>
   );
 }

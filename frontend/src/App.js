@@ -7,6 +7,7 @@ import AuthCallback from "@/pages/AuthCallback";
 import ProjectSheet from "@/pages/ProjectSheet";
 import Review from "@/pages/Review";
 import MyReviews from "@/pages/MyReviews";
+import Summary from "@/pages/Summary";
 
 export const Loading = ({ label = "Loading" }) => (
   <div data-testid="page-loading" className="min-h-screen flex items-center justify-center text-sm text-slate-500 font-mono">
@@ -37,6 +38,7 @@ function AppRouter() {
       <Route path="/login" element={<Login />} />
       <Route path="/project" element={<Protected><ProjectSheet /></Protected>} />
       <Route path="/reviews" element={<Protected><MyReviews /></Protected>} />
+      <Route path="/summary" element={<Protected><Summary /></Protected>} />
       <Route path="/review/:token" element={<Protected><Review /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -183,14 +183,20 @@ async def make_draft(body: DraftIn, user=Depends(current_user)):
         errors.append("Choose at least one crew to include in the draft.")
     if errors:
         bad(errors)
+    await generate_candidate(p, user, body.partner_ids, body.include_own, body.rev)
+    return {"sheet": await sheet(p["project_id"])}
+
+
+async def generate_candidate(p, user, partner_ids, include_own, rev, reason=""):
+    it = p["intake"]
     as_preview = await db.links.count_documents({"project_id": p["project_id"]}) > 0
     if as_preview and p.get("preview_version_id"):
         raise HTTPException(409, "Finish or discard the open amendment preview first.")
-    assignments, notes = L.generate(it, body.partner_ids, body.include_own)
+    assignments, notes = L.generate(it, partner_ids, include_own)
     vid_field = "preview_version_id" if as_preview else "current_version_id"
     doc = version_doc(p, it, 0, "preview" if as_preview else "current", "draft", user,
                       copy.deepcopy(it["sites"]), copy.deepcopy(it["partners"]), assignments, {}, notes)
-    await claim_rev(p, body.rev, {vid_field: doc["version_id"]})
+    await claim_rev(p, rev, {vid_field: doc["version_id"]})
     doc["number"] = await next_number(p["project_id"])
     if not as_preview and p.get("current_version_id"):
         await db.versions.update_one({"version_id": p["current_version_id"]}, {"$set": {"state": "replaced"}})
@@ -198,9 +204,9 @@ async def make_draft(body: DraftIn, user=Depends(current_user)):
     chk = L.check(doc)
     where = "as an amendment preview (partners already have links)" if as_preview else "as the current draft"
     await log_event(p["project_id"], org(user), "draft",
-                    f"Candidate v{doc['number']} generated {where}. Checker: {chk['overall'].upper()}.",
+                    f"Candidate v{doc['number']} generated {where}{reason}. Checker: {chk['overall'].upper()}.",
                     details=[r["label"] + ": " + r["status"] for r in chk["rules"]])
-    return {"sheet": await sheet(p["project_id"])}
+    return doc
 
 
 @router.post("/preview")
