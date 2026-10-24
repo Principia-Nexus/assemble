@@ -4,15 +4,19 @@ import os
 import re
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel
 from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 
 import logic as L
 from core import db, now, now_iso, new_id, current_user, log_event, STALE_MSG, as_aware
 from project_routes import get_project, claim_rev, generate_candidate, org
+from storage import APP_NAME, get_object, pdf_text, put_object
+from pdf_sample import redwood_quote_pdf
+from datetime import date, timedelta
 
 router = APIRouter(prefix="/api/project")
+MAX_PDF = 10 * 1024 * 1024
 MODEL = ("anthropic", "claude-sonnet-5-5")
 LLM_TIMEOUT = 120
 KINDS = {"brief": "Customer brief", "quote": "Partner quote", "email": "Email", "other": "Other document"}
@@ -78,7 +82,9 @@ def build_prompt(src, it):
         "known_partner_names": [p["name"] for p in it.get("partners") or []],
     }
     return (f"CONTEXT (from the organizer, trusted):\n{json.dumps(ctx)}\n\nReturn JSON exactly in this shape:\n"
-            f"{SCHEMA % ', '.join(FIELDS)}\n\n<document>\n{src['text']}\n</document>")
+            f"{SCHEMA % ', '.join(FIELDS)}\n\n"
+            "Lines like [Page 2] were inserted by the app to mark PDF pages; never quote them in excerpts.\n\n"
+            f"<document>\n{src['text']}\n</document>")
 
 
 async def call_llm(prompt):
@@ -103,7 +109,8 @@ def parse_json(raw):
     return data
 
 
-def locate(text, excerpt):
+def locate(src, excerpt):
+    text = src["text"]
     if not excerpt:
         return None
     idx = text.find(excerpt)
@@ -113,6 +120,10 @@ def locate(text, excerpt):
         idx = m.start() if m else -1
     if idx < 0:
         return None
+    starts = src.get("page_starts")
+    if starts:
+        page = sum(1 for s in starts if s <= idx)
+        return {"offset": idx, "page": page, "line": text[starts[page - 1]:idx].count("\n")}
     return {"offset": idx, "line": text[:idx].count("\n") + 1}
 
 
@@ -169,7 +180,7 @@ def make_fact(src, raw, it):
         n = WORDS.get(m.group(1).lower()) or (int(m.group(1)) if m.group(1).isdigit() else None)
         if n == parsed and not re.search(r"\b(site|branch|location)", excerpt, re.I):
             issues.append("This excerpt describes crew size (people), not crews or sites per week.")
-    loc = locate(src["text"], excerpt)
+    loc = locate(src, excerpt)
     if not loc:
         issues.append("The quoted excerpt was not found in the source, so it is unverified.")
     target = "|".join([field, pid or (pname or "").lower(), site or "", str(week or "")])
@@ -251,31 +262,99 @@ async def get_readings(user=Depends(current_user)):
     return await readings_payload(p["project_id"])
 
 
-@router.post("/sources")
-async def add_source(body: SourceIn, user=Depends(current_user)):
-    p = await get_project(user)
+def source_meta_errors(kind, label_raw, source_date):
     e = []
-    if body.kind not in KINDS:
+    if kind not in KINDS:
         e.append("Choose what kind of document this is.")
-    label = L.text(body.label, "Document label", e, 120)
+    label = L.text(label_raw, "Document label", e, 120)
     if not label:
         e.append("Give the document a short label.")
-    if L.blank(body.text):
-        e.append("Paste the document text or choose a text file.")
-    elif len(body.text) > 40000:
-        e.append(f"Document is too long ({len(body.text)} characters, limit 40,000).")
-    sdate = L.iso_date(body.source_date, "Document date", e)
-    if e:
-        raise HTTPException(422, e)
+    sdate = L.iso_date(source_date, "Document date", e)
+    return label, sdate, e
+
+
+async def create_source(p, user, kind, label, text, sdate, filename, extra=None):
     order_doc = await db.projects.find_one_and_update({"project_id": p["project_id"]}, {"$inc": {"source_counter": 1}},
                                                       projection={"source_counter": 1}, return_document=True)
     order = (sdate or "9999") + f"-{order_doc['source_counter']:04d}"
-    src = {"source_id": new_id("src"), "project_id": p["project_id"], "kind": body.kind, "label": label,
-           "text": body.text, "filename": (body.filename or "")[:200] or None, "source_date": sdate, "order": order,
-           "status": "pending", "error": None, "created_at": now_iso(), "created_by": user["name"]}
+    src = {"source_id": new_id("src"), "project_id": p["project_id"], "kind": kind, "label": label,
+           "text": text, "filename": (filename or "")[:200] or None, "source_date": sdate, "order": order,
+           "status": "pending", "error": None, "created_at": now_iso(), "created_by": user["name"], **(extra or {})}
     await db.sources.insert_one(dict(src))
     await run_extraction(src, p, user)
     return await readings_payload(p["project_id"])
+
+
+@router.post("/sources")
+async def add_source(body: SourceIn, user=Depends(current_user)):
+    p = await get_project(user)
+    label, sdate, e = source_meta_errors(body.kind, body.label, body.source_date)
+    if L.blank(body.text):
+        e.append("Paste the document text or choose a file.")
+    elif len(body.text) > 40000:
+        e.append(f"Document is too long ({len(body.text)} characters, limit 40,000).")
+    if e:
+        raise HTTPException(422, e)
+    return await create_source(p, user, body.kind, label, body.text, sdate, body.filename)
+
+
+@router.post("/sources/upload")
+async def upload_pdf(file: UploadFile = File(...), kind: str = Form(...), label: str = Form(""),
+                     source_date: str = Form(""), user=Depends(current_user)):
+    p = await get_project(user)
+    name = (file.filename or "document.pdf")[:200]
+    label, sdate, e = source_meta_errors(kind, label or name, source_date)
+    data = await file.read(MAX_PDF + 1)
+    if len(data) > MAX_PDF:
+        e.append(f'"{name}" is larger than 10 MB. Nothing was saved.')
+    elif not data.startswith(b"%PDF"):
+        e.append(f'"{name}" is not a PDF file. Nothing was saved.')
+    if e:
+        raise HTTPException(422, e)
+    try:
+        text, page_starts, pages = await asyncio.to_thread(pdf_text, data)
+    except Exception as ex:  # noqa: BLE001
+        raise HTTPException(422, [f'Could not open "{name}" ({str(ex)[:120]}). Nothing was saved or read.']) from ex
+    body_chars = len(re.sub(r"\[Page \d+\]|\s", "", text))
+    if body_chars < 20:
+        raise HTTPException(422, [f'No readable text found in "{name}". It looks like a scanned image, so nothing was read. '
+                                  "Use a typed PDF or paste the text."])
+    if len(text) > 40000:
+        raise HTTPException(422, [f'"{name}" has too much text ({len(text)} characters, limit 40,000). Paste the relevant part instead.'])
+    path = f"{APP_NAME}/{p['project_id']}/{new_id('pdf')}.pdf"
+    try:
+        stored = await asyncio.to_thread(put_object, path, data, "application/pdf")
+    except Exception as ex:  # noqa: BLE001
+        raise HTTPException(502, [f"Could not save the original PDF ({str(ex)[:120]}). Nothing was read; try again."]) from ex
+    file_id = new_id("file")
+    await db.files.insert_one({"file_id": file_id, "project_id": p["project_id"], "storage_path": stored["path"],
+                               "original_filename": name, "content_type": "application/pdf", "size": len(data),
+                               "is_deleted": False, "created_at": now_iso()})
+    return await create_source(p, user, kind, label, text, sdate, name,
+                               {"file_id": file_id, "page_starts": page_starts, "page_count": pages})
+
+
+@router.get("/sample-pdf")
+async def sample_pdf(user=Depends(current_user)):
+    p = await get_project(user)
+    if not p.get("synthetic"):
+        raise HTTPException(404, "Sample documents are only available in the synthetic demo.")
+    start = date.fromisoformat(p["intake"].get("start_date") or L.today_pacific().isoformat())
+    data = redwood_quote_pdf(start.isoformat(), (start + timedelta(days=28)).isoformat(), (start - timedelta(days=10)).isoformat())
+    return Response(content=data, media_type="application/pdf",
+                    headers={"Content-Disposition": 'inline; filename="redwood-quote-synthetic.pdf"'})
+
+
+@router.get("/sources/{source_id}/file")
+async def download_pdf(source_id: str, user=Depends(current_user)):
+    p = await get_project(user)
+    src = await db.sources.find_one({"source_id": source_id, "project_id": p["project_id"]}, {"_id": 0, "file_id": 1})
+    rec = await db.files.find_one({"file_id": (src or {}).get("file_id"), "project_id": p["project_id"], "is_deleted": False})
+    if not rec:
+        raise HTTPException(404, "No original file for this document.")
+    data, _ = await asyncio.to_thread(get_object, rec["storage_path"])
+    safe = re.sub(r'[^A-Za-z0-9._ -]', "_", rec["original_filename"])
+    return Response(content=data, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{safe}"'})
 
 
 @router.post("/sources/{source_id}/retry")
@@ -388,7 +467,7 @@ async def apply_readings(body: ApplyIn, user=Depends(current_user)):
     await claim_rev(p, body.rev, {"intake": it, "name": it.get("job_name") or p["name"]})
     await db.facts.update_many({"fact_id": {"$in": [f["fact_id"] for f in chosen]}}, {"$set": {"status": "applied", "applied_at": now_iso()}})
     await log_event(p["project_id"], org(user), "apply", f"{len(chosen)} reading(s) used in the job details.",
-                    details=[f"{f['label']} ({f['partner_name'] or f['site_id'] or 'job'}{' wk ' + str(f['week']) if f['week'] else ''}) = {f['value']} · from \"{f['source_label']}\" line {(f.get('location') or {}).get('line', '?')}" for f in chosen])
+                    details=[f"{f['label']} ({f['partner_name'] or f['site_id'] or 'job'}{' wk ' + str(f['week']) if f['week'] else ''}) = {f['value']} · from \"{f['source_label']}\" {('page ' + str(f['location']['page']) + ', ') if (f.get('location') or {}).get('page') else ''}line {(f.get('location') or {}).get('line', '?')}" for f in chosen])
     recalc = "No candidate yet, so nothing was recalculated."
     p2 = await db.projects.find_one({"project_id": p["project_id"]}, {"_id": 0})
     cur = await db.versions.find_one({"version_id": p2.get("current_version_id")}, {"_id": 0}) if p2.get("current_version_id") else None

@@ -53,7 +53,7 @@ function FactLine({ f, current, onRead }) {
       </div>
       {err && <p className="text-xs text-red-700">{err}</p>}
       <p className="mt-0.5 text-[11px] text-slate-500">
-        {f.source_label} · {f.location ? `line ${f.location.line}` : "location not found"}: <q className="italic text-slate-700">{f.excerpt || "no excerpt"}</q>
+        {f.source_label} · {f.location ? `${f.location.page ? `page ${f.location.page}, ` : ""}line ${f.location.line}` : "location not found"}: <q className="italic text-slate-700">{f.excerpt || "no excerpt"}</q>
       </p>
       {f.issues?.length > 0 && <p className="text-[11px] text-red-700">{f.issues.join(" ")}</p>}
       {f.note && <p className="text-[11px] text-slate-500">Reader note: {f.note}</p>}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, RotateCw } from "lucide-react";
+import { FileDown, Loader2, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/StatusPill";
 import { api, errText } from "@/lib/api";
@@ -19,14 +19,26 @@ function SourceItem({ s, onRead }) {
     catch (e) { toast.error(errText(e)); }
     finally { setBusy(false); }
   };
+  const openPdf = async () => {
+    const win = window.open("", "_blank");
+    try {
+      const { data } = await api.get(`/project/sources/${s.source_id}/file`, { responseType: "blob" });
+      const url = URL.createObjectURL(data);
+      if (win) win.location.href = url; else window.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) { if (win) win.close(); toast.error("Could not open the original PDF. Try again."); }
+  };
   return (
     <li data-testid={`source-${s.source_id}`} className="space-y-2 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-slate-900">{s.label}</p>
-          <p className="font-mono text-[11px] text-slate-500">{s.kind} · dated {fmtDate(s.source_date)} · added {fmtTime(s.created_at)}{s.status === "read" ? ` · ${s.fact_count} fact(s)` : ""}</p>
+          <p className="font-mono text-[11px] text-slate-500">{s.kind}{s.page_count ? ` · PDF, ${s.page_count} page(s)` : ""} · dated {fmtDate(s.source_date)} · added {fmtTime(s.created_at)}{s.status === "read" ? ` · ${s.fact_count} fact(s)` : ""}</p>
         </div>
         <div className="flex items-center gap-2">
+          {s.file_id && (
+            <Button size="sm" variant="ghost" onClick={openPdf} data-testid={`source-download-${s.source_id}`}><FileDown className="h-4 w-4" /> Original PDF</Button>
+          )}
           <StatusPill testId={`source-status-${s.source_id}`} tone={ST[s.status].tone} label={ST[s.status].label} />
           {s.status !== "reading" && (
             <Button size="sm" variant="ghost" onClick={retry} disabled={busy} data-testid={`source-retry-${s.source_id}`}>

@@ -58,6 +58,13 @@ async def startup():
     await db.login_attempts.create_index("identifier")
     await db.user_sessions.create_index("session_token")
     await db.events.create_index([("project_id", 1), ("at", -1)])
+    try:
+        import asyncio
+        from storage import init_storage
+        await asyncio.to_thread(init_storage)
+        logging.info("Object storage initialized")
+    except Exception as e:  # noqa: BLE001
+        logging.error(f"Object storage init failed: {e}")
 
 
 @app.on_event("shutdown")
