@@ -20,13 +20,17 @@ function SourceItem({ s, onRead }) {
     finally { setBusy(false); }
   };
   const openPdf = async () => {
-    const win = window.open("", "_blank");
     try {
       const { data } = await api.get(`/project/sources/${s.source_id}/file`, { responseType: "blob" });
       const url = URL.createObjectURL(data);
-      if (win) win.location.href = url; else window.location.href = url;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = s.filename || "document.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } catch (e) { if (win) win.close(); toast.error("Could not open the original PDF. Try again."); }
+    } catch (e) { toast.error("Could not get the original PDF. Try again."); }
   };
   return (
     <li data-testid={`source-${s.source_id}`} className="space-y-2 p-4">
@@ -37,7 +41,7 @@ function SourceItem({ s, onRead }) {
         </div>
         <div className="flex items-center gap-2">
           {s.file_id && (
-            <Button size="sm" variant="ghost" onClick={openPdf} data-testid={`source-download-${s.source_id}`}><FileDown className="h-4 w-4" /> Original PDF</Button>
+            <Button size="sm" variant="ghost" onClick={openPdf} data-testid={`source-download-${s.source_id}`}><FileDown className="h-4 w-4" /> Download original PDF</Button>
           )}
           <StatusPill testId={`source-status-${s.source_id}`} tone={ST[s.status].tone} label={ST[s.status].label} />
           {s.status !== "reading" && (

@@ -28,8 +28,9 @@
 - Synthetic sample docs (brief, Redwood quote, Redwood "week three only" email with an injection line) in `frontend/src/lib/samples.js`.
 - Organizer-only printable summary at /summary (browser print).
 - Acceptance record: /app/memory/ACCEPTANCE.md. Deployed URL is NOT RUN until the app is published.
+- Typed PDF upload (2026-06): pypdf text per page with [Page N] markers, page+line fact locations, original stored in Emergent Object Storage (`storage.py`, `db.files`), organizer-only download, scanned/non-PDF/oversize refused with 422. Synthetic sample PDF at GET /api/project/sample-pdf (`pdf_sample.py`).
 
 ## Backlog
 - Publish, then re-run the acceptance checks on the live URL.
-- PDF text extraction (currently: paste the text yourself).
+- OCR for scanned PDFs (currently refused with a clear message).
 - Optional: email delivery of review links (organizers share them manually by design).

@@ -25,6 +25,7 @@ Deployed URL: NOT RUN. The app has not been deployed yet. Re-run these checks on
 | 18 | Injected instructions in documents ignored and listed | PASS | NOT RUN |
 | 19 | Correction keeps original, prior, editor, time; re-read keeps corrections; candidate recalculated on use | PASS | NOT RUN |
 | 20 | Bad file type / malformed output / timeout keep input, offer retry, no false success | PASS (bad type + malformed verified; timeout by code review) | NOT RUN |
+| 20b | Typed PDF upload: text per page, page+line references, original stored and downloadable (organizer only); scanned/fake PDFs refused | PASS (iteration_3) | NOT RUN |
 | 21 | Organizer-only dated printable summary (checks, contributions, exact responses, conditions) | PASS | NOT RUN |
 | 22 | Mobile 390px usable | PASS | NOT RUN |
 
