@@ -7,7 +7,7 @@ export function Brand() {
   return (
     <Link to="/" data-testid="brand-home-link" className="flex items-baseline gap-2">
       <span className="text-lg font-extrabold tracking-tight text-slate-900">Assemble</span>
-      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">powered by Fabric</span>
+      <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500 sm:inline">powered by Fabric</span>
     </Link>
   );
 }

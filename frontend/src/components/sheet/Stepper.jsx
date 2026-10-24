@@ -55,11 +55,11 @@ export function TaskHeader({ step, title, lead, children }) {
   );
 }
 
-export function ErrorList({ errors, testId }) {
+export function ErrorList({ errors, testId, title = "Nothing was saved. Fix these first:" }) {
   if (!errors?.length) return null;
   return (
     <div data-testid={testId} role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-      <p className="font-semibold">Nothing was saved. Fix these first:</p>
+      <p className="font-semibold">{title}</p>
       <ul className="mt-1 list-disc space-y-0.5 pl-5">{errors.map((e) => <li key={e}>{e}</li>)}</ul>
     </div>
   );

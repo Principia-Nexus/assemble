@@ -294,6 +294,8 @@ async def edit_preview(body: PreviewEditIn, user=Depends(current_user)):
 async def discard_preview(body: RevIn, user=Depends(current_user)):
     p = await get_project(user)
     pre = await get_version(p.get("preview_version_id"))
+    if p["rev"] != body.rev:
+        raise HTTPException(409, STALE_MSG)
     if not pre:
         raise HTTPException(409, "There is no open amendment preview.")
     await claim_rev(p, body.rev, {"preview_version_id": None})

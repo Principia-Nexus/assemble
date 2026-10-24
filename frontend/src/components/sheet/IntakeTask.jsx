@@ -59,8 +59,8 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
         )}
       </TaskHeader>
       <ErrorList errors={errors} testId="intake-errors" />
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-6">
           <div className="rounded-md border border-slate-200 bg-white p-5">
             <p className="eyebrow mb-4">Job basics</p>
             <div className="grid gap-4 sm:grid-cols-2">

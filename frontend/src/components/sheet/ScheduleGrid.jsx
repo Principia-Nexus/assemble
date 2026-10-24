@@ -21,7 +21,7 @@ export default function ScheduleGrid({ version, checker, testPrefix }) {
   };
 
   return (
-    <div data-testid={`${testPrefix}-schedule-grid`} className="rounded-md border border-slate-200 bg-white">
+    <div data-testid={`${testPrefix}-schedule-grid`} className="min-w-0 rounded-md border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-4">
         <p className="eyebrow mr-2">Schedule</p>
         {owners.map((o) => <span key={o} className={cn("rounded-sm border px-2 py-0.5 text-[11px] font-semibold", color(o))}>{name(o)}</span>)}

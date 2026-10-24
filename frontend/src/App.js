@@ -48,7 +48,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppRouter />
-        <Toaster position="top-center" richColors />
+        <Toaster position="bottom-right" richColors visibleToasts={2} />
       </AuthProvider>
     </BrowserRouter>
   );

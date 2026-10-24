@@ -91,7 +91,7 @@ async def login(body: LoginIn, request: Request, response: Response):
             raise HTTPException(401, "Email or password is incorrect.")
         user = await ensure_demo_user(body.visitor_id, DEMO_EMAILS[email])
     else:
-        ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[0]
+        ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[-1].strip()
         ident = f"{ip}:{email}"
         att = await db.login_attempts.find_one({"identifier": ident})
         if att and att.get("count", 0) >= 5 and att.get("locked_until") and att["locked_until"] > now().isoformat():

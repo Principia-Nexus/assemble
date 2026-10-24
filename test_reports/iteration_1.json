@@ -1,0 +1,47 @@
+{
+  "summary": "First full e2e run of Assemble Phase 1 MVP. Backend: 20/20 pytest pass (auth, demo login + visitor_id, register/create project, origin guard, invalid intake saves nothing, blank->unknown, draft 156k fail with week 1+2 capacity failures, 168k pass at 4/4/4, links + mark shared, partner review shows only own part (Alder S01,S02,S09,S10 $56,000), forwarded link 403 (same and cross sandbox), confirm + idempotent duplicate, customer change -> preview 6/4/2 fail, discard keeps consents and reopens the CR, Dogwood repair 172k pass, select carries Birch/Cedar over, Alder needs_rereview, Dogwood no_link, stale partner 409, Birch 70000 -> 186k ceiling fail, history, partner 403 on project/reset, sandbox isolation + reset invalidates old links). Lockout returns 429 after 5 failures; httpOnly secure cookies set. Frontend: every requested flow checked in the UI and all work: demo Use buttons, register -> empty project -> create job, intake errors, gap unknowns, draft generate both cases, create/copy/mark-shared link, demo review as each partner, review-back-to-organizer, forwarded link review-error, Decide statuses, customer-change sample -> open preview -> discard -> reopen -> amend owners to Dogwood -> save -> diff -> select, Birch stress test, stale partner tab 409 then reload, organizer stale 409 in a second tab, history drawer, reload persists state, demo reset, isolated second visitor, and the Google redirect. Found 2 real issues: lost update in the intake form after a 409, and horizontal overflow on mobile.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/auth/login", "issue": "Lockout key uses the first X-Forwarded-For value, which the client controls. An attacker can rotate that header to get around the 5-attempt lockout. Use the last trusted proxy hop or request.client, or lock by email as well."},
+      {"endpoint": "POST /api/project/preview/discard (stale tab)", "issue": "A stale second tab gets 409 'There is no open amendment preview.' instead of the stale-sheet message, because the existence check runs before claim_rev. It is still safe because the tab reloads. This only affects the wording."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "IntakeTask (stale protection bypass / lost update)", "issue": "After a 409 on intake save, act() reloads the sheet (new rev) but IntakeTask keeps its local form state: useState(() => toForm(sheet.intake)) is never re-initialised when sheet.intake changes. A second click on Save then succeeds and silently overwrites the other tab's changes. Reproduced: Tab A set customer to 'TabA Customer' and saved. Tab B edited scope and saved (409). Tab B clicked Save again (200), and the server customer went back to 'Harborview Credit Union (Synthetic)'. Fix: reset the form from sheet.intake after a 409 (or whenever sheet.project.rev changes and the form is not dirty), or keep the old rev until the user reloads.", "selector": "[data-testid='intake-save-button']", "priority": "HIGH"},
+      {"component": "Mobile 390px layout", "issue": "The page scrolls horizontally. Check this job: scrollWidth 618 at a 390px viewport. The sites/partners tables push the grid column wide, so job basics inputs and the gap panel are cut off. Prepare a draft: scrollWidth 438. The current-schedule-grid (table min-w-[420px]) grows its grid parent, and the checker panel Pass pills are clipped at the right edge. Likely fix: add min-w-0 to the grid/flex children that hold the overflow-x-auto wrappers (IntakeTask/DraftTask layout columns). Ask, Decide and Review fit at 390.", "selector": "[data-testid='task-intake'], [data-testid='current-schedule-grid']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Global toasts", "issues": ["The top-center sonner toasts cover the header user name and nav for a few seconds after every action, and several stack up."]},
+      {"screen": "Check this job", "issues": ["Start date uses the browser's native input type=date instead of a shadcn Calendar/Popover date picker."]},
+      {"screen": "Demo reset", "issues": ["Uses window.confirm (native dialog). The rest of the app uses shadcn AlertDialog."]},
+      {"screen": "Partner review after 409", "issues": ["Errors say 'Nothing was saved. Fix these first:' even for stale-version errors, where there is nothing to fix. After the reload the previously chosen action (e.g. Confirm) stays selected, so one more click confirms the new terms. Consider resetting mode on a 409."]},
+      {"screen": "Mobile stepper", "issues": ["Step titles are hidden at 390px (numbers only). Acceptable, but there is no label for the current step."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_assemble_flow.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "HIGH: In IntakeTask, re-initialise the form from sheet.intake after a 409 or a rev change. Today a stale tab overwrites newer saves on the second click.",
+    "MEDIUM: Fix horizontal overflow at 390px on Check this job and Prepare a draft (add min-w-0 to grid children wrapping the overflow-x-auto tables).",
+    "LOW: Lockout identifier should not trust the client-supplied first X-Forwarded-For hop.",
+    "LOW: Replace the native date input with a shadcn date picker and window.confirm with AlertDialog. Move or shorten toasts so they don't cover the header.",
+    "LOW: Review.jsx backToOrganizer has no try/catch. Reset RespondBox mode after a 409. Use a different error heading for stale-version errors."
+  ],
+  "critical_code_review_comments": [
+    "IntakeTask.jsx: form state is derived once from props and never synced. That causes the lost-update bug above (AmendmentPanel does it correctly with useEffect on [v]).",
+    "auth_routes.login: the lockout identifier comes from x-forwarded-for[0] and can be spoofed.",
+    "project_routes.make_draft/start_preview: claim_rev runs before versions.insert_one. If the insert fails, the project points at a missing version. Insert first, or roll back.",
+    "Review.jsx backToOrganizer: an unhandled promise rejection if the login fails.",
+    "Backend logic is cleanly separated (logic.py / state.py). Idempotency is enforced by a unique index plus a pre-check. Origin guard and httpOnly secure cookies are in place, and bcrypt hashes are used."
+  ],
+  "updated_files": ["/app/backend/tests/test_assemble_flow.py"],
+  "success_rate": {"backend": "100% (20/20)", "frontend": "~90% (all flows work; intake lost-update and mobile overflow issues)"},
+  "test_credentials": "Taken from /app/memory/test_credentials.md: demo accounts with password synthetic-demo. Registered TEST users with test_*@example.com / password123.",
+  "seed_data_creation": "Created demo sandboxes for random visitor_ids (test-*, iso-*, 0246ba4b-...) and TEST_ registered users test_*@example.com / test_ui_*@example.com.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest /app/backend/tests/test_assemble_flow.py; it creates its own visitor sandbox and is self-contained. Each browser_automation call gets a fresh localStorage, so set localStorage assemble_visitor before clicking signin-demo-*-button to reuse a sandbox. Retest: the intake stale second-save (two tabs, edit different fields) and mobile scrollWidth on intake/draft at 390px.",
+  "rca of the issue": "Lost update: ProjectSheet.act() handles 409 by calling load(), which updates sheet.project.rev. IntakeTask's form is initialised with useState(() => toForm(sheet.intake)) and only reset after a successful save. After a 409 the stale form values are sent with the fresh rev, so claim_rev matches and the save goes through. Mitigation: setForm(toForm(sheet.intake)) when sheet.project.rev changes (useEffect), or after a non-ok 409 result in save()."
+}

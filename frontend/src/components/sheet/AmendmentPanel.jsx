@@ -96,8 +96,8 @@ export default function AmendmentPanel({ sheet, act, busy }) {
         </div>
       </div>
       {pv.diff && <DiffView diff={pv.diff} />}
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-4">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-4">
           <ScheduleGrid version={v} checker={pv.checker} testPrefix="preview" />
           <details className="group" open>
             <summary className="cursor-pointer text-sm font-semibold text-slate-800" data-testid="amend-editor-toggle">Edit the preview</summary>

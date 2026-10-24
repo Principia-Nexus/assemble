@@ -58,6 +58,7 @@ function RespondBox({ data, token, onDone }) {
   const [conditions, setConditions] = useState("");
   const [proposed, setProposed] = useState("");
   const [errors, setErrors] = useState([]);
+  const [stale, setStale] = useState(false);
   const [busy, setBusy] = useState(false);
   const key = useRef(newKey());
 
@@ -75,7 +76,9 @@ function RespondBox({ data, token, onDone }) {
       onDone(r.review);
     } catch (e) {
       setErrors(errList(e));
-      if (e.response?.status === 409) onDone(null);
+      const isStale = e.response?.status === 409;
+      setStale(isStale);
+      if (isStale) { setMode(null); onDone(null); }
     } finally {
       setBusy(false);
     }
@@ -109,7 +112,8 @@ function RespondBox({ data, token, onDone }) {
       {mode === "decline" && (
         <Textarea rows={2} placeholder="Optional: reason" value={note} onChange={(e) => setNote(e.target.value)} data-testid="partner-review-decline-note-input" />
       )}
-      <ErrorList errors={errors} testId="partner-review-errors" />
+      <ErrorList errors={errors} testId="partner-review-errors"
+        title={stale ? "Your answer was not saved. The terms below are the current ones; review them and answer again." : undefined} />
       {mode && <Button onClick={submit} disabled={busy} data-testid="partner-review-submit-button">{busy ? "Saving…" : "Send answer to organizer"}</Button>}
     </div>
   );

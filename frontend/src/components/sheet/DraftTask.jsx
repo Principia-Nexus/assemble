@@ -57,7 +57,7 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
         </div>
       </div>
       {sheet.current ? (
-        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <ScheduleGrid version={sheet.current.version} checker={sheet.current.checker} testPrefix="current" />
           <CheckerPanel checker={sheet.current.checker} notes={sheet.current.version.generator_notes} title={`Checker · plan v${sheet.current.version.number}`} testPrefix="current" />
         </div>

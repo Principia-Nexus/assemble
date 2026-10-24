@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { RotateCcw } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { SyntheticTag, StatusPill } from "@/components/StatusPill";
 import { api, errList } from "@/lib/api";
 import { OVERALL } from "@/lib/format";
@@ -61,10 +62,7 @@ export default function ProjectSheet() {
   if (loadError) return <div className="p-10 text-sm text-red-700" data-testid="sheet-load-error">{loadError}</div>;
   if (sheet === undefined) return <Loading label="Loading your job sheet" />;
 
-  const reset = async () => {
-    if (!window.confirm("Reset your demo copy to the starting point? Other visitors are not affected.")) return;
-    await act("post", "/project/demo-reset", {}, "Demo copy reset");
-  };
+  const reset = () => act("post", "/project/demo-reset", {}, "Demo copy reset");
 
   const props = { sheet, act, busy, goTo: setSelected, user };
   const overall = sheet?.current?.checker?.overall;
@@ -79,9 +77,23 @@ export default function ProjectSheet() {
               <SyntheticTag /> Synthetic demo data: 12 branch retrofits, $180,000 ceiling. Not profit, revenue or customer evidence.
             </p>
             {user?.demo_key === "organizer" && (
-              <Button size="sm" variant="ghost" className="h-7 text-amber-900" onClick={reset} disabled={busy} data-testid="demo-reset-button">
-                <RotateCcw className="h-3.5 w-3.5" /> Reset my demo copy
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="ghost" className="h-7 text-amber-900" disabled={busy} data-testid="demo-reset-button">
+                    <RotateCcw className="h-3.5 w-3.5" /> Reset my demo copy
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reset your demo copy?</AlertDialogTitle>
+                    <AlertDialogDescription>Your synthetic job, links and responses return to the starting point. Other visitors are not affected.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel data-testid="demo-reset-cancel">Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={reset} data-testid="demo-reset-confirm">Reset</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
         </div>
@@ -107,7 +119,7 @@ export default function ProjectSheet() {
             </div>
             <Stepper info={info} selected={selected} onSelect={setSelected} />
             <div key={selected} className="rise mt-6">
-              {selected === "intake" && <IntakeTask {...props} />}
+              {selected === "intake" && <IntakeTask key={sheet.project.rev} {...props} />}
               {selected === "draft" && <DraftTask {...props} />}
               {selected === "ask" && <PartnersTask {...props} />}
               {selected === "decide" && <DecideTask {...props} />}
