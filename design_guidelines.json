@@ -1,0 +1,90 @@
+{
+  "project_name": "Assemble, powered by Fabric",
+  "app_type": "saas_app",
+  "theme": "Light theme preferred for business project sheet clarity with high-contrast slate borders, dark mode support togglable",
+  "design_archetype": "Swiss & High-Contrast meets Precision Construction (Archetype 4 & Archetype 1 Hybrid)",
+  "typography": {
+    "font_family_heading": "Plus Jakarta Sans, -apple-system, sans-serif",
+    "font_family_body": "Inter, -apple-system, sans-serif",
+    "font_family_mono": "JetBrains Mono, Menlo, monospace",
+    "h1_hero": "text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100",
+    "h2_section": "text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100",
+    "h3_card": "text-base font-semibold text-slate-800 dark:text-slate-200",
+    "section_eyebrow": "text-xs font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400",
+    "body": "text-sm text-slate-700 dark:text-slate-300 leading-relaxed",
+    "body_muted": "text-xs text-slate-500 dark:text-slate-400"
+  },
+  "colors": {
+    "background": "#F8FAFC",
+    "card_background": "#FFFFFF",
+    "border_default": "#E2E8F0",
+    "border_active": "#94A3B8",
+    "primary_brand": "#0F172A",
+    "primary_brand_hover": "#1E293B",
+    "accent_amber": "#D97706",
+    "accent_amber_light": "#FEF3C7",
+    "status_confirmed": {
+      "text": "#047857",
+      "bg": "#ECFDF5",
+      "border": "#A7F3D0",
+      "dot": "#10B981"
+    },
+    "status_pending": {
+      "text": "#B45309",
+      "bg": "#FFFBEB",
+      "border": "#FDE68A",
+      "dot": "#F59E0B"
+    },
+    "status_declined": {
+      "text": "#B91C1C",
+      "bg": "#FEF2F2",
+      "border": "#FECACA",
+      "dot": "#EF4444"
+    },
+    "status_unknown": {
+      "text": "#475569",
+      "bg": "#F1F5F9",
+      "border": "#CBD5E1",
+      "dot": "#94A3B8"
+    }
+  },
+  "key_functionalities": [
+    "Sign-in page with Google button, email/password form, and direct interactive quick-login buttons for demo accounts (Organizer GC, Electrical Partner A, HVAC Partner B)",
+    "Project sheet UI with a 4-step task stepper showing ONE active current task and ONE primary call to action",
+    "Task 1 - Check this job: Manual intake form (12 branch retrofit sites, dates, scope, $180k ceiling, own crew capacity) + gap analysis highlighting missing data as 'Unknown'",
+    "Task 2 - Prepare a draft: Schedule grid (sites x 3 weeks) with explicit Rule Checker list (Pass/Fail indicators for weekly capacity, 1 crew-week/site, deadlines, 1 scope owner/site, quoted limits, $180k ceiling)",
+    "Task 3 - Ask each partner: Focused partner cards with site/term visibility, direct link copy button, and partner review simulator modal/page",
+    "Partner Review Page/View: Private link route displaying ONLY partner's assigned sites and financial terms, with 3 explicit actions (Confirm, Request a change, Decline)",
+    "Task 4 - Decide next action: Partner status grid, before/after amendment diff view (comparing original terms vs partner requested modifications), action buttons (Discard / Select & Apply / Re-review)",
+    "History Drawer: Immutable timeline receipt ledger showing all intake entries, schedule rule checks, partner link generation, partner decisions, and amendment diff selections"
+  ],
+  "component_guidelines": {
+    "stepper": "Clean technical horizontal bar with numbered nodes 1-4. Active step highlighted in solid primary slate with bold title and main action CTA banner.",
+    "partner_card": "Flat rectangular card with explicit status pill (Dot + Text), summary of assigned sites, fee ceiling, and private review link generator with quick copy & simulated partner view button.",
+    "diff_viewer": "Side-by-side or stacked split comparison grid with green highlights for additions, red strikethrough for removals, and amber tags for modified values.",
+    "checker_list": "Strict rule validation panel with explicit 'PASS' (green badge) or 'FAIL' (red badge) labels next to numerical details.",
+    "history_drawer": "Slide-over drawer from right displaying chronological timestamped events with author role badges (GC / Subcontractor) and detailed diff payloads."
+  },
+  "testing_and_accessibility": {
+    "data_testid_requirement": "ALL interactive controls, step tabs, form inputs, partner action buttons, diff accept/reject toggles, and drawer controls MUST have unique kebabe-case data-testid attributes",
+    "examples": [
+      "data-testid=\"signin-demo-organizer-button\"",
+      "data-testid=\"task-step-intake\"",
+      "data-testid=\"intake-form-budget-input\"",
+      "data-testid=\"schedule-grid-cell-site-1-week-1\"",
+      "data-testid=\"rule-checker-pass-item\"",
+      "data-testid=\"partner-card-copy-link-partner-a\"",
+      "data-testid=\"partner-review-confirm-button\"",
+      "data-testid=\"diff-apply-amendment-button\"",
+      "data-testid=\"history-drawer-trigger\""
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Ensure UI is structured as a calm, authoritative 'Project Sheet' rather than a standard crowded metric dashboard.",
+    "Always write out status terms explicitly next to color indicators (e.g. 'Confirmed' next to green dot, 'Action Needed' next to amber dot).",
+    "Include synthetic demo banner ('Synthetic Demo Data - 12 Branch Retrofits, $180k Ceiling') across the top sheet.",
+    "Provide clear feedback, loading states, empty state placeholders for unassigned sites, and error states on rule checks.",
+    "Ensure the Partner Review flow is fully functional and can be experienced both directly in place and via copied link route.",
+    "Follow strict data-testid conventions across all interactive elements."
+  ]
+}
