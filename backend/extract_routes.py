@@ -13,6 +13,7 @@ from core import db, now, now_iso, new_id, current_user, log_event, STALE_MSG, a
 from project_routes import get_project, claim_rev, generate_candidate, org
 from storage import APP_NAME, get_object, pdf_text, put_object
 from pdf_sample import redwood_quote_pdf
+from ocr import ocr_pdf, scanned_pdf
 from datetime import date, timedelta
 
 router = APIRouter(prefix="/api/project")
@@ -83,7 +84,9 @@ def build_prompt(src, it):
     }
     return (f"CONTEXT (from the organizer, trusted):\n{json.dumps(ctx)}\n\nReturn JSON exactly in this shape:\n"
             f"{SCHEMA % ', '.join(FIELDS)}\n\n"
-            "Lines like [Page 2] were inserted by the app to mark PDF pages; never quote them in excerpts.\n\n"
+            "Lines like [Page 2] were inserted by the app to mark PDF pages; never quote them in excerpts.\n"
+            + ("This text was recognized from a scanned image and may contain recognition errors; "
+               "report [unreadable] parts as unknown.\n" if src.get("ocr") else "") + "\n"
             f"<document>\n{src['text']}\n</document>")
 
 
@@ -316,9 +319,18 @@ async def upload_pdf(file: UploadFile = File(...), kind: str = Form(...), label:
     except Exception as ex:  # noqa: BLE001
         raise HTTPException(422, [f'Could not open "{name}" ({str(ex)[:120]}). Nothing was saved or read.']) from ex
     body_chars = len(re.sub(r"\[Page \d+\]|\s", "", text))
+    extra = {}
     if body_chars < 20:
-        raise HTTPException(422, [f'No readable text found in "{name}". It looks like a scanned image, so nothing was read. '
-                                  "Use a typed PDF or paste the text."])
+        try:
+            text, page_starts, pages = await ocr_pdf(data)
+        except TimeoutError as ex:
+            raise HTTPException(504, [f'Text recognition for "{name}" timed out. Nothing was saved; try again.']) from ex
+        except Exception as ex:  # noqa: BLE001
+            raise HTTPException(422, [f'Could not recognize text in "{name}" ({str(ex)[:140]}). Nothing was saved or read.']) from ex
+        if len(re.sub(r"\[Page \d+\]|\[unreadable\]|\s", "", text)) < 20:
+            raise HTTPException(422, [f'No readable text could be recognized in "{name}", so nothing was read. '
+                                      "Try a clearer scan or paste the text."])
+        extra = {"ocr": True}
     if len(text) > 40000:
         raise HTTPException(422, [f'"{name}" has too much text ({len(text)} characters, limit 40,000). Paste the relevant part instead.'])
     path = f"{APP_NAME}/{p['project_id']}/{new_id('pdf')}.pdf"
@@ -331,16 +343,18 @@ async def upload_pdf(file: UploadFile = File(...), kind: str = Form(...), label:
                                "original_filename": name, "content_type": "application/pdf", "size": len(data),
                                "is_deleted": False, "created_at": now_iso()})
     return await create_source(p, user, kind, label, text, sdate, name,
-                               {"file_id": file_id, "page_starts": page_starts, "page_count": pages})
+                               {"file_id": file_id, "page_starts": page_starts, "page_count": pages, **extra})
 
 
 @router.get("/sample-pdf")
-async def sample_pdf(user=Depends(current_user)):
+async def sample_pdf(scanned: bool = False, user=Depends(current_user)):
     p = await get_project(user)
     if not p.get("synthetic"):
         raise HTTPException(404, "Sample documents are only available in the synthetic demo.")
     start = date.fromisoformat(p["intake"].get("start_date") or L.today_pacific().isoformat())
     data = redwood_quote_pdf(start.isoformat(), (start + timedelta(days=28)).isoformat(), (start - timedelta(days=10)).isoformat())
+    if scanned:
+        data = await asyncio.to_thread(scanned_pdf, data)
     return Response(content=data, media_type="application/pdf",
                     headers={"Content-Disposition": 'inline; filename="redwood-quote-synthetic.pdf"'})
 

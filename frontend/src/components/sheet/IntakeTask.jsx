@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +41,11 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
   const [form, setForm] = useState(() => toForm(sheet.intake));
   const [errors, setErrors] = useState([]);
   const [tab, setTab] = useState(() => sessionStorage.getItem("assemble_intake_tab") || "form");
+  useEffect(() => {
+    const h = (e) => setTab(e.detail);
+    window.addEventListener("assemble:intake-tab", h);
+    return () => window.removeEventListener("assemble:intake-tab", h);
+  }, []);
   const w = weeksOf(form);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const setCap = (i, v) => { const c = [...form.own_capacity]; c[i] = v; setForm({ ...form, own_capacity: c }); };

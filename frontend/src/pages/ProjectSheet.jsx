@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Sparkles } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -16,6 +16,7 @@ import DraftTask from "@/components/sheet/DraftTask";
 import PartnersTask from "@/components/sheet/PartnersTask";
 import DecideTask from "@/components/sheet/DecideTask";
 import HistoryDrawer from "@/components/sheet/HistoryDrawer";
+import DemoTour from "@/components/sheet/DemoTour";
 
 export default function ProjectSheet() {
   const { user } = useAuth();
@@ -24,6 +25,7 @@ export default function ProjectSheet() {
   const [busy, setBusy] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [tourOpen, setTourOpen] = useState(() => !localStorage.getItem("assemble_tour_closed"));
 
   const load = useCallback(async () => {
     try {
@@ -76,6 +78,10 @@ export default function ProjectSheet() {
             <p className="flex items-center gap-2 text-xs text-amber-900">
               <SyntheticTag /> Synthetic demo data: 12 branch retrofits, $180,000 ceiling. Not profit, revenue or customer evidence.
             </p>
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="ghost" className="h-7 text-amber-900" onClick={() => setTourOpen(true)} data-testid="demo-tour-open">
+                <Sparkles className="h-3.5 w-3.5" /> Guided tour
+              </Button>
             {user?.demo_key === "organizer" && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -95,6 +101,7 @@ export default function ProjectSheet() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
+            </div>
           </div>
         </div>
       )}
@@ -128,6 +135,9 @@ export default function ProjectSheet() {
         )}
       </main>
       {sheet && <HistoryDrawer open={historyOpen} onOpenChange={setHistoryOpen} rev={sheet.project.rev} />}
+      {sheet?.project.synthetic && tourOpen && (
+        <DemoTour sheet={sheet} act={act} busy={busy} goTo={setSelected} onClose={() => { setTourOpen(false); localStorage.setItem("assemble_tour_closed", "1"); }} />
+      )}
     </div>
   );
 }

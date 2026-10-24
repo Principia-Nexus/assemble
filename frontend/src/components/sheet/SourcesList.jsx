@@ -37,7 +37,7 @@ function SourceItem({ s, onRead }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-slate-900">{s.label}</p>
-          <p className="font-mono text-[11px] text-slate-500">{s.kind}{s.page_count ? ` · PDF, ${s.page_count} page(s)` : ""} · dated {fmtDate(s.source_date)} · added {fmtTime(s.created_at)}{s.status === "read" ? ` · ${s.fact_count} fact(s)` : ""}</p>
+          <p className="font-mono text-[11px] text-slate-500">{s.kind}{s.page_count ? ` · ${s.ocr ? "scanned PDF, text recognized" : "PDF"}, ${s.page_count} page(s)` : ""} · dated {fmtDate(s.source_date)} · added {fmtTime(s.created_at)}{s.status === "read" ? ` · ${s.fact_count} fact(s)` : ""}</p>
         </div>
         <div className="flex items-center gap-2">
           {s.file_id && (
@@ -52,6 +52,11 @@ function SourceItem({ s, onRead }) {
         </div>
       </div>
       {s.error && <p data-testid={`source-error-${s.source_id}`} className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-800">{s.error}</p>}
+      {s.ocr && (
+        <p data-testid={`source-ocr-${s.source_id}`} className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+          Scanned PDF: this text was recognized from page images and may contain recognition errors. Check each reading against the original PDF before using it.
+        </p>
+      )}
       {s.ignored_instructions?.length > 0 && (
         <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900" data-testid={`source-ignored-${s.source_id}`}>
           Instructions inside this document were ignored: {s.ignored_instructions.join(" · ")}

@@ -66,6 +66,13 @@
     animation: rise 0.35s ease-out both;
 }
 
+.tour-focus {
+    outline: 3px solid #0f172a;
+    outline-offset: 4px;
+    border-radius: 6px;
+    transition: outline-color 0.3s ease;
+}
+
 @media print {
     .no-print { display: none !important; }
 }

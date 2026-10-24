@@ -46,13 +46,21 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
     if (file) takeFile(file);
   };
 
-  const loadSamplePdf = async () => {
+  const loadSamplePdf = async (scanned = false) => {
     try {
-      const { data } = await api.get("/project/sample-pdf", { responseType: "blob" });
+      const { data } = await api.get(`/project/sample-pdf${scanned ? "?scanned=true" : ""}`, { responseType: "blob" });
       const quoteDate = samples(intake).find((x) => x.key === "quote")?.source_date || "";
-      setF({ ...EMPTY, kind: "quote", label: "Redwood quote PDF (Synthetic)", source_date: quoteDate });
-      takeFile(new File([data], "redwood-quote-synthetic.pdf", { type: "application/pdf" }));
+      const label = scanned ? "Scanned Redwood quote (Synthetic)" : "Redwood quote PDF (Synthetic)";
+      setF({ ...EMPTY, kind: "quote", label, source_date: quoteDate });
+      takeFile(new File([data], scanned ? "redwood-quote-scanned-synthetic.pdf" : "redwood-quote-synthetic.pdf", { type: "application/pdf" }));
     } catch (e) { setErrors(errList(e)); }
+  };
+  const [dragging, setDragging] = useState(false);
+  const onDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) takeFile(file);
   };
 
   const submit = async () => {
@@ -82,7 +90,16 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
 
   const sel = "mt-1 h-9 w-full rounded-md border border-input bg-white px-2 text-sm";
   return (
-    <div data-testid="read-document-form" className="space-y-4 rounded-md border border-slate-200 bg-white p-5">
+    <div data-testid="read-document-form"
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false); }}
+      onDrop={onDrop}
+      className={`relative space-y-4 rounded-md border bg-white p-5 transition-colors ${dragging ? "border-2 border-dashed border-slate-900 bg-slate-50" : "border-slate-200"}`}>
+      {dragging && (
+        <div data-testid="read-drop-overlay" className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md bg-white/85 text-sm font-semibold text-slate-900">
+          Drop a PDF or text file to read it
+        </div>
+      )}
       <div>
         <p className="eyebrow">Read a brief, quote or email</p>
         <p className="mt-1 text-xs text-slate-500">AI proposes facts, each with its exact source excerpt. Nothing changes until you choose readings to use. Text inside documents is treated as data, never as instructions.</p>
@@ -92,7 +109,8 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
           {samples(intake).map((s) => (
             <Button key={s.key} size="sm" variant="outline" onClick={() => { setPdf(null); setF({ ...s, filename: null }); }} data-testid={`read-sample-${s.key}-button`}>{s.label}</Button>
           ))}
-          <Button size="sm" variant="outline" onClick={loadSamplePdf} data-testid="read-sample-pdf-button">Redwood quote PDF (Synthetic)</Button>
+          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(false)} data-testid="read-sample-pdf-button">Redwood quote PDF (Synthetic)</Button>
+          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(true)} data-testid="read-sample-scanned-pdf-button">Scanned quote PDF (Synthetic)</Button>
         </div>
       )}
       <div className="grid gap-3 sm:grid-cols-3">
@@ -116,12 +134,12 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
         <div data-testid="read-pdf-chosen" className="flex items-center justify-between gap-3 rounded-md border border-dashed border-slate-300 bg-slate-50 p-4 text-sm">
           <div>
             <p className="font-semibold text-slate-900">{pdf.name}</p>
-            <p className="text-xs text-slate-500">PDF · {(pdf.size / 1024).toFixed(0)} KB. Its text will be pulled out page by page and kept with the original file. Scanned PDFs without text are refused.</p>
+            <p className="text-xs text-slate-500">PDF · {(pdf.size / 1024).toFixed(0)} KB. Its text is pulled out page by page and kept with the original file. If it is a scan with no text, the pages are read by text recognition (you will be asked to check the result).</p>
           </div>
           <Button size="icon" variant="ghost" onClick={() => setPdf(null)} aria-label="Remove PDF" data-testid="read-pdf-remove"><X className="h-4 w-4" /></Button>
         </div>
       ) : (
-        <Textarea rows={7} className="font-mono text-xs" placeholder="Paste the document text here, or choose a PDF or text file…" value={f.text} onChange={set("text")} data-testid="read-text-input" />
+        <Textarea rows={7} className="font-mono text-xs" placeholder="Paste the document text here, or drop / choose a PDF or text file…" value={f.text} onChange={set("text")} data-testid="read-text-input" />
       )}
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={submit} disabled={busy} data-testid="read-submit-button">
