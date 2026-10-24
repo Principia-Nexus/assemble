@@ -133,7 +133,8 @@ export default function Review() {
 
   const backToOrganizer = async () => {
     const { data: demo } = await api.get("/auth/demo-accounts");
-    const { data: u } = await api.post("/auth/login", { email: "organizer@demo.assemble.test", password: demo.password, visitor_id: visitorId() });
+    const org = demo.accounts.find((a) => a.role === "Organizer");
+    const { data: u } = await api.post("/auth/login", { email: org.email, password: demo.password, visitor_id: visitorId() });
     setUser(u);
     navigate("/project");
   };

@@ -30,6 +30,12 @@
 - Acceptance record: /app/memory/ACCEPTANCE.md. Deployed URL is NOT RUN until the app is published.
 - Typed PDF upload (2026-06): pypdf text per page with [Page N] markers, page+line fact locations, original stored in Emergent Object Storage (`storage.py`, `db.files`), organizer-only download, scanned/non-PDF/oversize refused with 422. Synthetic sample PDF at GET /api/project/sample-pdf (`pdf_sample.py`).
 
+## Implemented (2026-06, round 5)
+- OCR for scanned PDFs (PyMuPDF render + Claude Sonnet 5.5 vision transcription, flagged ocr=true, max 8 pages).
+- Drag-and-drop of PDF/text files onto Read a document.
+- 9-step guided demo tour (Show me / Do it for me, minimize).
+- Demo data moved to MongoDB: fixtures/*.json -> `fixtures` collection; seed_fixtures.py for any DB; /api/project/demo-content serves documents, PDF quote meta, customer change and tour.
+
 ## Backlog
 - Publish, then re-run the acceptance checks on the live URL.
 - OCR for scanned PDFs (currently refused with a clear message).

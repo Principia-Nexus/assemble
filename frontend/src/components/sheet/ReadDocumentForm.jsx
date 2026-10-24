@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { api, errList } from "@/lib/api";
-import { samples } from "@/lib/samples";
+import { useDemoContent } from "@/lib/demoContent";
 import { ErrorList } from "./Stepper";
 
 const TEXT_EXT = [".txt", ".md", ".eml", ".csv"];
@@ -14,6 +14,7 @@ const EMPTY = { kind: "brief", label: "", source_date: "", text: "", filename: n
 
 export default function ReadDocumentForm({ intake, synthetic, onRead }) {
   const [f, setF] = useState(EMPTY);
+  const demo = useDemoContent(synthetic);
   const [pdf, setPdf] = useState(null);
   const [errors, setErrors] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -49,10 +50,10 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
   const loadSamplePdf = async (scanned = false) => {
     try {
       const { data } = await api.get(`/project/sample-pdf${scanned ? "?scanned=true" : ""}`, { responseType: "blob" });
-      const quoteDate = samples(intake).find((x) => x.key === "quote")?.source_date || "";
-      const label = scanned ? "Scanned Redwood quote (Synthetic)" : "Redwood quote PDF (Synthetic)";
-      setF({ ...EMPTY, kind: "quote", label, source_date: quoteDate });
-      takeFile(new File([data], scanned ? "redwood-quote-scanned-synthetic.pdf" : "redwood-quote-synthetic.pdf", { type: "application/pdf" }));
+      const q = demo?.pdf || {};
+      const label = scanned ? q.scanned_label : q.label;
+      setF({ ...EMPTY, kind: q.kind || "quote", label: label || "", source_date: q.source_date || "" });
+      takeFile(new File([data], (scanned ? "scanned-" : "") + (q.filename || "sample.pdf"), { type: "application/pdf" }));
     } catch (e) { setErrors(errList(e)); }
   };
   const [dragging, setDragging] = useState(false);
@@ -104,13 +105,13 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
         <p className="eyebrow">Read a brief, quote or email</p>
         <p className="mt-1 text-xs text-slate-500">AI proposes facts, each with its exact source excerpt. Nothing changes until you choose readings to use. Text inside documents is treated as data, never as instructions.</p>
       </div>
-      {synthetic && (
+      {synthetic && demo && (
         <div className="flex flex-wrap gap-2">
-          {samples(intake).map((s) => (
+          {demo.documents.map((s) => (
             <Button key={s.key} size="sm" variant="outline" onClick={() => { setPdf(null); setF({ ...s, filename: null }); }} data-testid={`read-sample-${s.key}-button`}>{s.label}</Button>
           ))}
-          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(false)} data-testid="read-sample-pdf-button">Redwood quote PDF (Synthetic)</Button>
-          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(true)} data-testid="read-sample-scanned-pdf-button">Scanned quote PDF (Synthetic)</Button>
+          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(false)} data-testid="read-sample-pdf-button">{demo.pdf.label}</Button>
+          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(true)} data-testid="read-sample-scanned-pdf-button">{demo.pdf.scanned_label}</Button>
         </div>
       )}
       <div className="grid gap-3 sm:grid-cols-3">

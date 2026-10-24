@@ -58,6 +58,9 @@ async def startup():
     await db.login_attempts.create_index("identifier")
     await db.user_sessions.create_index("session_token")
     await db.events.create_index([("project_id", 1), ("at", -1)])
+    await db.fixtures.create_index("fixture_id", unique=True)
+    from fixtures import ensure_fixtures
+    await ensure_fixtures()
     try:
         import asyncio
         from storage import init_storage

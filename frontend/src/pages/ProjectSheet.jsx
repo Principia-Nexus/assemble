@@ -37,6 +37,13 @@ export default function ProjectSheet() {
     }
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // Stop files dropped outside the read form from navigating away from the app.
+    const stop = (e) => { if (!e.target.closest?.('[data-testid="read-document-form"]')) e.preventDefault(); };
+    window.addEventListener("dragover", stop);
+    window.addEventListener("drop", stop);
+    return () => { window.removeEventListener("dragover", stop); window.removeEventListener("drop", stop); };
+  }, []);
 
   // Runs a mutation; returns error list (empty on success). Stale saves reload the sheet.
   const act = useCallback(async (method, url, body, okMsg) => {
@@ -105,7 +112,7 @@ export default function ProjectSheet() {
           </div>
         </div>
       )}
-      <main className="mx-auto max-w-6xl px-4 pb-24 pt-8 sm:px-6">
+      <main className={`mx-auto max-w-6xl px-4 pt-8 sm:px-6 ${tourOpen && sheet?.project.synthetic ? "pb-80 sm:pb-64" : "pb-24"}`}>
         {!sheet ? (
           <CreateProject act={act} busy={busy} />
         ) : (

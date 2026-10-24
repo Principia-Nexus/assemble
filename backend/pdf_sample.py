@@ -25,19 +25,6 @@ def make_pdf(pages):
     return out
 
 
-if __name__ == "__main__":  # writes a test PDF and a text-less "scanned" PDF
+if __name__ == "__main__":  # writes a test PDF and a text-less PDF
     open(sys.argv[1], "wb").write(make_pdf([["Sample text line for testing."]]))
     open(sys.argv[2], "wb").write(make_pdf([[]]))
-
-
-def redwood_quote_pdf(start, valid_until, quote_date):
-    return make_pdf([
-        ["Redwood Circuit Co. (Synthetic) - Quotation", f"Date: {quote_date}", "Customer job: 12-branch lighting retrofit (Synthetic)",
-         "End customer: Harborview Credit Union (Synthetic)",
-         "Quote addressed to the organizer, Brightline Electrical (Synthetic), which hires us as a partner."],
-        ["We run a 2-man crew per branch. Price: $12,800 per branch, up to 10 branches.",
-         "Availability: 1 branch in week 1, 2 branches in week 2, 4 branches in week 3.",
-         f"Work weeks counted from the job start on {start}.",
-         "Terms: 10% advance, balance net 30 after each branch sign-off. Paid by Brightline Electrical.",
-         f"Excludes permits and ceiling repairs. Quote valid until {valid_until}."],
-    ])

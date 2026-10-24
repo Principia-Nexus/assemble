@@ -6,7 +6,7 @@ import pytest
 import requests
 
 sys.path.insert(0, "/app/backend")
-from pdf_sample import make_pdf, redwood_quote_pdf  # noqa: E402
+from pdf_sample import make_pdf  # noqa: E402
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 if not BASE_URL:
@@ -61,11 +61,20 @@ class TestSamplePdf:
 
 
 class TestRejections:
-    def test_scanned_pdf_422(self, ctx):
+    # Blank (truly empty) PDF -> OCR runs but finds nothing -> 422, nothing stored (1 LLM call)
+    def test_blank_pdf_422(self, ctx):
         before = n_sources(ctx["org"])
-        r = upload(ctx["org"], make_pdf([[], []]), "scan.pdf")
-        assert r.status_code == 422
-        assert "No readable text found" in r.text and "scanned image" in r.text
+        r = upload(ctx["org"], make_pdf([[]]), "blank.pdf")
+        assert r.status_code == 422, r.text
+        assert "No readable text could be recognized" in r.text
+        assert n_sources(ctx["org"]) == before
+
+    # Scanned PDF over 8 pages -> 422 before any LLM call
+    def test_scanned_over_8_pages_422(self, ctx):
+        before = n_sources(ctx["org"])
+        r = upload(ctx["org"], make_pdf([[] for _ in range(9)]), "scan9.pdf")
+        assert r.status_code == 422, r.text
+        assert "up to 8" in r.text
         assert n_sources(ctx["org"]) == before
 
     def test_not_pdf_422(self, ctx):
@@ -162,3 +171,40 @@ class TestTypedPdf:
         assert red["price_per_site_cents"] == 1280000
         assert red["capacity"][:3] == [1, 2, 4]
         print("recalc:", r.json().get("recalc"))
+
+
+# Scanned (image-only) PDF -> OCR via Claude vision -> read as usual, source flagged ocr=true (1 OCR + 1 read LLM call)
+class TestScannedPdf:
+    def test_scanned_sample_has_no_text_layer(self, ctx):
+        import pymupdf
+        r = ctx["org"].get(f"{BASE_URL}/api/project/sample-pdf", params={"scanned": "true"})
+        assert r.status_code == 200 and r.content.startswith(b"%PDF")
+        doc = pymupdf.open(stream=r.content, filetype="pdf")
+        assert doc.page_count == 2
+        assert all(not p.get_text().strip() for p in doc)
+        assert all(p.get_images() for p in doc)
+        ctx["scan"] = r.content
+
+    def test_upload_scanned_ocr(self, ctx):
+        r = upload(ctx["org"], ctx["scan"], "redwood-quote-scanned.pdf", label="TEST Redwood scanned")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        src = [s for s in body["sources"] if s["label"] == "TEST Redwood scanned"][-1]
+        print("source:", {k: v for k, v in src.items() if k != "text"})
+        assert src["status"] == "read", src.get("error")
+        assert src.get("ocr") is True
+        assert src["page_count"] == 2 and isinstance(src["file_id"], str)
+        facts = [f for r_ in body["readings"] for f in r_["facts"] if f["source_id"] == src["source_id"]]
+        for f in facts:
+            print(f["field"], f.get("partner_name"), f.get("week"), f["value"], f["status"], f.get("location"), f["issues"])
+        g = lambda fld: [f for f in facts if f["field"] == fld and f["status"] != "invalid"]  # noqa: E731
+        assert any(f["parsed"] == 1280000 or str(f["value"]) == "12800" for f in g("price_per_site"))
+        caps = {f["week"]: f["parsed"] for f in g("capacity") if "redwood" in (f["target"] or "")}
+        assert caps == {1: 1, 2: 2, 3: 4}, caps
+        assert any(f["parsed"] == 10 for f in g("max_sites"))
+        assert any(f["parsed"] == 10 for f in g("advance_pct"))
+        assert any("harborview" in str(f["value"]).lower() for f in facts if f["field"] == "customer_name")
+        located = [f for f in facts if f.get("location")]
+        assert located and all("page" in f["location"] and "line" in f["location"] for f in located)
+        price = next(f for f in g("price_per_site"))
+        assert price["location"]["page"] == 2, price["location"]

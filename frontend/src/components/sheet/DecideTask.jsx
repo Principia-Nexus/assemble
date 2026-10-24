@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusPill } from "@/components/StatusPill";
 import { STATUS, money, fmtTime, slug } from "@/lib/format";
 import { TaskHeader, ErrorList } from "./Stepper";
+import { useDemoContent } from "@/lib/demoContent";
 import AmendmentPanel from "./AmendmentPanel";
 import ChangeRequests from "./ChangeRequests";
 
@@ -32,7 +33,8 @@ function CustomerChangeForm({ sheet, act, busy, onDone }) {
   const [moves, setMoves] = useState([{ site_id: sites[0]?.site_id, new_week: "1" }]);
   const [errors, setErrors] = useState([]);
   const upd = (i, k, v) => setMoves(moves.map((m, j) => (j === i ? { ...m, [k]: v } : m)));
-  const sample = () => { setNote("Customer asks to move S09 and S10 into week 1 (Synthetic)"); setMoves([{ site_id: "S09", new_week: "1" }, { site_id: "S10", new_week: "1" }]); };
+  const demo = useDemoContent(sheet.project.synthetic);
+  const sample = () => { const c = demo?.customer_change; if (!c) return; setNote(c.note); setMoves(c.moves); };
   const submit = async () => {
     const r = await act("post", "/project/change-requests", { note, moves }, "Change request saved apart from the plan");
     setErrors(r.ok ? [] : r.errors);
@@ -42,7 +44,7 @@ function CustomerChangeForm({ sheet, act, busy, onDone }) {
   return (
     <div data-testid="customer-change-form" className="space-y-3 rounded-md border border-slate-200 bg-white p-4">
       <div className="flex items-center justify-between"><p className="eyebrow">Log a customer change request</p>
-        {sheet.project.synthetic && <Button size="sm" variant="ghost" onClick={sample} data-testid="customer-change-sample-button">Fill synthetic sample</Button>}</div>
+        {demo?.customer_change && <Button size="sm" variant="ghost" onClick={sample} data-testid="customer-change-sample-button">Fill synthetic sample</Button>}</div>
       <Textarea rows={2} placeholder="What did the customer ask for?" value={note} onChange={(e) => setNote(e.target.value)} data-testid="customer-change-note-input" />
       {moves.map((m, i) => (
         <div key={i} className="flex items-center gap-2 text-sm">

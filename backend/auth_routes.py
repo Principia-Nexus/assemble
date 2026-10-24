@@ -10,7 +10,8 @@ from pydantic import BaseModel
 
 from core import (db, now, now_iso, new_id, hash_password, verify_password, make_token, decode_token,
                   current_user, public_user, USER_PROJ)
-from demo import DEMO_ACCOUNTS, DEMO_EMAILS, ensure_demo_user
+from demo import ensure_demo_user
+from fixtures import accounts, demo_key_for, get_fixture
 
 router = APIRouter(prefix="/api/auth")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -54,8 +55,8 @@ async def create_firm(name):
 
 @router.get("/demo-accounts")
 async def demo_accounts():
-    return {"password": os.environ["DEMO_PASSWORD"],
-            "accounts": [{k: a[k] for k in ("key", "email", "name", "role", "firm")} for a in DEMO_ACCOUNTS]}
+    fx = await get_fixture()
+    return {"password": os.environ["DEMO_PASSWORD"], "fixture_id": fx["fixture_id"], "accounts": accounts(fx)}
 
 
 @router.post("/register")
@@ -63,7 +64,7 @@ async def register(body: RegisterIn, response: Response):
     email = body.email.strip().lower()
     if not EMAIL_RE.match(email):
         raise HTTPException(422, "Enter a valid email address.")
-    if email in DEMO_EMAILS or email.endswith("@demo.assemble.test"):
+    if email.endswith("@" + (await get_fixture())["email_domain"]):
         raise HTTPException(422, "Demo addresses are reserved. Use the demo accounts listed on this page.")
     if len(body.password) < 8:
         raise HTTPException(422, "Password must be at least 8 characters.")
@@ -84,12 +85,13 @@ async def register(body: RegisterIn, response: Response):
 @router.post("/login")
 async def login(body: LoginIn, request: Request, response: Response):
     email = body.email.strip().lower()
-    if email in DEMO_EMAILS:
+    demo_key = await demo_key_for(email)
+    if demo_key:
         if not body.visitor_id or not VISITOR_RE.match(body.visitor_id):
             raise HTTPException(400, "Demo sign-in needs a browser visitor id. Reload the page and try again.")
         if body.password != os.environ["DEMO_PASSWORD"]:
             raise HTTPException(401, "Email or password is incorrect.")
-        user = await ensure_demo_user(body.visitor_id, DEMO_EMAILS[email])
+        user = await ensure_demo_user(body.visitor_id, demo_key)
     else:
         ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[-1].strip()
         ident = f"{ip}:{email}"
