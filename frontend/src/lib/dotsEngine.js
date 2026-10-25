@@ -78,7 +78,7 @@ const PASS_BEHIND = 0.05, PASS_SOFT = 10;
 const T = {
   emergeEnd: 0.12,       // last dot starts fading in
   emergeDur: 0.35,
-  convStart: 0.55,      // first dot leaves the ring (end of wind-up)
+  convStart: 1.4,      // first dot leaves the ring (end of wind-up)
   sweep: 0.3,           // left-to-right release stagger across the word
   jitter: 0.04,
   flight: 1.25,          // + up to 0.1 random
@@ -464,7 +464,7 @@ function render(t) {
   const k = dpr * box.w / (WORD_X1 - WORD_X0), ws = wordScale(t);
   const cx = dpr * (box.x + box.w / 2), cy = dpr * box.cy;
   const a = k * ws, e = cx - a * LOGO_CX, f = cy - a * LOGO_CY;
-  const fx = (W / 2 - cx) / k + LOGO_CX, fy = (H / 2 - cy) / k + LOGO_CY, rx = 0.5 * W / k, ry = 0.5 * H / k;
+  const fx = (W / 2 - cx) / k + LOGO_CX, fy = (H / 2 - cy) / k + LOGO_CY, rx = 0.51 * W / k, ry = 0.51 * H / k;
   if (Math.abs(fx - FIELD_CX) + Math.abs(fy - FIELD_CY) + Math.abs(rx - FIELD_RX) + Math.abs(ry - FIELD_RY) > 0.5) {
     FIELD_CX = fx; FIELD_CY = fy; FIELD_RX = rx; FIELD_RY = ry; computeVArr();
   }

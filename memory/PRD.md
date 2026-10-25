@@ -115,3 +115,5 @@
 ## 2026-06 — Sites table fits without horizontal scroll (fixed layout, narrow ID/Due wk columns); Scope summary textarea non-resizable.
 
 ## 2026-06 — Sign-in page: dots scattered across the page converge into the Assemble wordmark (20% larger), replay on hover/tap; Invite step lead sentence removed. Engine: frontend/src/lib/dotsEngine.js (adapted from user-supplied assemble-dots.html), component LogoDots.jsx.
+
+## 2026-06 — Dots animation desktop-only (static logo on phones/touch); scattered hold lengthened to ~1.4s, field spans full viewport edge to edge.
