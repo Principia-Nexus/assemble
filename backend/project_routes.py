@@ -376,9 +376,14 @@ async def assign_site(body: AssignIn, user=Depends(current_user)):
     """Moves one site in the plan. Selected terms are never edited in place: this opens or edits the private draft."""
     p = await get_project(user)
     rev = body.rev
+    base = await get_version(p.get("preview_version_id") or p.get("current_version_id"))
+    if not base:
+        raise HTTPException(409, "No plan yet. Use Draft plan.")
+    if body.site_id not in base["assignments"]:
+        bad(f"{body.site_id} is not a site in this plan.")
+    if body.owner != L.OWN and body.owner not in {x["partner_id"] for x in base["partners"]}:
+        bad("Choose a firm that is part of this plan.")
     if not p.get("preview_version_id"):
-        if not p.get("current_version_id"):
-            raise HTTPException(409, "No plan yet. Use Draft plan.")
         await start_preview(PreviewIn(rev=rev), user)
         rev = (await get_project(user))["rev"]
     pre = await get_version((await get_project(user))["preview_version_id"])

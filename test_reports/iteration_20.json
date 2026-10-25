@@ -1,0 +1,33 @@
+{
+  "summary": "Tested the change that makes the plan the source of truth for site-task firms, plus the partner review wording. Backend: a new pytest file for POST /api/project/plan/assign (5 passed, 1 xfail that only reports a minor side effect). Frontend, with a fresh visitor and the 12-branch example: (1) Chat 'Assign all the sites to firms and move it forward' created plan v1 (Redwood S01,S05,S06,S09-S12; Alder S02,S03; Birch S04,S07,S08). Chat 'Organize this job into scope groups with one task per site' created 12 site tasks. All 12 task cards show the same firm as the Plan package (S01/S05 Redwood, S02 Alder, S04 Birch, etc.). The List view matches. (2) Inspector on the S02 card: Assignee firm changed alder->birch. Toast 'S02 moved in the plan'. The Plan frame became 'Plan · private draft' with S02 under Birch. primary-action changed to 'Review draft'. The card shows Birch. The Calendar bar reads 'Birch Street Power · S02, S04'. Everything was still consistent after a reload. (3) Reverse direction: Review draft -> amend-owner-S02 set to alder -> Save. Toast 'Preview rechecked'. The task card and Plan frame went back to Alder. (4) Calendar: no item chips for site-linked tasks; only firm weekly bars and a merged deadline marker. (5) Partner review: signed in as the alder demo account (same visitor) and opened /review/<token>. The eyebrow reads 'From Brightline Electrical'. There is no 'Private review' and no 'You see only your own sites and terms.' text. partner-review-confirm-button reads 'Confirm'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/project/plan/assign", "issue": "When no draft exists, assign_site calls start_preview() before it checks site_id and owner. A request rejected with 422 (bad owner, or unknown site S99) still leaves a new private draft behind (sheet.preview becomes non-null). Fix: check site_id against the current version's assignments and owner against the partner ids or 'own' before calling start_preview."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Inspector", "issues": ["The Start and Due inputs use the browser's native date picker (mm/dd/yyyy) instead of the shadcn calendar. Not part of this change."]},
+      {"screen": "Partner review page", "issues": ["The partner sees the organizer-side status badge 'Link created, not marked as shared'. This means nothing to a partner; consider hiding it or rewording it for partners."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter21_plan_assign.py", "/app/test_reports/pytest/iter21.xml"],
+  "action_items": [
+    "plan/assign: check site_id and owner before start_preview so that a 422 does not open a private draft.",
+    "Optional: in assistant_routes snapshot work_items, apply the plan's owner to single-site task firm_id (a server-side withPlan). The stored item firm_id can still be stale or None, so the LLM currently sees raw firm_id values that may disagree with the plan."
+  ],
+  "critical_code_review_comments": [
+    "withPlan only changes what is displayed. items.firm_id in Mongo is never updated (the S02 task still has firm_id=None after assign). Any server-side consumer of items (assistant snapshot, future exports) sees the stale value.",
+    "If the assistant or a user tries to update firm_id on a plan_site task through /items ops, the write succeeds but is silently hidden by withPlan. The Inspector routes around this, but assistant ops do not.",
+    "Inspector assign(''): picking 'Unassigned' on a planned site shows an error toast, which is fine."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter21_plan_assign.py"],
+  "success_rate": {"backend": "100% (5/5 functional; 1 xfail for the minor side effect)", "frontend": "100%"},
+  "seed_data_creation": "Demo sandboxes per visitor (t21-*, t21ui2-85ce2f5d85). Project prj_1042a06950e9 has plan v1, a private draft v2, 12 site tasks and links for alder/birch/redwood.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Site tasks are created by the chat message 'Organize this job into scope groups with one task per site' after a plan exists. The 'move it forward' chat also creates review links (links_count>0), so assign opens an amendment preview. The partner review token can be read from Mongo links by project_id; sign in at /login?next=/review/<token> with signin-review-as-partner-toggle -> signin-demo-alder-button using the same assemble_visitor value."
+}

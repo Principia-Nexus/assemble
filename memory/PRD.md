@@ -146,3 +146,8 @@ User overrides: keep original Assemble colours/fonts and AppHeader top bar; no l
 - Primary action top-right (Draft plan → Review draft → Send for review → Awaiting <firm> → Customer quote) + Quote button; ⋯ only Reset example; title click = Job details; Highlight changes removed; synthetic badges removed outside projects list.
 - Calendar: month/week, weekly firm bars, grouped deadlines, no Unscheduled tray. Schedule grid stacked on mobile.
 ### Round 2 (next): requirement/licence constraints per scope (C-10/C-33/C-39 acceptance), rapid-edit merge + two-tab conflicts, isolated-session partner access repro, job exclusions independent of partners, larger PDF page batches/page ranges, publish + repeat full journey on public URL, true 200% zoom check.
+
+## 2026-10-25 — Plan is source of truth for site tasks (iteration_20 pass)
+- withPlan() overlays plan owner/week on tasks tied to one planned site; Inspector firm change → POST /api/project/plan/assign (opens/edits private draft, validated before draft creation). Calendar no longer duplicates site tasks.
+- Firm colour system (FIRM_TONES in derive.js); left card ribbons removed; Example/Synthetic labels removed everywhere.
+- Partner page: "From <firm>", "Confirm", no organizer-only status badges, demo role-switch buttons removed.
