@@ -2,10 +2,10 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const STEPS = [
-  { key: "intake", title: "Check this job" },
-  { key: "draft", title: "Prepare a draft" },
-  { key: "ask", title: "Ask each partner" },
-  { key: "decide", title: "Decide next action" },
+  { key: "intake", title: "Check this job", short: "Check" },
+  { key: "draft", title: "Prepare a draft", short: "Draft" },
+  { key: "ask", title: "Ask each partner", short: "Ask" },
+  { key: "decide", title: "Decide next action", short: "Decide" },
 ];
 
 export function stepInfo(sheet) {
@@ -26,8 +26,8 @@ export default function Stepper({ info, selected, onSelect }) {
         const active = selected === s.key;
         const isCurrent = info.current === s.key;
         return (
-          <button key={s.key} onClick={() => onSelect(s.key)} data-testid={`task-step-${s.key}`} aria-current={active ? "step" : undefined}
-            className={cn("relative flex items-center gap-2.5 border-r border-slate-200 px-3 py-2.5 text-left transition-colors last:border-r-0 sm:px-4",
+          <button key={s.key} onClick={() => onSelect(s.key)} data-testid={`task-step-${s.key}`} aria-label={s.title} aria-current={active ? "step" : undefined}
+            className={cn("relative flex flex-col items-center gap-1 border-r border-slate-200 px-1 py-2 text-left transition-colors last:border-r-0 sm:flex-row sm:gap-2.5 sm:px-4 sm:py-2.5",
               active ? "bg-slate-900 text-white" : "hover:bg-slate-50")}>
             <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border font-mono text-xs",
               active ? "border-white/40" : info.done[s.key] ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 text-slate-600")}>
@@ -35,6 +35,7 @@ export default function Stepper({ info, selected, onSelect }) {
             </span>
             <span className="min-w-0">
               <span className="hidden text-sm font-semibold sm:block">{s.title}</span>
+              <span className="block text-xs font-semibold sm:hidden">{s.short}</span>
               {isCurrent && !active && (
                 <span data-testid={`task-step-${s.key}-next`} className="hidden font-mono text-[10px] uppercase tracking-wider text-slate-500 md:block">Next step</span>
               )}

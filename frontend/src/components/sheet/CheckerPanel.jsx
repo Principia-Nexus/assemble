@@ -13,7 +13,7 @@ export default function CheckerPanel({ checker, notes, title, testPrefix }) {
           <div><dt className="text-xs text-slate-500">Ceiling</dt><dd className="font-mono font-semibold">{money(checker.ceiling_cents)}</dd></div>
         </dl>
         {checker.headroom_cents != null && (
-          <p className="text-[11px] text-slate-500">Budget headroom {money(checker.headroom_cents)}. Headroom only; not profit or savings.</p>
+          <p className="text-[11px] text-slate-500">Budget headroom {money(checker.headroom_cents)}.</p>
         )}
       </div>
       <ul className="divide-y divide-slate-100">
@@ -30,7 +30,7 @@ export default function CheckerPanel({ checker, notes, title, testPrefix }) {
         ))}
       </ul>
       <div className="space-y-2 border-t border-slate-200 bg-slate-50 p-4 text-[11px] leading-relaxed text-slate-600">
-        <p data-testid={`${testPrefix}-checker-note`}>{checker.note}</p>
+        {checker.note && <p data-testid={`${testPrefix}-checker-note`}>{checker.note}</p>}
         {notes?.length > 0 && (
           <details>
             <summary className="cursor-pointer font-semibold text-slate-700">Generator notes ({notes.length})</summary>

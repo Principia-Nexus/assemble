@@ -28,7 +28,7 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
 
   return (
     <section data-testid="task-draft" className="space-y-6">
-      <TaskHeader step={2} title="Prepare a draft" lead="Pick which crews to try. A candidate schedule is generated, then the independent checker tests it.">
+      <TaskHeader step={2} title="Prepare a draft">
         <Button onClick={generate} disabled={busy} data-testid="draft-generate-button">{busy ? "Checking…" : failing ? "Regenerate with these crews" : "Generate and check candidate"}</Button>
         {sheet.current && !linksExist && !failing && <Button variant="outline" onClick={() => goTo("ask")} data-testid="draft-next-button">Go to partners</Button>}
       </TaskHeader>

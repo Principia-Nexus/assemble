@@ -100,7 +100,7 @@ export default function Summary() {
         {!cur ? <p className="text-sm text-slate-500">No candidate plan yet.</p> : (
           <>
             <Section title="Checks" testId="summary-checks">
-              <p className="mb-2 text-sm font-semibold">{OVERALL[cur.checker.overall].label} · total {money(cur.checker.total_cents)}{cur.checker.headroom_cents != null ? ` · headroom ${money(cur.checker.headroom_cents)} (not profit or savings)` : ""}</p>
+              <p className="mb-2 text-sm font-semibold">{OVERALL[cur.checker.overall].label} · total {money(cur.checker.total_cents)}{cur.checker.headroom_cents != null ? ` · headroom ${money(cur.checker.headroom_cents)}` : ""}</p>
               <ul className="space-y-1 text-xs">
                 {cur.checker.rules.map((r) => <li key={r.key}><span className="font-semibold">{CHECK[r.status].label}: {r.label}.</span> {r.details.join(" ")}</li>)}
               </ul>

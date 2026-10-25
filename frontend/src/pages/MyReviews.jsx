@@ -19,9 +19,6 @@ export default function MyReviews() {
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <p className="eyebrow">Partner reviews</p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Reviews shared with you</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Only links issued to {user?.email} appear here. You see your own part of each job, nothing else.
-        </p>
         {user?.firm_id && (
           <p className="mt-2 text-sm"><Link to="/project" className="font-semibold text-slate-900 underline" data-testid="my-reviews-project-link">Go to your own job sheet</Link></p>
         )}

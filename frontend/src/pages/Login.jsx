@@ -112,7 +112,6 @@ export default function Login() {
         <div className="flex flex-col items-center gap-3 text-center">
           <Brand />
           <p data-testid="signin-promise" className="text-2xl font-semibold tracking-tight text-slate-900">Check the job. Agree the plan.</p>
-          <p className="text-sm text-slate-600">See if your trusted partners can cover a multi-site job, then get each one to confirm their exact terms.</p>
         </div>
         {next?.startsWith("/review/") && (
           <p data-testid="signin-review-notice" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">

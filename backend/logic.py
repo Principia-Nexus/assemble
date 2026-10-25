@@ -469,7 +469,7 @@ def check(v):
     else:
         headroom = ceiling - total
         ce["details"].append(f"Total {fmt(total)} is within the {fmt(ceiling)} ceiling. "
-                             f"Budget headroom {fmt(headroom)} (headroom only, not profit or savings).")
+                             f"Budget headroom {fmt(headroom)}.")
     rules.append(ce)
 
     pay = _rule("payments", "Resulting payments are not negative")
@@ -503,8 +503,7 @@ def check(v):
 
     overall = max((r["status"] for r in rules), key=lambda s: RANK[s]) if rules else "unknown"
     if overall == "fail":
-        note = ("This candidate fails at least one check. That does not show the job is impossible, and no other plan "
-                "is claimed to be cheaper. The draft came from a single greedy pass, so the search is incomplete.")
+        note = ""
     elif overall == "unknown":
         note = "Some checks cannot run because inputs are unknown. Nothing is assumed for them."
     else:

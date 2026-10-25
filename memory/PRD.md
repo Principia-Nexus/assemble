@@ -42,7 +42,27 @@
 - "(Synthetic)" is removed from names by the frontend API layer (lib/api.js), except on /auth/demo-accounts (login page only). Removed the "Project sheet · customer" eyebrow.
 
 
-## Backlog
+## Handoff round (2026-06, round 7) — from emergent-master-handoff.md
+- Checker: new "payments" rule (negative partner totals fail); server rejects adjustments that make a total negative (max discount message).
+- Selection: preview Select disabled while edits are unsaved or preview fails; dialog shows version, total, delta, partners to re-review; server checks expected_version_id and refuses failing previews.
+- Review links blocked (server 409 + UI notice) while the current plan fails; stepper keeps "Prepare a draft" as next step.
+- Job-wide conditions: intake.job_conditions (edit/resolve in Check this job), extracted "conditions" without a partner become applicable Job condition readings; shown in gap panel, checker, Decide and Summary. Partners never see them.
+- Decide: summary strip (schedule fits / budget / confirmed / unresolved) and Next banner leads with open conditions; carried confirmations keep original responded_at.
+- Progress: "Ask" done once partners responded (no shared marker needed). Historic change requests from firms no longer in the plan are marked inapplicable (server 409).
+- Login: "Check the job. Agree the plan." + Try the example; partner logins behind "Review as a partner"; role-aware next redirects; partner on organizer routes gets header + Go to my reviews.
+- Readings: identical values across sources = corroborated (not conflict); attention-first order; site deadline facts grouped; sticky action bar; evidence in disclosure; sample-PDF preparing state; reader model/prompt_version stored on each source.
+- Tour opt-in (not auto-open); shortcuts state-aware; select shortcut routes to the normal dialog.
+- Copy removals per user (headroom disclaimer, greedy-pass fail note, draft lead, reviews intro, login subline).
+- Tests: backend 67 pass (new tests/test_handoff_rules.py); iteration_6 all 12 flows pass.
+- NOT done: full Jextaa-style workspace re-layout, 3x-per-case fresh-extraction consistency eval, field-adjacent validation messages, deployment/live acceptance.
+
+
 - Publish, then re-run the acceptance checks on the live URL.
 - OCR for scanned PDFs (currently refused with a clear message).
 - Optional: email delivery of review links (organizers share them manually by design).
+
+## Backlog
+- Workspace re-layout (contextual right panel per step)
+- Extraction consistency eval (6 cases x 3 runs)
+- Field-adjacent validation errors
+- Publish + live acceptance run
