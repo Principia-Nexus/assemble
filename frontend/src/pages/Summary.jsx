@@ -7,7 +7,7 @@ import { STATUS, money, fmtDate, fmtTime } from "@/lib/format";
 import { Loading } from "@/App";
 import { RouteDenied } from "@/components/RouteDenied";
 import { ruleView } from "@/components/sheet/CheckerPanel";
-import { answered, nextStep, scopedResult } from "@/lib/planState";
+import { answered, nextStep, openConditions, scopedResult } from "@/lib/planState";
 
 const ACTION = { confirm: "Confirmed proposed terms", request_change: "Requested a change", decline: "Declined" };
 
@@ -115,7 +115,7 @@ export default function Summary() {
             <Section title="Exact responses" testId="summary-responses"><Responses cur={cur} /></Section>
             <Section title="Supporting checks" testId="summary-checks">
               <ul className="space-y-1 text-xs">
-                {cur.checker.rules.map((r) => <li key={r.key}><span className="font-semibold">{ruleView(r, cur.checker).label}: {r.label}.</span> {r.details.join(" ")}</li>)}
+                {cur.checker.rules.map((r) => <li key={r.key}><span className="font-semibold">{ruleView(r, cur.checker, openConditions(cur).length).label}: {r.label}.</span> {r.details.join(" ")}</li>)}
               </ul>
               {cur.checker.note && <p className="mt-2 text-[11px] text-slate-500">{cur.checker.note}</p>}
             </Section>

@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { money, slug } from "@/lib/format";
 import { TaskHeader, ErrorList } from "./Stepper";
 import ScheduleGrid from "./ScheduleGrid";
+import { openConditions } from "@/lib/planState";
 import CheckerPanel from "./CheckerPanel";
 
 export default function DraftTask({ sheet, act, busy, goTo }) {
@@ -72,7 +73,7 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
       </div>
       {sheet.current ? (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <ScheduleGrid version={sheet.current.version} checker={sheet.current.checker} testPrefix="current" />
+          <ScheduleGrid version={sheet.current.version} checker={sheet.current.checker} testPrefix="current" openCount={openConditions(sheet.current).length} />
           <CheckerPanel checker={sheet.current.checker} notes={sheet.current.version.generator_notes} title={`Checker · plan v${sheet.current.version.number}`} testPrefix="current" />
         </div>
       ) : (

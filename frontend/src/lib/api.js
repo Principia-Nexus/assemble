@@ -16,6 +16,7 @@ let refreshing = null;
 api.interceptors.response.use(
   (r) => (r.config.url === "/auth/demo-accounts" ? r : { ...r, data: untag(r.data) }),
   async (err) => {
+    if (err.response?.data) err.response.data = untag(err.response.data);
     const cfg = err.config || {};
     if (err.response?.status === 401 && !cfg._retry && !String(cfg.url).startsWith("/auth/")) {
       cfg._retry = true;

@@ -42,6 +42,14 @@
 - "(Synthetic)" is removed from names by the frontend API layer (lib/api.js), except on /auth/demo-accounts (login page only). Removed the "Project sheet · customer" eyebrow.
 
 
+## Clarity + workspace round (2026-06, round 8)
+- Theme: white, black text, Avorant navy #1A2838 accent; matched green #1E7B5C / red #A93A3A; lowercase mono labels; clean CSS animations (stagger, panel fades, sliding tab pill, smooth partner drop-down; reduced-motion respected).
+- Login: logo larger, "Organizer" (Synthetic example) + "Partner" drop-down.
+- PlanStrip (components/sheet/PlanStrip.jsx + lib/planState.js): scoped result, total vs ceiling, responses, open conditions, one derived Next action button on every step.
+- Checker: failures/open conditions first, passes collapsed; conditions rule shows "N open" amber. Draft blocks generation while a preview is open (Open preview button). Amendment: "Proposed changes", changed vs already-awaiting partners, full editor under Edit details. Partner cards state-specific history text. Readings: applied collapsed; legacy job conditions migrated on load. Tour state note. Summary leads with Decision + Outstanding work.
+- Tests: iteration_9 all features pass; 6 minor follow-ups fixed afterwards (not re-run by testing agent).
+- Pending user decision: Claude extra uses, Jev classification, Resend email, Stripe (user said "not yet, wait").
+
 ## Handoff round (2026-06, round 7) — from emergent-master-handoff.md
 - Checker: new "payments" rule (negative partner totals fail); server rejects adjustments that make a total negative (max discount message).
 - Selection: preview Select disabled while edits are unsaved or preview fails; dialog shows version, total, delta, partners to re-review; server checks expected_version_id and refuses failing previews.

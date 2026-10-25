@@ -22,7 +22,7 @@ export function nextStep(sheet) {
   if (!cur) return { text: "No candidate plan yet.", label: "Prepare a draft", task: "draft" };
   if (cur.checker.overall === "fail") return { text: `Plan v${cur.version.number} fails a check.`, label: "Repair the draft", task: "draft" };
   const noLink = cur.partners.filter((p) => !p.link);
-  if (noLink.length) return { text: `${noLink.length} partner${noLink.length > 1 ? "s" : ""} have no review link yet.`, label: "Create review links", task: "ask" };
+  if (noLink.length) return { text: `${noLink.length} partner${noLink.length > 1 ? "s" : ""} ${noLink.length > 1 ? "have" : "has"} no review link yet.`, label: "Create review links", task: "ask" };
   const open = sheet.change_requests.filter((c) => c.status === "open");
   if (open.length) return { text: `${open.length} change request${open.length > 1 ? "s" : ""} waiting.`, label: "Handle change requests", task: "decide", focus: "change-requests" };
   const waiting = cur.partners.filter((p) => !answered(p));

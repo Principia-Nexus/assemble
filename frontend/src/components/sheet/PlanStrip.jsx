@@ -27,7 +27,7 @@ export default function PlanStrip({ sheet, goTo }) {
     <section data-testid="plan-strip" className="no-print mt-5 overflow-hidden rounded-md border border-slate-200 bg-white">
       <div className="stagger grid grid-cols-2 divide-x divide-y divide-slate-100 md:grid-cols-4 md:divide-y-0">
         <Cell label={cur ? `Plan v${cur.version.number}` : "Plan"} testId="plan-strip-result">
-          {r ? <StatusPill testId="project-overall-status" tone={r.tone} label={r.label} /> : <span className="text-slate-500">No candidate yet</span>}
+          {r ? <StatusPill testId="project-overall-status" tone={r.tone} label={r.label} className="whitespace-normal" /> : <span className="text-slate-500">No candidate yet</span>}
         </Cell>
         <Cell label="Total against ceiling" testId="plan-strip-total">
           {cur ? `${money(cur.checker.total_cents)} of ${money(cur.checker.ceiling_cents)}` : `Ceiling ${money(sheet.intake.budget_ceiling_cents)}`}

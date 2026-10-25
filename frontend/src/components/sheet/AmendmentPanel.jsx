@@ -78,7 +78,7 @@ export default function AmendmentPanel({ sheet, act, busy }) {
   const delta = d && d.total_after_cents != null && d.total_before_cents != null ? d.total_after_cents - d.total_before_cents : null;
   const lead = d ? [
     `${d.sites.length} site${d.sites.length === 1 ? "" : "s"} change${d.sites.length === 1 ? "s" : ""}`,
-    delta == null ? "total unknown" : `${delta >= 0 ? "+" : "-"}${money(Math.abs(delta))}`,
+    delta == null ? "total unknown" : delta === 0 ? "total unchanged" : `${delta > 0 ? "+" : "-"}${money(Math.abs(delta))}`,
     review.length ? `${review.map((p) => p.name).join(", ")} must review` : "no partner's terms change",
     ...(pending.length ? [`${pending.length} already awaiting a response`] : []),
   ].join(" · ") : null;

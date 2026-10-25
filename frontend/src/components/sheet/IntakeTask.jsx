@@ -42,7 +42,7 @@ export function F({ id, label, hint, className, ...props }) {
 export default function IntakeTask({ sheet, act, busy, goTo }) {
   const [form, setForm] = useState(() => toForm(sheet.intake));
   const [errors, setErrors] = useState([]);
-  const [tab, setTab] = useState(() => sessionStorage.getItem("assemble_intake_tab") || (sheet.intake.sites.length ? "form" : "read"));
+  const [tab, setTab] = useState(() => (sheet.intake.sites.length ? sessionStorage.getItem("assemble_intake_tab") || "form" : "read"));
   useEffect(() => {
     const h = (e) => setTab(e.detail);
     window.addEventListener("assemble:intake-tab", h);
