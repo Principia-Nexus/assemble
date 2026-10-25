@@ -33,7 +33,7 @@ function PartnerCard({ p, email, act, busy, demoPassword, blocked }) {
         <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold text-slate-900">{p.name}</h3>
-            {p.status !== "no_link" && <StatusPill testId={`partner-card-status-${id}`} tone={s.tone} label={s.label} />}
+            {!["no_link", "link_not_shared"].includes(p.status) && <StatusPill testId={`partner-card-status-${id}`} tone={s.tone} label={s.label} />}
           </div>
           <p className="text-xs text-slate-600">{p.terms.sites.map((x) => `${x.name || x.site_id} (${x.week_start ? `week of ${fmtDate(x.week_start)}` : `wk ${x.week}`})`).join(" · ")}</p>
           <p className="text-xs text-slate-500">Advance {money(p.terms.advance_cents)} · balance {money(p.terms.balance_cents)} · to <span data-testid={`partner-card-recipient-${id}`} className="break-all font-mono text-slate-700">{p.link?.invite_email || email || "no email yet"}</span></p>
