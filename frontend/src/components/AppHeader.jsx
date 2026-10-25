@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 
 export function Brand({ light = false }) {
   return (
-    <Link to="/" data-testid="brand-home-link" className={`text-2xl font-bold tracking-tight sm:text-[28px] ${light ? "text-[#FFFFFF]" : "text-[#0E5E8C]"}`}>
+    <Link to="/" data-testid="brand-home-link" className={`text-2xl font-semibold tracking-tight sm:text-[28px] ${light ? "text-[#FFFFFF]" : "text-[#0E5E8C]"}`}>
       Assemble
     </Link>
   );
