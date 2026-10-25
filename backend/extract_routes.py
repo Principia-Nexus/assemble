@@ -34,6 +34,9 @@ FIELDS = {
     "own_capacity": ("own", "int", "Your crew capacity"), "own_cost_per_site": ("own", "money", "Your cost per site"),
     "site_name": ("site", "text", "Site name"), "site_deadline_week": ("site", "int", "Site deadline week"),
     "site_scope": ("site", "text", "Site scope"),
+    "site_access_start": ("site", "date", "Access opens"), "site_access_end": ("site", "date", "Access closes"),
+    "customer_payment_terms": ("job", "text", "Customer payment terms"),
+    "coordination": ("job", "money", "Coordination"), "contingency": ("job", "money", "Contingency"),
     "partner_email": ("partner", "text", "Contact email"), "price_per_site": ("partner", "money", "Price per site"),
     "capacity": ("partner", "int", "Capacity"), "max_sites": ("partner", "int", "Quoted site limit"),
     "payer": ("partner", "text", "Payer"), "advance_pct": ("partner", "int", "Advance %"),
@@ -43,7 +46,9 @@ FIELDS = {
 }
 WEEKLY = {"own_capacity", "capacity"}
 INTAKE_KEY = {"budget_ceiling": "budget_ceiling_cents", "own_cost_per_site": "own_cost_per_site_cents",
-              "site_name": "name", "site_deadline_week": "deadline_week", "site_scope": "scope", "partner_email": "email",
+              "site_name": "name", "site_deadline_week": "deadline_week", "site_scope": "scope",
+              "site_access_start": "access_start", "site_access_end": "access_end",
+              "coordination": "coordination_cents", "contingency": "contingency_cents", "partner_email": "email",
               "price_per_site": "price_per_site_cents", "partner_scope": "scope"}
 
 SYSTEM = """You extract structured facts for a subcontracting planner used by an electrical contractor.
@@ -54,6 +59,8 @@ Rules:
 - Crew size ("2-man crew", "3-person team") is the number of people in one crew. It is NOT the number of crews and NOT capacity. Never report crew size as capacity.
 - Capacity means how many sites/branches a crew or firm can complete in a specific week (integer, per week). One site takes one crew-week.
 - If the document narrows availability (for example "week three only"), report capacity 0 for each excluded week and say so in "note".
+- Site access windows ("S05-S08 available Nov 9-13") become "site_access_start" and "site_access_end" facts per site. Coordination and contingency allowances are "coordination" and "contingency" (job totals). The customer's payment terms are "customer_payment_terms".
+- A date stated without a year: give "MM-DD" (e.g. "11-02"); never guess the year.
 - Money: plain US dollar digits without symbols or commas (e.g. "12800"). Percent: integer. Weeks: integer counted from week 1 of the job. Dates: YYYY-MM-DD only when the full date is stated; otherwise list it in unknowns.
 - If the document contradicts itself, report each statement as its own fact and describe it in "conflicts".
 - A prerequisite or condition that applies to the whole job (site access, permits, customer approvals) is a "conditions" fact with "partner": null.
@@ -163,6 +170,10 @@ def match_partner(name, it):
     return None, str(name).strip()
 
 
+MMDD_RE = re.compile(r"\d{2}-\d{2}")
+YEAR_ISSUE = "Year not stated."
+
+
 def parse_value(kind, value, label):
     e = []
     parsed = {"money": lambda: L.money(value, label, e), "int": lambda: L.whole(value, label, e, 0, 100),
@@ -236,6 +247,8 @@ def make_fact(src, raw, it):
         issues.append("No partner named for this fact.")
     if scope == "site" and site_issue:
         issues.append(site_issue)
+    if field == "site_scope" and re.search(r"\b(proposed|assigned|offered|quoted)\b|\bby\s+[A-Z]", value):
+        issues.append("This says who would do the work, not the site's scope.")
     if field in WEEKLY and not week:
         issues.append("No week given for this capacity.")
     weeks = it.get("weeks")
@@ -247,7 +260,12 @@ def make_fact(src, raw, it):
         wk_from_date = week_of(value, it.get("start_date"))
         if wk_from_date:
             value = str(wk_from_date)
-    parsed, errs = parse_value(kind, value, label)
+    if kind == "date" and MMDD_RE.fullmatch(value):
+        if it.get("year_basis"):
+            value = f"{it['year_basis']}-{value}"
+        else:
+            issues.append(YEAR_ISSUE)
+    parsed, errs = parse_value(kind, value, label) if YEAR_ISSUE not in issues else (None, [])
     issues += errs
     m = CREW_SIZE_RE.search(excerpt)
     if field in WEEKLY and m and parsed is not None:
@@ -382,7 +400,7 @@ def source_meta_errors(kind, label_raw, source_date):
 async def create_source(p, user, kind, label, text, sdate, filename, extra=None):
     order_doc = await db.projects.find_one_and_update({"project_id": p["project_id"]}, {"$inc": {"source_counter": 1}},
                                                       projection={"source_counter": 1}, return_document=True)
-    order = (sdate or "9999") + f"-{order_doc['source_counter']:04d}"
+    order = (sdate or "0000") + f"-{order_doc['source_counter']:04d}"
     src = {"source_id": new_id("src"), "project_id": p["project_id"], "kind": kind, "label": label,
            "text": text, "filename": (filename or "")[:200] or None, "source_date": sdate, "order": order,
            "status": "pending", "error": None, "created_at": now_iso(), "created_by": user["name"], **(extra or {})}
@@ -671,12 +689,13 @@ def apply_fact(it, f):
     if scope == "job_condition":
         conds = it.setdefault("job_conditions", [])
         if not any(norm(c["text"]) == norm(val) for c in conds):
-            conds.append({"id": "jc_" + new_id("x")[-8:], "text": val, "source": fact_where(f), "resolved": False})
+            conds.append({"id": "jc_" + new_id("x")[-8:], "text": val, "source": fact_where(f), "resolved": False,
+                          "sites": [f["site_id"]] if f.get("site_id") else []})
         return
     key = INTAKE_KEY.get(field, field)
     weeks = it.get("weeks")
     if scope == "job":
-        it["budget_ceiling_cents" if field == "budget_ceiling" else field] = val
+        it[key] = val
         if field == "weeks":
             it["own_capacity"] = (it.get("own_capacity") or [])[:val] + [None] * max(0, val - len(it.get("own_capacity") or []))
             for p in it["partners"]:
@@ -707,9 +726,43 @@ def apply_fact(it, f):
         p["capacity"] = (p.get("capacity") or []) + [None] * max(0, (weeks or 0) - len(p.get("capacity") or []))
         p["capacity"][f["week"] - 1] = val
     else:
+        if field == "conditions" and p.get("conditions") and norm(val) not in norm(p["conditions"]):
+            # Conditions add to each other; a contradiction is resolved by an explicit correction, not by overwrite.
+            val = f"{p['conditions'].rstrip('. ')}. {val}"
         p[key] = val.lower() if field == "partner_email" else val
         if field == "conditions":
             p["conditions_source"] = fact_where(f)
+
+
+class YearIn(BaseModel):
+    rev: int
+    year: int
+
+
+@router.post("/readings/year")
+async def answer_year(body: YearIn, user=Depends(current_user)):
+    """One answer for every saved date that was stated without a year; those readings are then used."""
+    p = await get_project(user)
+    if not 2000 <= body.year <= 2100:
+        raise HTTPException(422, ["Enter a four-digit year."])
+    if p["rev"] != body.rev:
+        raise HTTPException(409, STALE_MSG)
+    facts = await db.facts.find({"project_id": p["project_id"], "issues": YEAR_ISSUE}, {"_id": 0}).to_list(2000)
+    ids = []
+    for f in facts:
+        v = f"{body.year}-{f['value']}"
+        parsed, errs = parse_value(FIELDS[f["field"]][1], v, f["label"])
+        issues = [i for i in f["issues"] if i != YEAR_ISSUE] + errs
+        await db.facts.update_one({"fact_id": f["fact_id"]}, {"$set": {"value": v, "parsed": parsed, "issues": issues,
+                                                                        "status": "invalid" if issues else "proposed"}})
+        if not issues:
+            ids.append(f["fact_id"])
+    it = {**p["intake"], "year_basis": body.year}
+    await claim_rev(p, body.rev, {"intake": it})
+    if ids:
+        return await apply_readings(ApplyIn(rev=p["rev"] + 1, fact_ids=ids), user)
+    from project_routes import sheet
+    return {"sheet": await sheet(p["project_id"])}
 
 
 @router.post("/readings/apply")
@@ -739,6 +792,7 @@ async def apply_readings(body: ApplyIn, user=Depends(current_user)):
         if FIELDS[f["field"]][0] in ("own", "partner") and f["field"] in WEEKLY and not it.get("weeks"):
             raise HTTPException(422, ["Set the number of weeks before using weekly capacity readings."])
         apply_fact(it, f)
+    L.derive_from_access(it)
     await claim_rev(p, body.rev, {"intake": it, "name": it.get("job_name") or p["name"], "exclusions": exclusions})
     await db.facts.update_many({"fact_id": {"$in": [f["fact_id"] for f in chosen]}}, {"$set": {"status": "applied", "applied_at": now_iso()}})
     await log_event(p["project_id"], org(user), "apply", f"{len(chosen)} reading(s) used in the job details.",

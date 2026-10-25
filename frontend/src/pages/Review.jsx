@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { BackToOrganizer } from "@/components/ReviewAs";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -163,7 +164,8 @@ function VerifyEmail({ onDone }) {
 
 export default function Review() {
   const { token } = useParams();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const load = useCallback(async () => {
@@ -178,7 +180,13 @@ export default function Review() {
       <AppHeader />
       <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
         {error.startsWith("VERIFY_EMAIL") && <VerifyEmail onDone={load} />}
-        {error && !error.startsWith("VERIFY_EMAIL") && <div data-testid="review-error" className="rounded-md border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error}</div>}
+        {error && !error.startsWith("VERIFY_EMAIL") && (
+          <div data-testid="review-error" className="rounded-md border border-red-200 bg-red-50 p-5 text-sm text-red-800">
+            {error}
+            {user && <div className="mt-3"><Button size="sm" variant="outline" className="bg-white" onClick={async () => { await logout(); navigate(`/login?next=${encodeURIComponent(`/review/${token}`)}`); }} data-testid="review-switch-account">Sign in as the invited firm</Button></div>}
+          </div>
+        )}
+        <BackToOrganizer />
         {!data && !error && <Loading label="Loading your review" />}
         {data && (
           <>

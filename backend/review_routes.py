@@ -71,8 +71,9 @@ async def review_payload(token, link, p):
         out.update({"version": {"version_id": v["version_id"], "number": v["number"], "created_at": v["created_at"]},
                     "terms": st["terms"], "terms_hash": st["terms_hash"], "status": st["status"],
                     "expired": st["expired"]})
-        out["shared_conditions"] = [{"text": c["text"], "source": c.get("source"), "resolved": bool(c.get("resolved"))}
-                                    for c in it.get("job_conditions") or []]
+        mine = {x["site_id"] for x in st["terms"]["sites"]}
+        out["shared_conditions"] = [{"text": c["text"], "source": c.get("source"), "resolved": bool(c.get("resolved")), "sites": c.get("sites") or []}
+                                    for c in it.get("job_conditions") or [] if not c.get("sites") or mine & set(c["sites"])]
     out["responses"] = await db.responses.find({"project_id": p["project_id"], "partner_id": pid},
                                                {"_id": 0, "user_id": 0, "idempotency_key": 0}
                                                ).sort("created_at", -1).to_list(100)

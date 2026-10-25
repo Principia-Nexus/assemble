@@ -257,6 +257,8 @@ async def chat_intake(p, user, result, msg):
     cur = {r["reading"]["fact_id"] for r in X.readings_from(facts) if r["reading"]}
     ids = [f["fact_id"] for f in facts if f["source_id"] == new["source_id"] and f["status"] in ("proposed", "corrected") and f["fact_id"] in cur]
     if not ids:
+        if any("Year not stated." in (f.get("issues") or []) for f in facts if f["source_id"] == new["source_id"]):
+            return await sheet(p["project_id"]), [], ["Year?"]
         return await sheet(p["project_id"]), [], ["I saved your message as a source, but it held no new job facts."]
     fresh = await db.projects.find_one({"project_id": p["project_id"]}, {"_id": 0})
     try:

@@ -40,13 +40,13 @@ export default function ScheduleGrid({ version, checker, testPrefix }) {
           {checker.weekly.map((w) => <span key={w.week} className={w.gap > 0 ? "font-semibold text-red-700" : "text-slate-700"}>Wk {w.week}: {w.load}/{w.capacity}{w.capacity_partial ? "+?" : ""}</span>)}
         </li>
       </ul>
-      <div className="hidden sm:block">
-        <table className="w-full table-fixed text-sm">
+      <div className="hidden overflow-x-auto sm:block" data-testid={`${testPrefix}-schedule-scroll`}>
+        <table className="w-full table-fixed text-sm" style={{ minWidth: 220 + weeks * 110 }}>
           <thead>
             <tr className="font-mono text-[10px] text-slate-500">
-              <th className="w-[34%] px-4 py-2 text-left font-semibold">Site</th>
+              <th className="sticky left-0 z-10 w-[220px] bg-white px-4 py-2 text-left font-semibold">Site</th>
               {Array.from({ length: weeks }).map((_, i) => (
-                <th key={i} className="px-2 py-2 text-left font-semibold">Week {i + 1}<span className="block normal-case tracking-normal text-slate-400">{weekStart(i + 1) ? fmtDate(weekStart(i + 1)) : "date unknown"}</span></th>
+                <th key={i} className="w-[110px] px-2 py-2 text-left font-semibold">Week {i + 1}<span className="block normal-case tracking-normal text-slate-400">{weekStart(i + 1) ? fmtDate(weekStart(i + 1)) : "date unknown"}</span></th>
               ))}
             </tr>
           </thead>
@@ -55,7 +55,7 @@ export default function ScheduleGrid({ version, checker, testPrefix }) {
               const a = version.assignments[s.site_id] || {};
               return (
                 <tr key={s.site_id} className="border-t border-slate-100" style={{ "--i": idx }}>
-                  <td className="px-4 py-1.5"><span className="text-xs font-semibold text-slate-900">{s.name || s.site_id}</span>
+                  <td className="sticky left-0 z-10 bg-white px-4 py-1.5"><span className="text-xs font-semibold text-slate-900">{s.name || s.site_id}</span>
                     {s.name && <span className="ml-1.5 font-mono text-[10px] text-slate-400">{s.site_id}</span>}
                     <span className="block text-[11px] text-slate-500">due {s.deadline_week == null ? "unknown" : weekStart(s.deadline_week) ? `week of ${fmtDate(weekStart(s.deadline_week))}` : `wk ${s.deadline_week}`}</span></td>
                   {Array.from({ length: weeks }).map((_, i) => {

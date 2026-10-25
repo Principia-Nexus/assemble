@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Mail } from "lucide-react";
+import { Check, Copy, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,13 +30,30 @@ function Draft({ q, onSaved }) {
     } catch (e) { setErrors(errList(e)); }
   };
   const [ack, setAck] = useState(!!q.partial_ack);
-  const decisions = () => Object.fromEntries((preview?.readiness?.conditions || []).filter((c) => c.decision).map((c) => [c.text, c.decision]));
-  const decide = async (patch) => {
-    try {
-      const { data } = await api.put(`/project/quotes/${q.quote_id}`, { fields: patch });
-      setPreview((await api.get(`/project/quotes/${q.quote_id}/preview`)).data);
-      onSaved(data.quote, false);
-    } catch (e) { setErrors(errList(e)); }
+  // Each decision is kept locally and saved in order; only the newest reply may refresh the preview.
+  const [chosen, setChosen] = useState(q.condition_decisions || {});
+  const [pending, setPending] = useState({});
+  const queue = useRef(Promise.resolve()), seq = useRef(0), latest = useRef(q.condition_decisions || {});
+  const decide = (patch) => {
+    const n = ++seq.current;
+    const run = async () => {
+      try {
+        const { data } = await api.put(`/project/quotes/${q.quote_id}`, { fields: patch });
+        const pv = (await api.get(`/project/quotes/${q.quote_id}/preview`)).data;
+        if (n === seq.current) { setPreview(pv); onSaved(data.quote, false); }
+        return true;
+      } catch (e) { setErrors(errList(e)); return false; }
+    };
+    const p = queue.current.then(run, run);
+    queue.current = p.catch(() => {});
+    return p;
+  };
+  const choose = async (text, k) => {
+    latest.current = { ...latest.current, [text]: k };
+    setChosen(latest.current);
+    setPending((x) => ({ ...x, [text]: "saving" }));
+    const ok = await decide({ condition_decisions: latest.current });
+    setPending((x) => ({ ...x, [text]: ok ? null : "failed" }));
   };
   const issue = async () => {
     try {
@@ -87,10 +104,15 @@ function Draft({ q, onSaved }) {
               {preview.readiness.conditions.map((c, i) => (
                 <li key={c.text} className="flex flex-wrap items-center gap-2 text-xs text-slate-700" data-testid={`quote-condition-${i}`}>
                   <span className="min-w-0 flex-1">{c.text}</span>
-                  {[["in_offer", "Put in offer"], ["resolved", "Resolved"]].map(([k, l]) => (
-                    <button key={k} type="button" onClick={() => decide({ condition_decisions: { ...decisions(), [c.text]: k } })} data-testid={`quote-condition-${i}-${k}`}
-                      className={`rounded-full border px-2 py-0.5 transition-colors ${c.decision === k ? "border-[#1A2838] bg-[#1A2838] text-white" : "border-slate-200 hover:border-slate-400"}`}>{l}</button>
-                  ))}
+                  {[["in_offer", "Put in offer"], ["resolved", "Resolved"], ["excluded", "Exclude"]].map(([k, l]) => {
+                    const on = (chosen[c.text] ?? c.decision) === k;
+                    return (
+                      <button key={k} type="button" aria-pressed={on} onClick={() => choose(c.text, k)} data-testid={`quote-condition-${i}-${k}`}
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 transition-colors ${on ? "border-[#1A2838] bg-[#1A2838] text-white" : "border-slate-200 hover:border-slate-400"}`}>{on && <Check className="h-3 w-3" />}{l}</button>
+                    );
+                  })}
+                  {pending[c.text] === "saving" && <span className="text-[11px] text-slate-500" data-testid={`quote-condition-${i}-saving`}>Saving</span>}
+                  {pending[c.text] === "failed" && <button type="button" className="text-[11px] font-medium text-[#A93A3A] underline" onClick={() => choose(c.text, chosen[c.text])} data-testid={`quote-condition-${i}-retry`}>Retry</button>}
                 </li>
               ))}
             </ul>

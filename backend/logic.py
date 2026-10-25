@@ -98,6 +98,10 @@ def validate_intake(raw):
         "budget_ceiling_cents": money(raw.get("budget_ceiling"), "Budget ceiling", e),
         "own_capacity": caps(raw.get("own_capacity"), weeks, "Your crew capacity", e),
         "own_cost_per_site_cents": money(raw.get("own_cost_per_site"), "Your cost per site", e),
+        "coordination_cents": money(raw.get("coordination"), "Coordination", e),
+        "contingency_cents": money(raw.get("contingency"), "Contingency", e),
+        "customer_payment_terms": text(raw.get("customer_payment_terms"), "Customer payment terms", e, 500),
+        "year_basis": whole(raw.get("year_basis"), "Year", e, 2000, 2100),
         "sites": [],
         "partners": [],
     }
@@ -119,6 +123,8 @@ def validate_intake(raw):
             "name": text(s.get("name"), f"{label} name", e, 120),
             "deadline_week": whole(s.get("deadline_week"), f"{label} deadline week", e, 1, weeks or 12),
             "scope": text(s.get("scope"), f"{label} scope", e, 500),
+            "access_start": iso_date(s.get("access_start"), f"{label} access opens", e),
+            "access_end": iso_date(s.get("access_end"), f"{label} access closes", e),
         })
     raw_partners = raw.get("partners") or []
     if len(raw_partners) > 12:
@@ -170,12 +176,13 @@ def validate_intake(raw):
             "id": cid if isinstance(cid, str) and PID_RE.match(cid) else "jc_" + uuid.uuid4().hex[:8],
             "text": t, "source": text(src, f"Job condition {i + 1} source", e, 300),
             "resolved": c.get("resolved") is True,
+            "sites": [str(x).upper()[:20] for x in c.get("sites") or [] if x][:60],
         })
     return it, e
 
 
 def open_conditions(it, v=None):
-    out = [{"scope": "Job", "text": c["text"], "source": c.get("source")}
+    out = [{"scope": ", ".join(c["sites"]) if c.get("sites") else "Job", "text": c["text"], "source": c.get("source")}
            for c in it.get("job_conditions") or [] if not c.get("resolved")]
     if v:
         for o in sorted(partner_owners(v), key=lambda x: owner_name(v, x)):
@@ -188,6 +195,32 @@ def open_conditions(it, v=None):
 # ---------- helpers ----------
 def pmap(v):
     return {p["partner_id"]: p for p in v.get("partners") or []}
+
+
+def week_no(start, d):
+    if not start or not d:
+        return None
+    return (date.fromisoformat(d) - date.fromisoformat(start)).days // 7 + 1
+
+
+def access_weeks(s, start):
+    """(earliest allowed week, last allowed week) from a site's dated access window."""
+    return week_no(start, s.get("access_start")), week_no(start, s.get("access_end"))
+
+
+def derive_from_access(it):
+    """Dated access windows fill the start date, week count and each site's deadline when those are not set."""
+    starts = [s["access_start"] for s in it.get("sites") or [] if s.get("access_start")]
+    ends = [s["access_end"] for s in it.get("sites") or [] if s.get("access_end")]
+    if starts and not it.get("start_date"):
+        d = date.fromisoformat(min(starts))
+        it["start_date"] = (d - timedelta(days=d.weekday())).isoformat()
+    if ends and it.get("start_date") and not it.get("weeks"):
+        it["weeks"] = min(12, max(1, week_no(it["start_date"], max(ends))))
+    for s in it.get("sites") or []:
+        if s.get("access_end") and it.get("start_date") and s.get("deadline_week") is None:
+            s["deadline_week"] = week_no(it["start_date"], s["access_end"])
+    return it
 
 
 def week_range(start, w):
@@ -346,7 +379,8 @@ def generate(it, partner_ids, include_own, blocked=frozenset(), keep_open=frozen
             assignments[s["site_id"]] = {"owner": None, "week": None}
             notes.append(f"{s['site_id']} left open as asked.")
             continue
-        for w in range(dl, 0, -1):
+        first = max(1, access_weeks(s, it.get("start_date"))[0] or 1)
+        for w in range(dl, first - 1, -1):
             for o in owners:
                 if (s["site_id"], o) in blocked:
                     continue
@@ -376,9 +410,12 @@ def _bump(r, st, msg):
     r["details"].append(msg)
 
 
+COST_LINES = (("coordination_cents", "coordination"), ("contingency_cents", "contingency"))
+
+
 def plan_total(v):
     counts = site_owner_counts(v)
-    total, unknown = 0, []
+    total, unknown = sum(v.get(k) or 0 for k, _ in COST_LINES), []
     for o, n in counts.items():
         price = owner_price(v, o, n)
         if price is None:
@@ -422,15 +459,33 @@ def check(v):
         cap["details"].append("Every crew stays within its weekly capacity.")
     rules.append(cap)
 
-    cw = _rule("crew_week", "One indivisible crew-week per site")
+    narrowed = set(v.get("narrowed") or [])
+    cw = _rule("crew_week", "Every site scheduled in exactly one week")
     for s in v["sites"]:
         a = A.get(s["site_id"]) or {}
         w = a.get("week")
-        if a.get("owner") and (not isinstance(w, int) or not 1 <= w <= weeks):
+        if s["site_id"] in narrowed:
+            continue
+        if not a.get("owner"):
+            _bump(cw, "fail", f"{s['site_id']} is unassigned.")
+        elif not isinstance(w, int) or not 1 <= w <= weeks:
             _bump(cw, "fail", f"{s['site_id']} is not scheduled in exactly one week of the job.")
     if not cw["details"]:
         cw["details"].append("Each site is one crew-week in exactly one week.")
     rules.append(cw)
+
+    ac = _rule("access", "Site access")
+    for s in v["sites"]:
+        w = (A.get(s["site_id"]) or {}).get("week")
+        lo, hi = access_weeks(s, v.get("start_date"))
+        if isinstance(w, int) and lo and w < lo:
+            _bump(ac, "fail", f"Access conflict: {s['site_id']} is in week {w}; access opens {s['access_start']} (week {lo}).")
+        if isinstance(w, int) and hi and w > hi:
+            _bump(ac, "fail", f"Access conflict: {s['site_id']} is in week {w}; access closes {s['access_end']} (week {hi}).")
+    if ac["details"] or any(s.get("access_start") or s.get("access_end") for s in v["sites"]):
+        if not ac["details"]:
+            ac["details"].append("Every site is scheduled inside its access window.")
+        rules.append(ac)
 
     dl = _rule("deadlines", "Each site's deadline")
     for s in v["sites"]:
@@ -470,6 +525,10 @@ def check(v):
     total, unknown_prices = plan_total(v)
     ceiling = v.get("budget_ceiling_cents")
     headroom = None
+    lines = [(lbl, v.get(k)) for k, lbl in COST_LINES if v.get(k)]
+    if lines and total is not None:
+        firms = total - sum(c for _, c in lines)
+        ce["details"].append(f"Firms {fmt(firms)} + " + " + ".join(f"{lbl} {fmt(c)}" for lbl, c in lines) + f" = {fmt(total)}.")
     if unknown_prices:
         _bump(ce, "unknown", f"Price unknown for {', '.join(unknown_prices)}, so the total cannot be checked.")
     elif ceiling is None:

@@ -1,0 +1,357 @@
+{
+ "project": {
+  "visitor": "fresh-8d08b2511c",
+  "project_id": "prj_5f9777753751"
+ },
+ "brief": [
+  19,
+  [
+   [
+    "Access closes",
+    "11-06",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-02",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access closes",
+    "11-06",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-02",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access closes",
+    "11-06",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-02",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access closes",
+    "11-06",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-02",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access closes",
+    "11-13",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-09",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access closes",
+    "11-13",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-09",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access closes",
+    "11-13",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-09",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access closes",
+    "11-13",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-09",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access closes",
+    "11-20",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-16",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access closes",
+    "11-20",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-16",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access closes",
+    "11-20",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-16",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access closes",
+    "11-20",
+    [
+     "Year not stated."
+    ]
+   ],
+   [
+    "Access opens",
+    "11-16",
+    [
+     "Year not stated."
+    ]
+   ]
+  ]
+ ],
+ "questions": [
+  {
+   "key": "year",
+   "field": "Year",
+   "count": 24
+  }
+ ],
+ "job": {
+  "start_date": "2026-11-02",
+  "weeks": 3,
+  "budget_ceiling_cents": 18000000,
+  "customer_payment_terms": "30% on award, balance net 30 after final sign-off"
+ },
+ "sites": [
+  [
+   "S01",
+   "2026-11-02",
+   "2026-11-06",
+   1,
+   null
+  ],
+  [
+   "S02",
+   "2026-11-02",
+   "2026-11-06",
+   1,
+   null
+  ],
+  [
+   "S03",
+   "2026-11-02",
+   "2026-11-06",
+   1,
+   null
+  ],
+  [
+   "S04",
+   "2026-11-02",
+   "2026-11-06",
+   1,
+   null
+  ],
+  [
+   "S05",
+   "2026-11-09",
+   "2026-11-13",
+   2,
+   null
+  ],
+  [
+   "S06",
+   "2026-11-09",
+   "2026-11-13",
+   2,
+   null
+  ],
+  [
+   "S07",
+   "2026-11-09",
+   "2026-11-13",
+   2,
+   null
+  ],
+  [
+   "S08",
+   "2026-11-09",
+   "2026-11-13",
+   2,
+   null
+  ],
+  [
+   "S09",
+   "2026-11-16",
+   "2026-11-20",
+   3,
+   null
+  ],
+  [
+   "S10",
+   "2026-11-16",
+   "2026-11-20",
+   3,
+   null
+  ],
+  [
+   "S11",
+   "2026-11-16",
+   "2026-11-20",
+   3,
+   null
+  ],
+  [
+   "S12",
+   "2026-11-16",
+   "2026-11-20",
+   3,
+   null
+  ]
+ ],
+ "costs": [
+  2,
+  []
+ ],
+ "alder": [
+  11,
+  []
+ ],
+ "birch": [
+  11,
+  []
+ ],
+ "cedar": [
+  10,
+  []
+ ],
+ "dogwood": [
+  10,
+  []
+ ],
+ "redwood": [
+  10,
+  []
+ ],
+ "redwood_email": [
+  3,
+  []
+ ],
+ "costs_saved": {
+  "coordination_cents": 1200000,
+  "contingency_cents": 1200000
+ },
+ "capacity": {
+  "Alder Line Electric": [
+   [
+    2,
+    2,
+    2
+   ],
+   1200000,
+   6
+  ],
+  "Birch Street Power": [
+   [
+    1,
+    1,
+    1
+   ],
+   1200000,
+   3
+  ],
+  "Cedar Grid Services": [
+   [
+    1,
+    1,
+    1
+   ],
+   1200000,
+   3
+  ],
+  "Dogwood Field Crews": [
+   [
+    2,
+    0,
+    0
+   ],
+   1400000,
+   2
+  ],
+  "Redwood Circuit Co.": [
+   [
+    0,
+    0,
+    6
+   ],
+   1300000,
+   6
+  ]
+ }
+}

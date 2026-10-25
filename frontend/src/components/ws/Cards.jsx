@@ -4,7 +4,8 @@ import { RESP_TONE, firmName, firmTone } from "./derive";
 
 const RESP = { confirmed: "Confirmed", confirmed_conditional: "Confirmed with conditions", declined: "Declined", change_requested: "Change requested",
   awaiting: "Awaiting response", link_not_shared: "Link not shared", no_link: "No review link", needs_rereview: "Needs fresh review", expired: "Expired" };
-export const respText = (s) => RESP[s] || null;
+const FOR = new Set(["confirmed", "confirmed_conditional", "declined", "change_requested"]);
+export const respText = (s, n) => (s === "needs_review_v" ? `Needs review v${n}` : RESP[s] ? `${RESP[s]}${n && FOR.has(s) ? ` for v${n}` : ""}` : null);
 
 export const QUAL = { fits: "Fits", review_needed: "Review needed", evidence_needed: "Evidence needed", does_not_fit: "Does not fit" };
 const ring = (sel, hot) => `${sel ? "ring-2 ring-[#215273]" : ""} ${hot ? "outline outline-2 outline-offset-2 outline-[#215273]" : ""}`;
@@ -38,7 +39,7 @@ export function ItemCard({ it, sheet, selected, hot, onSelect, cardRef }) {
 
 export function PackageCard({ pkg, sheet, selected, onSelect, cardRef }) {
   const tone = firmTone(sheet, pkg.owner);
-  const weeks = [...new Set(pkg.sites.map((s) => s.week).filter(Boolean))].sort();
+  const weeks = [...new Set(pkg.sites.map((s) => s.week).filter(Boolean))].sort((a, b) => a - b);
   return (
     <button ref={cardRef} type="button" onClick={() => onSelect(pkg.id)} data-testid={`card-${pkg.id}`}
       className={`ws-card w-[232px] rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] p-3 text-left shadow-[0_1px_2px_rgba(26,40,56,.06)] transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-[0_4px_14px_-6px_rgba(26,40,56,.25)] ${ring(selected)}`}>
@@ -52,7 +53,7 @@ export function PackageCard({ pkg, sheet, selected, onSelect, cardRef }) {
       {pkg.sites.length > 0 && <div className="mt-1.5 flex flex-wrap gap-1">{pkg.sites.map((s) => <span key={s.site_id} title={s.name} className={`rounded px-1 font-mono text-[10px] ${tone.chip}`}>{s.site_id}</span>)}</div>}
       {pkg.qual && pkg.qual !== "fits" && <p className={`mt-1 text-[11px] font-medium ${pkg.qual === "does_not_fit" ? "text-[#A93A3A]" : "text-[#B4690E]"}`} data-testid={`card-qual-${pkg.id}`}>{QUAL[pkg.qual]}</p>}
       {pkg.qual === "fits" && <p className="mt-1 text-[11px] font-medium text-[#1E7B5C]" data-testid={`card-qual-${pkg.id}`}>Fits</p>}
-      {respText(pkg.response) && <p className={`mt-1 text-[11px] font-medium ${RESP_TONE[pkg.response] || "text-[#B4690E]"}`}>{respText(pkg.response)}</p>}
+      {respText(pkg.response, pkg.for_version) && <p className={`mt-1 text-[11px] font-medium ${RESP_TONE[pkg.response] || "text-[#B4690E]"}`} data-testid={`package-response-${pkg.owner}`}>{respText(pkg.response, pkg.for_version)}</p>}
     </button>
   );
 }

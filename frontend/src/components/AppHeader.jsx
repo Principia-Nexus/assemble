@@ -27,17 +27,17 @@ export default function AppHeader({ onHistory }) {
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
           {onHistory && (
-            <Button variant="ghost" size="sm" onClick={onHistory} data-testid="history-drawer-trigger">
+            <Button variant="ghost" size="sm" onClick={onHistory} aria-label="History" data-testid="history-drawer-trigger">
               <History className="h-4 w-4" /> <span className="hidden sm:inline">History</span>
             </Button>
           )}
           {user?.firm_id && (
             <Button variant="ghost" size="sm" asChild data-testid="header-projects-link">
-              <Link to="/projects" onClick={guard}><FolderOpen className="h-4 w-4" /> <span className="hidden sm:inline">Projects</span></Link>
+              <Link to="/projects" onClick={guard} aria-label="Projects"><FolderOpen className="h-4 w-4" /> <span className="hidden sm:inline">Projects</span></Link>
             </Button>
           )}
           <Button variant="ghost" size="sm" asChild data-testid="header-my-reviews-link">
-            <Link to="/reviews" onClick={guard}><Inbox className="h-4 w-4" /> <span className="hidden sm:inline">My reviews</span></Link>
+            <Link to="/reviews" onClick={guard} aria-label="My reviews"><Inbox className="h-4 w-4" /> <span className="hidden sm:inline">My reviews</span></Link>
           </Button>
           <Button variant="outline" size="sm" onClick={() => { if (confirmLeave()) { setDirty(false); logout(); } }} data-testid="header-logout-button" aria-label="Sign out"
             className="rounded-none border-2 border-[#1A2838] bg-transparent px-2 text-sm font-semibold text-[#1A2838] hover:bg-[#1A2838] hover:text-[#FFFFFF] min-[400px]:px-3">

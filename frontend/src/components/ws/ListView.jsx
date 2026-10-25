@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { KIND_LABEL, statusText } from "./useItems";
 import { firmName } from "./derive";
@@ -8,6 +8,7 @@ const DONE = { task: "done", milestone: "reached", condition: "resolved" };
 
 function Row({ it, depth, sheet, run, onSelect, selectedId, hot }) {
   const [title, setTitle] = useState(it.title);
+  useEffect(() => setTitle(it.title), [it.title]);
   const save = () => { if (title.trim() && title !== it.title) run([{ op: "update", item_id: it.item_id, fields: { title } }], `Renamed to “${title}”`); else setTitle(it.title); };
   const done = DONE[it.kind];
   return (
@@ -60,8 +61,8 @@ export default function ListView({ sheet, items, pkgs, conds, run, onSelect, sel
             {pkgs.filter(filter).map((p) => (
               <button key={p.id} type="button" onClick={() => onSelect(p.id)} data-testid={`list-row-${p.id}`}
                 className={`grid w-full grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-[#F1F5F9] px-3 py-2 text-left text-[13px] hover:bg-[#F1F5F9] ${selectedId === p.id ? "bg-[#E4EFF6]" : ""}`}>
-                <span className="font-medium text-[#1A2838]">{p.title} <span className="font-normal text-[#64748B]">· {p.sites.length ? p.sites.map((s) => s.site_id).join(", ") : "no sites assigned"}</span></span>
-                <span className="text-xs text-[#B4690E]">{respText(p.response) || ""}</span>
+                <span className="font-medium text-[#1A2838]">{p.title}{p.firm && <span className="font-normal text-[#2F4A66]"> · {p.firm}</span>} <span className="font-normal text-[#64748B]">· {p.sites.length ? p.sites.map((s) => s.site_id).join(", ") : "no sites assigned"}</span></span>
+                <span className="text-xs text-[#B4690E]">{respText(p.response, p.for_version) || ""}</span>
               </button>
             ))}
           </Section>

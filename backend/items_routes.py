@@ -173,6 +173,10 @@ async def apply_ops(p, user, rev, ops, summary, origin="organizer", inverse_of=N
                 prev = {k: cur.get(k) for k in f}
                 if prev == f:
                     continue
+                sd, dd = f.get("start_date", cur.get("start_date")), f.get("due_date", cur.get("due_date"))
+                if sd and dd and sd > dd:
+                    errors.append(f"{label}: the due date is before the start date.")
+                    continue
                 cur.update(f, updated_at=now)
                 writes.append(("upsert", cur))
                 inverse.append({"op": "update", "item_id": iid, "fields": prev})

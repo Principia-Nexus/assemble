@@ -3,7 +3,7 @@ import hashlib
 import json
 import re
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -80,7 +80,7 @@ def clean(raw, errors):
         out["partial_ack"] = bool(raw["partial_ack"])
     if "condition_decisions" in raw:
         d = raw["condition_decisions"] or {}
-        out["condition_decisions"] = {str(k)[:500]: v for k, v in d.items() if v in ("in_offer", "resolved")} if isinstance(d, dict) else {}
+        out["condition_decisions"] = {str(k)[:500]: v for k, v in d.items() if v in ("in_offer", "resolved", "excluded")} if isinstance(d, dict) else {}
     for k in DRAFT_FIELDS:
         if k not in raw:
             continue
@@ -176,6 +176,7 @@ def snapshot_of(q, p, firm_name, ready=None):
         exc += [x["text"] for x in ready["exclusions"] if x["text"] not in exc]
         con = list(snap.get("conditions") or [])
         con += [c["text"] for c in ready["conditions"] if c["decision"] == "in_offer" and c["text"] not in con]
+        exc += [c["text"] for c in ready["conditions"] if c["decision"] == "excluded" and c["text"] not in exc]
         names = sorted(firm_aliases(p["intake"].get("partners") or []), key=len, reverse=True)
         pat = re.compile(r"\b(?:" + "|".join(re.escape(n) for n in names) + r")(?:'s)?(?!\w)", re.I) if names else None
         email = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
@@ -209,15 +210,21 @@ async def readiness(p, q):
                 a, b = site_of.get(e["from_id"]), site_of.get(e["to_id"])
                 if a in qa["coverage"]["open"] and b and b not in qa["coverage"]["open"]:
                     blockers.append(f"{b} depends on open scope {a}, and nobody is responsible for it. Assign {a} or remove the dependency.")
+        blockers += [d for r in cur["checker"]["rules"] if r["key"] == "access" and r["status"] == "fail" for d in r["details"]]
         if not s["project"].get("plan_selected"):
             blockers.append("Select the plan first.")
         decisions = q.get("condition_decisions") or {}
         for c in cur["checker"]["open_conditions"]:
             text = c["text"] if isinstance(c, dict) else str(c)
             conds.append({"text": text, "decision": decisions.get(text)})
+        for x in cur["partners"]:
+            rc = (x.get("response") or {}).get("conditions")
+            same = lambda t: re.sub(r"[^a-z0-9]", "", t.lower())  # noqa: E731
+            if x["status"] == "confirmed_conditional" and rc and not any(same(c["text"]) == same(rc) for c in conds):
+                conds.append({"text": rc, "decision": decisions.get(rc), "from_response": x["name"]})
         undecided = [c["text"] for c in conds if not c["decision"]]
         if undecided:
-            blockers.append(f"Decide each material condition ({len(undecided)} open): put it in the offer or mark it resolved.")
+            blockers.append(f"Decide each material condition ({len(undecided)} open): put it in the offer, resolve it or exclude it.")
     elif p["intake"].get("partners"):
         blockers.append("No plan selected for review.")
     if not sup["ok"]:
@@ -298,7 +305,14 @@ async def new_quote(body: NewIn, user=Depends(current_user)):
     seed = (accepted or base or {}).get("snapshot") or {}
     if not seed:
         it = p["intake"]
-        seed = {"customer_name": it.get("customer_name"), "scope": it.get("scope_summary"), "currency": "USD"}
+        timing = None
+        if it.get("start_date") and it.get("weeks"):
+            a = date.fromisoformat(it["start_date"])
+            b = a + timedelta(days=7 * (it["weeks"] - 1) + 4)
+            timing = f"{a.strftime('%b')} {a.day} – {b.strftime('%b')} {b.day}, {b.year}"
+        seed = {"customer_name": it.get("customer_name"), "scope": it.get("scope_summary"), "currency": "USD",
+                "payment_terms": it.get("customer_payment_terms"), "timing": timing}
+    seed = {**seed, "price_cents": None}
     q = {"quote_id": new_id("quo"), "project_id": p["project_id"], "firm_id": p["firm_id"], "number": f"Q{n}",
          "kind": "amendment" if accepted else "offer", "baseline_id": accepted["quote_id"] if accepted else None,
          "baseline_number": accepted["number"] if accepted else None, "replaces": base["quote_id"] if base and not accepted else None,

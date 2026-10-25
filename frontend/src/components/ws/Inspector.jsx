@@ -1,6 +1,6 @@
 import { api, errText } from "@/lib/api";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { KIND_LABEL, STATUS_OPTIONS, statusText } from "./useItems";
 import { firmName } from "./derive";
 import { respText } from "./Cards";
+import { ReviewAsPartner } from "@/components/ReviewAs";
 
 const REL = { prerequisite: "must finish before", uses_input: "is input to", produces_output: "produces output for", relates_to: "relates to" };
 const sel = "h-9 w-full rounded-md border border-[#E2E8F0] bg-white px-2 text-sm text-[#1A2838] focus:outline-none focus:ring-2 focus:ring-[#215273]";
@@ -16,14 +17,22 @@ const Lbl = ({ children, htmlFor }) => <label htmlFor={htmlFor} className="mb-1 
 function ItemForm({ it, sheet, items, edges, run, onSheet }) {
   const [f, setF] = useState(it);
   const [errors, setErrors] = useState([]);
-  useEffect(() => { setF(it); setErrors([]); }, [it]);
+  const dirty = useRef(new Set()), saved = useRef(it);
+  // A reload keeps whatever is still being typed or failed to save.
+  useEffect(() => { saved.current = it; setF((prev) => ({ ...it, ...Object.fromEntries([...dirty.current].map((k) => [k, prev[k]])) })); }, [it]);
+  useEffect(() => { dirty.current = new Set(); setErrors([]); }, [it.item_id]);
   const save = async (fields, label) => {
-    const changed = Object.fromEntries(Object.entries(fields).filter(([k, v]) => (v ?? null) !== (it[k] ?? null)));
+    const changed = Object.fromEntries(Object.entries(fields).filter(([k, v]) => (v ?? null) !== (saved.current[k] ?? null)));
     if (!Object.keys(changed).length) return;
+    const next = { ...saved.current, ...changed };
+    if (next.start_date && next.due_date && next.due_date < next.start_date) { setErrors(["The due date is before the start date."]); return; }
+    Object.keys(changed).forEach((k) => dirty.current.add(k));
     const r = await run([{ op: "update", item_id: it.item_id, fields: changed }], label || `Edited “${it.title}”`);
+    if (r.ok) Object.keys(changed).forEach((k) => dirty.current.delete(k));
     setErrors(r.ok ? [] : r.errors);
   };
-  const txt = (k) => ({ value: f[k] || "", onChange: (e) => setF({ ...f, [k]: e.target.value }), onBlur: () => save({ [k]: f[k] || null }) });
+  const set = (k, v) => { dirty.current.add(k); setF((prev) => ({ ...prev, [k]: v })); };
+  const txt = (k) => ({ value: f[k] || "", onChange: (e) => set(k, e.target.value), onBlur: (e) => save({ [k]: e.target.value || null }) });
   const sites = sheet.intake.sites || [], firms = sheet.intake.partners || [];
   const groups = items.filter((g) => g.kind === "group" && g.item_id !== it.item_id);
   const mine = edges.filter((e) => e.from_id === it.item_id || e.to_id === it.item_id);
@@ -78,10 +87,10 @@ function ItemForm({ it, sheet, items, edges, run, onSheet }) {
       )}
       {it.kind !== "group" && (
         <div className="grid grid-cols-2 gap-2">
-          <div><Lbl htmlFor="insp-start">Start</Lbl><Input id="insp-start" type="date" className="bg-white" value={f.start_date || ""} onChange={(e) => save({ start_date: e.target.value || null })} data-testid="inspector-start-input" /></div>
-          <div><Lbl htmlFor="insp-due">Due</Lbl><Input id="insp-due" type="date" className="bg-white" value={f.due_date || ""} onChange={(e) => save({ due_date: e.target.value || null })} data-testid="inspector-due-input" /></div>
+          <div><Lbl htmlFor="insp-start">Start</Lbl><Input id="insp-start" type="date" className="bg-white" value={f.start_date || ""} onChange={(e) => { set("start_date", e.target.value); save({ start_date: e.target.value || null }); }} data-testid="inspector-start-input" /></div>
+          <div><Lbl htmlFor="insp-due">Due</Lbl><Input id="insp-due" type="date" className="bg-white" value={f.due_date || ""} onChange={(e) => { set("due_date", e.target.value); save({ due_date: e.target.value || null }); }} data-testid="inspector-due-input" /></div>
           <div className="col-span-2"><Lbl htmlFor="insp-dk">Date is</Lbl>
-            <select id="insp-dk" className={sel} value={f.date_kind || ""} onChange={(e) => save({ date_kind: e.target.value || null })} data-testid="inspector-datekind-select">
+            <select id="insp-dk" className={sel} value={f.date_kind || ""} onChange={(e) => { set("date_kind", e.target.value); save({ date_kind: e.target.value || null }); }} data-testid="inspector-datekind-select">
               <option value="">Not specified</option><option value="target">A target</option><option value="stated">Stated in a source</option><option value="provisional">A provisional estimate</option>
             </select>
           </div>
@@ -122,17 +131,35 @@ function ItemForm({ it, sheet, items, edges, run, onSheet }) {
   );
 }
 
-function PackageDetail({ pkg, openTool }) {
+function YearAnswer({ sheet, onSheet }) {
+  const [y, setY] = useState("");
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    try { const { data } = await api.post("/project/readings/year", { rev: sheet.project.rev, year: Number(y) }); onSheet(data.sheet); }
+    catch (e) { toast.error(errText(e)); }
+    setBusy(false);
+  };
+  return (
+    <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); save(); }}>
+      <Input inputMode="numeric" maxLength={4} placeholder="2026" value={y} onChange={(e) => setY(e.target.value.replace(/\D/g, ""))} className="bg-white" aria-label="Year" data-testid="inspector-year-input" />
+      <Button size="sm" type="submit" className="h-9" disabled={busy || y.length !== 4} data-testid="inspector-year-save">Save</Button>
+    </form>
+  );
+}
+
+function PackageDetail({ pkg, openTool, sheet }) {
   return (
     <div className="space-y-4">
       {pkg.reasons?.length > 0 && <ul className="space-y-1 text-[12px] text-[#334155]" data-testid="inspector-qual-reasons">{pkg.reasons.map((r) => <li key={r}>{r}</li>)}</ul>}
-      {respText(pkg.response) && <p className="rounded-md bg-[#FDF5E6] px-2 py-1.5 text-xs font-medium text-[#B4690E]" data-testid="inspector-package-response">{respText(pkg.response)}</p>}
+      {respText(pkg.response, pkg.for_version) && <p className="rounded-md bg-[#FDF5E6] px-2 py-1.5 text-xs font-medium text-[#B4690E]" data-testid="inspector-package-response">{respText(pkg.response, pkg.for_version)}</p>}
       <table className="w-full text-[12.5px]"><tbody>
-        {pkg.sites.map((s) => <tr key={s.site_id} className="border-b border-[#F1F5F9]"><td className="py-1 font-mono text-[11px]">{s.site_id}</td><td className="py-1">{s.name}</td><td className="py-1 text-right text-[#64748B]">{s.week ? `wk ${s.week}` : ""}{s.deadline_week ? ` · due wk ${s.deadline_week}` : ""}</td></tr>)}
+        {pkg.sites.map((s) => <tr key={s.site_id} className="border-b border-[#F1F5F9]"><td className="py-1 font-mono text-[11px]">{s.site_id}</td><td className="py-1">{s.name}</td><td className="py-1 text-right text-[#64748B]">{s.week ? `wk ${s.week}` : "Unassigned"}{s.deadline_week ? ` · due wk ${s.deadline_week}` : ""}</td></tr>)}
       </tbody></table>
       <div className="flex flex-col gap-2">
         <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("check")} data-testid="inspector-open-plan">Edit allocation</Button>
         <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("qualify")} data-testid="inspector-open-qualify">Requirements and evidence</Button>
+        <ReviewAsPartner sheet={sheet} owner={pkg.owner} />
       </div>
     </div>
   );
@@ -151,13 +178,13 @@ export default function Inspector({ target, sheet, items, edges, run, onSheet, o
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {!it && <h2 className="mb-3 text-[15px] font-semibold leading-snug text-[#1A2838]">{target.title}</h2>}
         {it ? <ItemForm it={it} sheet={sheet} items={items} edges={edges} run={run} onSheet={onSheet} />
-          : target.kind === "package" ? <PackageDetail pkg={target} openTool={openTool} />
+          : target.kind === "package" ? <PackageDetail pkg={target} openTool={openTool} sheet={sheet} />
             : (
               <div className="space-y-3 text-sm text-[#1A2838]">
                 {target.scope && <p className="text-[#64748B]">Applies to {target.scope}</p>}
                 {target.note && <p className="text-[#475569]" data-testid="inspector-note">{target.note}</p>}
                 {target.source && <p className="text-xs text-[#64748B]">Source: {typeof target.source === "string" ? target.source : target.source.label || target.source.doc_id}</p>}
-                {target.kind === "open_scope" ? (
+                {target.kind === "question" ? <YearAnswer sheet={sheet} onSheet={onSheet} /> : target.kind === "open_scope" ? (
                   <div className="flex flex-col gap-2">
                     <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("details")} data-testid="inspector-open-add-firm">Add a known firm</Button>
                     <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("qualify")} data-testid="inspector-open-evidence">Attach evidence</Button>

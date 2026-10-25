@@ -1,153 +1,115 @@
-# Assemble: Make the Construction Workflow Dependable
+# Assemble: Fresh-Project Completion Repairs
 
-Assemble helps an organizing contractor see which parts of a job they can take on, what is missing, and which partner firms complete the team. It then turns that into a customer-ready quote with explicit customer acceptance.
+A fresh project built from the twelve-site documents should go from import to an explicit customer acceptance without retyping facts already supplied; request genuinely missing contacts, evidence and commercial decisions.
+These repairs fix behavior only. The graph, assistant, navigation and look stay the same, and no new explanatory text is added.
 
 ## Who it's for
-- **Organizing contractors** (initially California) who plan multi-trade or multi-site jobs, bring in partner firms and quote the customer.
-- **Partner firms**, who review and respond to their own exact terms.
-- **Customers**, who read, question and explicitly accept an issued quote.
+- Organizing contractors who import job documents and firm quotes, plan the work, get firm sign-off and issue a customer quote.
+- Partner firms reviewing only their own terms.
+- Customers reading and accepting an issued quote.
 
 ## Core features and experience
-
-### 1. Qualification decides assignments
-- Each scope carries its requirements, such as "C-10 electrical" or "active C-39 roofing". A requirement comes from three places:
-  - a project document or chat, cited with its source and page;
-  - a suggestion grounded in the active California rules and the firm's role on the contract;
-  - organizer input.
-- Every proposed firm-to-scope assignment shows one of **Fits**, **Does not fit**, **Evidence needed** or **Review needed**, with the reason and a link to the source or rule in the card's detail panel.
-- **Suggested requirements** show as "Review needed", with the reason and source, until the organizer reviews them.
-  - **Confirm** records that review but does not prove legal eligibility.
-  - **Dismiss** requires a reason, and cannot remove a requirement set by a project document or an applicable rule.
-  - An unresolved requirement stays "Review needed". Silence is never treated as permission.
-- **Licence evidence: the organizer attaches and reviews it** (licence card, screenshot, certificate). The result is labelled "Evidence reviewed by <name>, <date>", never "verified". Expired or wrong-class evidence counts as **Does not fit**.
-- **Automatic CSLB lookup (Phase 2):** a "Check CSLB" action that records the official result with a timestamp. It needs a CSLB data-portal access token, which the organizer registers for. If the lookup fails or is unavailable, the evidence stays unresolved.
-- **The same rules apply everywhere:** chat, direct edits, drafting, plan selection and quote issue.
-  - A wrong-class or expired firm can never become the operative assignment.
-  - Unknown evidence never counts as a pass.
-  - An invalid alternative may exist only as an explicitly invalid private draft.
-- **Separate results:** budget/schedule checks, scope coverage and qualification are reported separately. A passing budget check no longer means "ready".
-- Architect or engineer-of-record authority is kept separate from contractor licensing and is never inferred from a licence.
-
-### 2. Uncovered work stays visible
-- Assignment is optional. "Leave roofing open" in chat, or clearing the firm on the card, keeps the scope with its quantity, requirements, exclusions, dependencies and sources.
-- The drafting step never fills an open slot with the cheapest remaining firm.
-- An open scope shows as a short card, e.g. **Roofing: qualified firm needed**, with three actions:
-  - add a known firm;
-  - attach evidence;
-  - ask the assistant to compare firms already in the project.
-  The app never invents partners, prices or availability; when nothing fits it says no supported match is known.
-- Partial plans can be saved and edited.
-
-### 3. Documents are read completely, or the gap is shown exactly
-- Every upload keeps its revision and a per-page record: queued, read, unreadable or unsupported. For example, "20 of 38 reviewed · 18 remaining".
-- **Large sets** are read in resumable batches until every supported page is done. Completed pages survive cancel, timeout, retry and reload, with no duplicate scopes.
-- **Conclusions** cite the source revision and page/sheet. Text extraction is not presented as having read a drawing's dimensions or symbols.
-- **Unreadable pages:** the assistant names the page and asks in chat for a clearer export or the specific missing fact. The answer is recorded as the user's. Readable pages are never asked for again.
-- **Unsupported files** (e.g. CAD/BIM) get a request for a PDF export, and the project is kept.
-- **Unread pages** that matter block any claim that the review is complete.
-- **Conflicts and revisions:** conflicts between drawings, specifications, addenda and chat are shown, not settled by upload time. A new document revision creates a change to review and never alters an accepted quote.
-
-### 4. Easy correction
-- **Scope details:** clicking a scope opens a compact detail panel with title, included/excluded work, site, quantity and unit, proposed firm, timing and evidence.
-- **Grouping and splitting** keeps the original source, contract context and quantities. A scope is not the same as a site, and one firm may cover several scopes or the whole job.
-- **Chat makes the same saved edits.** Examples:
-  - "Split controls from fixture replacement"
-  - "Keep roofing unassigned"
-  - "We have zero own capacity"
-  - "Use the revised quote for electrical"
-
-  Zero is kept distinct from unknown. Every change gets a short receipt with Undo. A short question is asked only when an ambiguity changes scope, price, authority or commitment.
-- **Dates:** missing dates can get an explicitly tentative sequence, kept separate from availability a firm has stated. No precise dates, capacity or prices are invented from drawings.
-- **Firms not in the plan:** their missing fields (e.g. payment terms) leave the main list of what's missing and stay in their own detail panel.
-
-### 5. Drafts are separate from commitments
-- **Draft plan** creates and checks a private candidate only. It never selects terms, sends anything, issues a quote or records consent. An explicit "private draft, don't select" instruction is always respected.
-- **One header action at a time:** **Draft plan → Review draft → Select plan → Send for review → Prepare quote**.
-  - Selection shows the exact change first.
-  - Sending shows the recipients first, and a missing email can be filled in right there.
-  - Link created, copied, sent and delivered are shown as different states.
-- **Partner responses:**
-  - A job done entirely by the organizer needs no partner invitation.
-  - Any independent partner, even a sole one, gives its own response to its exact current contribution.
-  - There is no written-reason override.
-
-### 6. Scope and conditions carry into the quote
-- **Exclusions** can be recorded for the whole job, a scope or a firm. A partner name is no longer required.
-- **The quote preview** is built from the current scope, applicable exclusions and material conditions, and flags conflicts and omissions for the organizer. Private firm prices, peer terms and internal notes never reach the customer view or the customer assistant.
-- **Before issue**, the app requires:
-  - coverage of every scope the quote promises;
-  - supported qualification;
-  - current firm responses;
-  - a decision on each material condition.
-
-  Permitted open commercial conditions are written into the offer.
-- **Partial quote** (when a scope has no qualified firm): allowed only after an explicit review of included work, exclusions and dependencies.
-  - The quote clearly states what it does not cover.
-  - The partial quote is blocked if left-out work is needed to deliver the included work and nobody is responsible for that dependency.
-  - Work is never silently dropped, and the job is never called fully covered.
-- **Price and dates:** the organizer sets the customer price, which stays separate from internal cost or budget. Offer expiry is separate from project start: a November 1 expiry is valid on October 25.
-- Accepted quotes, their receipts and amendment history stay unchanged by later private drafts.
-
-### 7. Project knowledge you can trust
-- Project requirements, firm evidence and reference material are added through the existing attachment and chat flow. Each item records its source, revision, who added it and who may see it.
-- Uploads propose knowledge; they never switch on platform rules by themselves.
-- California rules are versioned. Each assessment records the rule version and evidence revisions it used. When knowledge changes, affected work is reassessed, while past consent and offers are preserved.
-
-### 8. Recovery and real recipients
-- **Applying readings** marks them Applied and shows the result at once. Repeating it never falsely says nothing was saved.
-- **Conflicts and AI runs:** typed edits survive conflicts, retry never duplicates anything, and a cancelled AI run can never make a late change.
-- **No AI needed:** the whole journey still works through direct controls when the AI is unavailable, including with the keyboard, at 200% zoom, on narrow screens and in print/PDF export.
-- **Access:** invitations and access are checked in separate organizer, partner and customer browser sessions. Each recipient sees only their own data, and expired or stale links are refused.
+1. **Document facts become saved fields**
+   - Dated access windows set the start date, the week count, the earliest allowed work per site and each site's deadline.
+   - If the year or meaning is unclear, the app asks one question using the field name. The answer applies to every affected record.
+   - Later documents are read against the facts already saved, including corrections.
+   - Customer payment terms go to the job and customer fields.
+   - Chat only reports a change when it saved one. Explanations are never shown as saved changes.
+   - A private customer quote is pre-filled with the timing and terms from the selected records. The selling price is always entered by the organizer.
+2. **Full internal cost**
+   - Coordination and contingency are saved as separate cost lines. They count in draft totals, checks, comparisons and the Report.
+   - Contingency is kept apart from margin.
+   - If a material cost can't be represented, the total shows as incomplete and the budget check can't pass.
+   - Chat quotes the saved total. It labels any hypothetical calculation as one.
+   - Internal cost and the customer selling price stay separate.
+3. **Scope, conditions and access kept separate**
+   - Site scope, proposed assignment, access windows and conditions are stored separately, so "Proposed by Alder" can no longer replace a site's scope.
+   - Conditions that add to each other, such as an advance and an owner review, are both kept. Only a real contradiction about the same fact replaces the older one, and the change is recorded with who made it.
+   - Material conditions from partner responses reach the quote's issue gate. Each must be put in the offer, resolved with support, or excluded.
+   - Work scheduled before a site's access opens, or after its deadline, is flagged as an **Access conflict**.
+   - A plan with an access conflict stays a private draft. It can't be selected, sent to firms or quoted until the conflict is resolved by an attributed change.
+   - Once a firm's exact response satisfies an older condition, that condition is no longer shown as open. Its wording stays in the inspector history. Obligations that continue stay active.
+4. **Every condition decision is saved**
+   - Fast clicks are each saved in order. A slow or stale reply can't overwrite a newer decision.
+   - Each choice shows Saving, or a failure with Retry, and keeps what was chosen.
+   - The selected state is marked by more than colour.
+5. **Consent shown for the right version**
+   - Package cards show the plan version together with the version the response applies to, for example "Confirmed for v1" or "Needs review v2".
+   - Exploring v2 keeps v1's valid responses and the accepted Q1. Discarding a private draft never removes responses.
+   - List and Report scope rows show the assigned firm's name.
+6. **Handoffs and AI failure**
+   - On the organizer's own example projects, **Review as partner** signs in as that firm's demo account, then switches back. It never opens a real partner's response.
+   - A real invitation opened while signed in as someone else offers a sign-in that returns to the invitation.
+   - Partner sign-in, permissions and the required firm support stay in force.
+   - The customer assistant works again. It answers only from the issued quote version and never reveals firm prices, changes terms or accepts for the customer.
+   - When the assistant fails, reading, editing and responding still work directly.
+7. **Task edits persist**
+   - Fast edits to a task's title, dates, date type and notes are all saved, in order, and survive a reload.
+   - A conflict (409) keeps the unsaved input in place.
+   - List and inspector show the same saved title.
+8. **Correct checks on incomplete plans**
+   - An unassigned site fails "every site scheduled" and "exactly one week".
+   - Unassigned sites show "Unassigned" instead of "null · wk null".
+   - Incomplete drafts stay editable.
+   - A deliberately narrowed offer is checked against the scope it explicitly includes.
+9. **Source ordering**
+   - An undated document does not outrank a dated drawing by default.
+   - Upload order does not decide which revision is in force.
+   - A revision that only changes price leaves the scope details intact.
+10. **Condition ownership**
+   - Each prerequisite keeps its site, scope or firm through extraction, saving, partner review and quoting.
+   - A firm working only at Central sees Central requirements and the shared dependencies that affect it. It does not see unlabelled North or South conditions.
+11. **Task date ranges**
+   - A due date earlier than the start date is rejected, whether it's edited directly or by the assistant.
+   - The entered values stay in the fields for correction.
+12. **Dated tasks in Calendar**
+   - Dated tasks appear in the correct month and week, next to milestones and firm allocations.
+   - Editing a task's dates moves it in the calendar.
+   - Clicking an entry opens the existing inspector.
+13. **Long schedule tables**
+   - Columns keep a readable minimum width. The schedule scrolls sideways inside the drawer instead of squeezing twelve weeks.
+   - Site names stay visible while scrolling.
+14. **Mobile accessible names**
+   - History, Projects and My reviews keep their accessible names when the visible labels are hidden. No visible text is added.
+15. **Week order**
+   - Weeks sort by number: 3, 4, …, 10, 11, 12, never alphabetically.
 
 ## User flow
-1. Upload documents or describe the job in chat.
-2. See sourced scopes with requirements; correct them by clicking a card or in chat.
-3. Add or compare partner firms. Every assignment shows Fits, Does not fit, Evidence needed or Review needed, and open scopes stay visible.
-4. Draft plan (private) → Review draft → Select plan.
-5. Send for review. Partners sign in, see only their terms and respond.
-6. Prepare quote. Review coverage, exclusions and conditions (with a partial-scope review if needed), then issue.
-7. The customer opens the quote with an emailed code, asks questions, and accepts or requests changes.
-8. After reload, both the organizer and the customer can retrieve the accepted version. Later changes become a new amendment and never alter it.
+1. Create a fresh project and upload the brief. For the test fixture, confirm 2026 once if asked. The start date (November 2), the three weeks and the three groups of four site deadlines are filled in.
+2. Import the five firm quotes and the Redwood email. Weekly capacity comes out as Alder 2/2/2, Birch 1/1/1, Cedar 1/1/1, Dogwood 2/0/0 and Redwood 0/0/6.
+3. Add contacts and reviewed qualification evidence. Tests use clearly fictional records.
+4. Draft the baseline. Firm cost $144,000 + coordination $12,000 + contingency $12,000 = $168,000, with $12,000 headroom. Access windows are enforced.
+5. Select the plan and send it. Each firm reviews only its own terms.
+6. Decide every material condition. Enter the customer selling price.
+7. Issue Q1. The customer opens it with their own code and accepts explicitly.
+8. Reload both sides. The same accepted version and receipt appear.
+9. Draft the Dogwood change as private v2 ($172,000, $8,000 headroom). Q1 and v1 stay unchanged, and the affected firms show "Needs review v2".
+10. Once all preview checks pass, publish the app and repeat the relevant steps on the public URL, with separate sessions for each recipient.
 
 ## UI/UX feel
-- **One graph workspace:** Graph, List, Calendar and Report views of the same saved plan, a floating chat bar at the bottom, and a single detail panel.
-- **One header action** that changes with the job's state. No step rails, stage dashboards or decorative status boxes.
-- **Short, concrete labels:** "Roofing: qualified firm needed", "Awaiting Alder", "Evidence reviewed".
-- **Existing look kept:** Assemble's colours and top bar, per-firm colours, and coloured status text.
+- The current layout stays as it is. Wording is reduced, not added.
+- Labels are short: Draft, Review, Send, Accepted, Needs review, Missing price, Access conflict, Review v2.
+- There is one primary action for the current step. Repeated "Edit plan" and "run checks" controls are removed, clicking a card opens its editor, and checks run automatically after each save.
+- Saved results appear in their own field or card, with no duplicate toast, chat paragraph or status panel.
+- Assistant receipts are one factual line, such as "Moved S09 and S10 to week 1".
+- Source details and history live in the existing inspector.
+- Existing filler sentences are deleted.
 
 ## Implementation phases
-
-**Phase 1: MVP (built now)**
-- Scope requirements with sources, rule-based "Review needed" suggestions, Confirm/Dismiss with a recorded reason.
-- Organizer-attached licence evidence, and the four assignment results enforced on every path (chat, edits, draft, selection, issue).
-- Optional assignment, open-scope cards, partial plans.
-- Separate coverage, qualification and budget/schedule results.
-- Private drafts that never select, and the Select plan step.
-- Exclusions at job, scope and firm level, carried into the quote preview.
-- Issue gate covering coverage, qualification, responses and conditions, plus the partial-quote review with the dependency block.
-- Resumable reading of every page in large PDFs, with an exact "X of Y reviewed" record and chat requests for unreadable pages.
-- The "Applied" readings fix, and the expiry-versus-start fix.
-
-**Phase 2**
-- Automatic CSLB lookup (needs a CSLB data-portal token).
-- Scope splitting and grouping in chat and the detail panel, with quantities kept.
-- Detected conflicts between drawings, specifications and addenda, and a review step for revisions.
-- A versioned knowledge library with reassessment when rules or evidence change.
-- Merging rapid edits and handling edits from two tabs.
-
-**Phase 3**
-- Testing access in separate organizer, partner and customer sessions on the published app.
-- An authorized real-email delivery test.
-- Checks for 200% zoom, keyboard use and print/export.
-- The full acceptance table repeated on the published build.
-- An observed session with a real contractor on a nonconfidential project.
+- **Phase 1 (MVP, built now):** repairs 1–15 and the completion test on a fresh preview project.
+  - Acceptance checks also cover unknown-cost handling (the total shows as incomplete and the budget can't pass) and rejection of wrong or expired licences.
+  - The added tests are: rapid task edits followed by a reload, incomplete-plan checks, source ordering, condition ownership, task date ranges, Calendar tasks, long schedule tables, mobile accessible names and week order.
+  - The app is then published and the relevant checks are repeated on the public URL.
+  - Every check is reported as PASS / FAIL / NOT RUN, with the build identity.
+- **Phase 2:** real email delivery to a real inbox, which must pass before claiming real invitations work. Also page coverage on large documents.
+- **Phase 3:** export and 200% zoom checks, then a clean-copy rehearsal of the full journey for recording. The rehearsal is held until the export and zoom checks pass.
 
 ## Assumptions
-- The first target market is California. Rules cover common C-class specialty and B general contractor roles; anything else is "Review needed".
-- "Evidence reviewed" is an organizer attestation, never presented as an official registry check.
-- Firms "compared" by the assistant are only those already in the project. No external contractor directory is connected.
-- Large PDFs are read in the background. The organizer can keep working, and partial results are clearly marked.
-- Drawings are read as text plus any notes the reader can see. Dimensions and symbols are not claimed to be read.
-- A sole independent partner still responds to its own terms. A job done entirely by the organizer skips invitations.
-- Existing accepted test project `prj_57d9052ae647` and the twelve-site example are kept as they are and not reset.
-- Stripe stays in test mode. No real customer email is sent unless the user explicitly authorizes a test.
+- In normal use, the year comes from the source documents. The app asks only when the documents don't establish it. The 2026 confirmation applies only to the test fixture.
+- Where a document has no date, a dated document (such as a dated drawing) wins by default. The organizer can override this with a recorded choice.
+- Coordination and contingency are internal costs that count against the budget ceiling. Contingency is never counted as margin.
+- A condition is "material" if it affects price, payment, access, timing, scope or required customer action. Other notes stay informational.
+- An access conflict blocks both selecting the plan and sending it to firms. It is resolved by a change from a named person, such as moving the week or recording an approved access exception.
+- The audit project `prj_d2bda21ee301`, accepted quotes and the seeded examples are kept untouched and aren't used as proof.
+- Publishing happens only after the preview checks pass. Synthetic `.test` addresses never receive email.
+- Any leftover filler text found on screens touched by these repairs is removed.

@@ -17,6 +17,8 @@ const toForm = (it) => ({
   job_name: it.job_name || "", customer_name: it.customer_name || "", scope_summary: it.scope_summary || "",
   start_date: it.start_date || "", weeks: n2s(it.weeks), budget_ceiling: c2s(it.budget_ceiling_cents),
   own_capacity: (it.own_capacity || []).map(n2s), own_cost_per_site: c2s(it.own_cost_per_site_cents),
+  coordination: c2s(it.coordination_cents), contingency: c2s(it.contingency_cents),
+  customer_payment_terms: it.customer_payment_terms || "", year_basis: n2s(it.year_basis),
   sites: it.sites.map((s) => ({ ...s, site_id: s.site_id || "", name: s.name || "", scope: s.scope || "", deadline_week: n2s(s.deadline_week) })),
   partners: it.partners.map((p) => ({
     ...p, name: p.name || "", email: p.email || "", price_per_site: c2s(p.price_per_site_cents),
@@ -104,6 +106,9 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
               <F id="weeks" label="Number of weeks" inputMode="numeric" value={form.weeks} onChange={set("weeks")} data-testid="intake-weeks-input" />
               <F id="ceil" label="Budget ceiling (USD)" inputMode="decimal" placeholder="180000" value={form.budget_ceiling} onChange={set("budget_ceiling")} data-testid="intake-budget-input" />
               <F id="owncost" label="Your own cost per site (USD)" inputMode="decimal" value={form.own_cost_per_site} onChange={set("own_cost_per_site")} data-testid="intake-own-cost-input" />
+              <F id="coord" label="Coordination (USD)" inputMode="decimal" value={form.coordination} onChange={set("coordination")} data-testid="intake-coordination-input" />
+              <F id="cont" label="Contingency (USD)" inputMode="decimal" value={form.contingency} onChange={set("contingency")} data-testid="intake-contingency-input" />
+              <F id="cpay" label="Customer payment terms" className="sm:col-span-2" value={form.customer_payment_terms} onChange={set("customer_payment_terms")} data-testid="intake-customer-terms-input" />
             </div>
             <div className="mt-4">
               <Label className="text-xs font-semibold text-slate-700">Your own crew capacity (sites per week)</Label>

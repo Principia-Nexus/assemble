@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errList } from "@/lib/api";
 
 // Work items + relationships for the open project. Every change goes through /items/ops (validated, undoable).
@@ -7,6 +7,10 @@ export function useItems(rev, onChanged) {
   const [edges, setEdges] = useState([]);
   const [save, setSave] = useState("idle");
   const [lastBatch, setLastBatch] = useState(null);
+  // Edits run one after another against the latest saved revision, so a fast second edit never loses to a stale one.
+  const revRef = useRef(rev), queue = useRef(Promise.resolve());
+  useEffect(() => { revRef.current = Math.max(revRef.current, rev); }, [rev]);
+  const serial = useCallback((fn) => { const p = queue.current.then(fn, fn); queue.current = p.catch(() => {}); return p; }, []);
 
   const load = useCallback(async () => {
     const { data } = await api.get("/project/items");
@@ -18,6 +22,7 @@ export function useItems(rev, onChanged) {
   const finish = useCallback(async (data) => {
     setItems(data.items);
     setEdges(data.edges);
+    if (data.rev) revRef.current = data.rev;
     setLastBatch(data.batch);
     setSave("saved");
     await onChanged();
@@ -30,17 +35,17 @@ export function useItems(rev, onChanged) {
     return { ok: false, errors: errList(e) };
   }, [onChanged]);
 
-  const run = useCallback(async (ops, summary) => {
+  const run = useCallback((ops, summary) => serial(async () => {
     setSave("saving");
-    try { return await finish((await api.post("/project/items/ops", { rev, ops, summary })).data); }
+    try { return await finish((await api.post("/project/items/ops", { rev: revRef.current, ops, summary })).data); }
     catch (e) { return fail(e); }
-  }, [rev, finish, fail]);
+  }), [serial, finish, fail]);
 
-  const undo = useCallback(async (batchId) => {
+  const undo = useCallback((batchId) => serial(async () => {
     setSave("saving");
-    try { return await finish((await api.post("/project/items/undo", { rev, batch_id: batchId })).data); }
+    try { return await finish((await api.post("/project/items/undo", { rev: revRef.current, batch_id: batchId })).data); }
     catch (e) { return fail(e); }
-  }, [rev, finish, fail]);
+  }), [serial, finish, fail]);
 
   const adopt = useCallback(async (batch) => { setLastBatch(batch); await load(); }, [load]);
 

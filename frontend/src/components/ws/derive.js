@@ -28,6 +28,12 @@ export function packages(sheet) {
     return out;
   }
   const status = Object.fromEntries((sheet.current?.partners || []).map((x) => [x.partner_id, x.status]));
+  const curN = sheet.current?.version?.number, preN = sheet.preview?.version?.number;
+  const changed = new Set((sheet.preview?.diff?.partners || []).filter((x) => x.state !== "unchanged").map((x) => x.partner_id));
+  const respOf = (owner) => {
+    if (preN && changed.has(owner)) return { response: "needs_review_v", for_version: preN };
+    return sheet.project.plan_selected && status[owner] ? { response: status[owner], for_version: curN } : { response: null };
+  };
   const by = {};
   for (const s of v.sites || []) {
     const a = v.assignments?.[s.site_id] || {};
@@ -44,7 +50,7 @@ export function packages(sheet) {
       id: `plan-${owner}`, derived: true, kind: "package", owner,
       title: owner === "unassigned" ? "Open scopes" : sites.length ? `${workLabel(sheet)}: ${sites.length} site${sites.length === 1 ? "" : "s"}` : firmName(sheet, owner),
       firm: owner === "unassigned" || !sites.length ? null : firmName(sheet, owner),
-      sites, response: sheet.project.plan_selected ? status[owner] || null : null, quote: firms.find((p) => p.partner_id === owner), qual,
+      sites, ...respOf(owner), quote: firms.find((p) => p.partner_id === owner), qual,
       reasons: sites.flatMap((s) => (qa[s.site_id]?.reasons || []).map((r) => `${s.site_id}: ${r}`)),
     };
   });
@@ -60,6 +66,7 @@ export function conditions(sheet) {
     if (!unused.some((n) => t.includes(n))) out.push({ id: `unk-${i}`, derived: true, kind: "unknown", title: t });
   });
   (sheet.gap?.open_conditions || []).forEach((c, i) => { if (!unused.includes(c.scope)) out.push({ id: `cond-${i}`, derived: true, kind: "condition", title: c.text, scope: c.scope, source: c.source }); });
+  (sheet.questions || []).forEach((q) => out.push({ id: `q-${q.key}`, derived: true, kind: "question", question: q.key, title: `${q.field}?` }));
   (sheet.qual?.requirements || []).filter((r) => r.status === "suggested").forEach((r) => out.push({ id: `req-${r.req_id}`, derived: true, kind: "requirement", title: `${r.label}: review needed`, note: r.reason, source: r.source }));
   const v = planVersion(sheet);
   (((sheet.preview || sheet.current)?.qualification?.coverage?.open) || []).forEach((sid) => {

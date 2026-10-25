@@ -1,6 +1,5 @@
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SynthBadge } from "@/components/StatusPill";
 import { firmName, statusSentence } from "./derive";
 import { respText } from "./Cards";
 import { statusText } from "./useItems";
@@ -26,16 +25,21 @@ export default function ReportView({ sheet, items, pkgs, conds }) {
       <article className="report-print mx-auto max-w-[820px] rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] px-6 py-6 sm:px-10">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-semibold text-[#1A2838]">{it.job_name || sheet.project.name}{sheet.project.synthetic && <SynthBadge />}</h2>
+            <h2 className="text-2xl font-semibold text-[#1A2838]">{it.job_name || sheet.project.name}</h2>
             <p className="mt-1 text-sm text-[#64748B]">{[it.customer_name, it.start_date && `starts ${it.start_date}`, it.weeks && `${it.weeks} weeks`].filter(Boolean).join(" · ")}</p>
             <p className="mt-1 text-xs text-[#64748B]" data-testid="report-status">{statusSentence(sheet)}</p>
           </div>
           <Button size="sm" variant="outline" className="no-print bg-white" onClick={() => window.print()} aria-label="Print or save as PDF" data-testid="report-print-button"><Printer className="h-4 w-4" /><span className="hidden sm:inline">Print / PDF</span></Button>
         </div>
+        {ch && (
+          <Part title="Internal cost" testId="report-cost">
+            <p className="text-sm text-[#1A2838]">{(ch.rules.find((r) => r.key === "ceiling")?.details || []).join(" ")}</p>
+          </Part>
+        )}
         <Part title="Scope coverage" testId="report-coverage">
           {pkgs.length ? (
             <ul className="space-y-1 text-sm text-[#1A2838]">
-              {pkgs.map((p) => <li key={p.id}><span className="font-medium">{p.title}</span> — {p.sites.length ? p.sites.map((s) => s.name || s.site_id).join(", ") : "no sites assigned"}</li>)}
+              {pkgs.map((p) => <li key={p.id}><span className="font-medium">{p.title}</span>{p.firm ? ` · ${p.firm}` : ""} — {p.sites.length ? p.sites.map((s) => s.name || s.site_id).join(", ") : "no sites assigned"}</li>)}
             </ul>
           ) : <p className="text-sm text-[#64748B]">No plan drafted yet. {(it.sites || []).length} sites recorded.</p>}
           {ch && <p className="mt-2 text-xs text-[#64748B]">Checker ({pre ? `private draft v${pre.version.number}` : `selected v${cur.version.number}`}): {ch.overall}. Total {usd(ch.total_cents)}{it.budget_ceiling_cents ? ` against a ${usd(it.budget_ceiling_cents)} ceiling` : ""}. Internal planning totals, not a customer price.</p>}

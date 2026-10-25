@@ -40,8 +40,8 @@ export default function DiffView({ diff }) {
               {diff.sites.map((s) => (
                 <tr key={s.site_id} className="border-t border-slate-100" data-testid={`amend-diff-site-${s.site_id}`}>
                   <td className="p-2"><span className="font-semibold">{s.after?.name || s.before?.name || s.site_id}</span> <span className="font-mono text-[10px] text-slate-500">{s.site_id}</span></td>
-                  <td className="p-2 text-red-700 line-through decoration-red-300">{s.before ? `${s.before.owner_name} · ${s.before.week_start ? `week of ${fmtDate(s.before.week_start)}` : `wk ${s.before.week}`} · due ${s.before.deadline_end ? fmtDate(s.before.deadline_end) : s.before.deadline_week ?? "?"}` : "—"}</td>
-                  <td className="p-2 text-emerald-800">{s.after ? `${s.after.owner_name} · ${s.after.week_start ? `week of ${fmtDate(s.after.week_start)}` : `wk ${s.after.week}`} · due ${s.after.deadline_end ? fmtDate(s.after.deadline_end) : s.after.deadline_week ?? "?"}` : "—"}</td>
+                  <td className="p-2 text-red-700 line-through decoration-red-300">{s.before && !s.before.owner ? "Unassigned" : s.before ? `${s.before.owner_name} · ${s.before.week_start ? `week of ${fmtDate(s.before.week_start)}` : `wk ${s.before.week}`} · due ${s.before.deadline_end ? fmtDate(s.before.deadline_end) : s.before.deadline_week ?? "?"}` : "—"}</td>
+                  <td className="p-2 text-emerald-800">{s.after && !s.after.owner ? "Unassigned" : s.after ? `${s.after.owner_name} · ${s.after.week_start ? `week of ${fmtDate(s.after.week_start)}` : `wk ${s.after.week}`} · due ${s.after.deadline_end ? fmtDate(s.after.deadline_end) : s.after.deadline_week ?? "?"}` : "—"}</td>
                 </tr>
               ))}
             </tbody>

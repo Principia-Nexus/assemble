@@ -114,6 +114,12 @@ def bad(errors):
     raise HTTPException(422, errors if isinstance(errors, list) else [errors])
 
 
+def checked(v, p):
+    """Checker input: the version plus job conditions and the scopes the organizer deliberately excluded."""
+    narrowed = set(v.get("narrowed") or []) | {x["target"] for x in p.get("exclusions") or [] if x["level"] == "scope"}
+    return L.check({**v, "job_conditions": p["intake"].get("job_conditions") or [], "narrowed": sorted(narrowed)})
+
+
 async def sheet(project_id):
     p = await db.projects.find_one({"project_id": project_id}, {"_id": 0})
     cur, pre = await get_version(p.get("current_version_id")), await get_version(p.get("preview_version_id"))
@@ -122,7 +128,7 @@ async def sheet(project_id):
            "intake": p["intake"], "gap": L.gap_analysis(p["intake"]), "current": None, "preview": None}
     jc = p["intake"].get("job_conditions") or []
     if cur:
-        out["current"] = {"version": cur, "checker": L.check({**cur, "job_conditions": jc}),
+        out["current"] = {"version": cur, "checker": checked(cur, p),
                           "partners": await partner_statuses(p, cur)}
     if pre:
         d = L.diff(cur, pre) if cur else None
@@ -130,7 +136,9 @@ async def sheet(project_id):
             st = {x["partner_id"]: x["status"] for x in out["current"]["partners"]}
             for x in d["partners"]:
                 x["current_status"] = st.get(x["partner_id"])
-        out["preview"] = {"version": pre, "checker": L.check({**pre, "job_conditions": jc}), "diff": d}
+        out["preview"] = {"version": pre, "checker": checked(pre, p), "diff": d}
+    ny = await db.facts.count_documents({"project_id": project_id, "issues": "Year not stated.", "status": "invalid"})
+    out["questions"] = [{"key": "year", "field": "Year", "count": ny}] if ny else []
     out["rules"] = {"checker": L.CHECKER_VERSION, "packs": sorted(set(RP.FILES.values())), "qualification": Q.RULES_VERSION}
     labels = [s["label"] for s in await db.sources.find({"project_id": project_id}, {"_id": 0, "label": 1}).to_list(50)]
     reqs = Q.requirements(p, labels)
@@ -237,6 +245,8 @@ def version_doc(p, base, number, state, origin, user, sites, partners, assignmen
             "origin": origin, "start_date": base.get("start_date"), "weeks": base.get("weeks"),
             "budget_ceiling_cents": base.get("budget_ceiling_cents"), "own_capacity": base.get("own_capacity") or [],
             "own_cost_per_site_cents": base.get("own_cost_per_site_cents"), "sites": sites, "partners": partners,
+            "coordination_cents": base.get("coordination_cents"), "contingency_cents": base.get("contingency_cents"),
+            "narrowed": list(base.get("narrowed") or []),
             "assignments": assignments, "adjustments": adjustments, "generator_notes": notes or [],
             "change_request_id": cr_id, "created_at": now_iso(), "created_by": user["name"]}
 
@@ -278,6 +288,7 @@ async def generate_candidate(p, user, partner_ids, include_own, rev, reason="", 
     vid_field = "preview_version_id" if as_preview else "current_version_id"
     doc = version_doc(p, it, 0, "preview" if as_preview else "current", "draft", user,
                       copy.deepcopy(it["sites"]), copy.deepcopy(it["partners"]), assignments, {}, notes)
+    doc["narrowed"] = sorted(keep_open)
     await claim_rev(p, rev, {vid_field: doc["version_id"], **({} if as_preview else {"plan_selected": False})})
     doc["number"] = await next_number(p["project_id"])
     if not as_preview and p.get("current_version_id"):
@@ -451,7 +462,7 @@ async def select_preview(body: RevIn, user=Depends(current_user)):
         raise HTTPException(409, "There is no open amendment preview to select.")
     if body.expected_version_id and body.expected_version_id != pre["version_id"]:
         raise HTTPException(409, "The preview changed since you checked it. Review it again before selecting.")
-    if L.check(pre)["overall"] == "fail":
+    if checked(pre, p)["overall"] == "fail":
         raise HTTPException(409, f"Preview v{pre['number']} fails a check. Repair it and recheck before selecting it.")
     from qual_routes import selection_block
     why = await selection_block(p, pre)
@@ -495,7 +506,7 @@ async def create_link(body: LinkIn, user=Depends(current_user)):
         raise HTTPException(409, "Select the plan before sending it for review.")
     if body.partner_id not in L.partner_owners(cur):
         raise HTTPException(400, "This partner has no sites in the current plan.")
-    if L.check(cur)["overall"] == "fail":
+    if checked(cur, p)["overall"] == "fail":
         raise HTTPException(409, f"Plan v{cur['number']} fails a check. Repair the draft before asking partners to confirm it.")
     partner = next((x for x in p["intake"]["partners"] if x["partner_id"] == body.partner_id), None) or \
         next(x for x in cur["partners"] if x["partner_id"] == body.partner_id)

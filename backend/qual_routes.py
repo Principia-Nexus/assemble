@@ -185,7 +185,11 @@ async def selection_block(p, v):
     bad_sites = sorted(k for k, x in a["sites"].items() if x["status"] == "does_not_fit")
     if bad_sites:
         return f"{', '.join(bad_sites)}: the assigned firm does not fit a requirement. Reassign or leave open before selecting."
-    if L.check(v)["overall"] == "fail":
+    from project_routes import checked
+    ch = checked(v, p)
+    if any(r["key"] == "access" and r["status"] == "fail" for r in ch["rules"]):
+        return f"Access conflict in plan v{v['number']}. Move the week or record an access exception before selecting."
+    if ch["overall"] == "fail":
         return f"Plan v{v['number']} fails a check. Repair it before selecting."
     return None
 

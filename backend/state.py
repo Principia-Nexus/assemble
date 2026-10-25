@@ -36,7 +36,7 @@ async def status_for(p, v, pid, link):
     else:
         s = "awaiting"
     return {"partner_id": pid, "name": t["partner_name"], "status": s, "terms": t, "terms_hash": L.terms_hash(t),
-            "response": resp, "link": link_public(link), "expired": expired}
+            "response": resp, "link": link_public(link), "expired": expired, "for_version": v.get("number")}
 
 
 async def active_links(project_id):
