@@ -123,7 +123,7 @@ function Issued({ q, onChange }) {
       <p className="mt-1 text-xs text-slate-500">To {q.recipient} · issued {new Date(q.issued_at).toLocaleString()} · valid until {s.valid_until ? new Date(s.valid_until).toLocaleString() : ""}{q.sends?.length ? ` · emailed ${q.sends.length}×` : " · not sent"}</p>
       {(q.responses || []).map((r) => (
         <p key={r.receipt_id} className="mt-2 rounded bg-slate-50 px-2 py-1 text-xs" data-testid={`quote-response-${r.receipt_id}`}>
-          {r.signer_name}{r.authority ? ` (${r.authority})` : ""} · {r.email} · {r.action.replace("_", " ")} {r.version} · {new Date(r.at).toLocaleString()}{r.note ? ` — “${r.note}”` : ""}
+          {r.signer_name}{r.authority ? ` (${r.authority})` : ""} · {r.email} · {{ accept: "accepted", decline: "declined", request_changes: "requested changes to" }[r.action] || r.action} {r.version} · {new Date(r.at).toLocaleString()}{r.note ? ` — “${r.note}”` : ""}
         </p>
       ))}
       <div className="mt-3 flex flex-wrap gap-2">

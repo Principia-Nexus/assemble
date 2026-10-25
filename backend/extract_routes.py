@@ -230,6 +230,8 @@ def make_fact(src, raw, it):
     label_out = label
     if field == "conditions" and not pname:
         scope, label_out = "job_condition", "Job condition"
+    elif field == "exclusions" and not pname:
+        scope, label_out = "job_exclusion", "Job exclusion"
     elif scope == "partner" and not pname:
         issues.append("No partner named for this fact.")
     if scope == "site" and site_issue:
@@ -256,8 +258,8 @@ def make_fact(src, raw, it):
     if not loc:
         issues.append("The quoted excerpt was not found in the source, so it is unverified.")
     target = "|".join([field, pid or (pname or "").lower(), site or "", str(week or "")])
-    if scope == "job_condition":
-        target = "job_condition|" + norm(value)[:80]
+    if scope in ("job_condition", "job_exclusion"):
+        target = scope + "|" + norm(value)[:80]
     return {
         "fact_id": new_id("fact"), "project_id": src["project_id"], "source_id": src["source_id"],
         "source_label": src["label"], "source_kind": src["kind"], "source_order": src["order"],
@@ -339,10 +341,11 @@ def readings_from(facts):
 
 async def migrate_job_conditions(facts):
     for f in facts:
-        if f["field"] == "conditions" and f.get("scope") == "partner" and not f.get("partner_name"):
+        if f["field"] in ("conditions", "exclusions") and f.get("scope") == "partner" and not f.get("partner_name"):
             issues = [i for i in f.get("issues") or [] if i != "No partner named for this fact."]
-            upd = {"scope": "job_condition", "label": "Job condition", "issues": issues,
-                   "target": "job_condition|" + norm(f.get("value") or "")[:80]}
+            sc = "job_condition" if f["field"] == "conditions" else "job_exclusion"
+            upd = {"scope": sc, "label": "Job condition" if sc == "job_condition" else "Job exclusion", "issues": issues,
+                   "target": sc + "|" + norm(f.get("value") or "")[:80]}
             if f.get("status") == "invalid" and not issues:
                 upd["status"] = "proposed"
             await db.facts.update_one({"fact_id": f["fact_id"]}, {"$set": upd})
@@ -649,16 +652,24 @@ async def reject_fact(fact_id: str, user=Depends(current_user)):
     return await readings_payload(p["project_id"])
 
 
+def fact_where(f):
+    loc = f.get("location") or {}
+    return f"{f['source_label']}, " + (f"page {loc['page']}, " if loc.get("page") else "") + f"line {loc.get('line', '?')}"
+
+
+def apply_exclusion(exclusions, f, user):
+    if not any(x["level"] == "job" and norm(x["text"]) == norm(f["parsed"]) for x in exclusions):
+        exclusions.append({"ex_id": new_id("ex"), "text": str(f["parsed"])[:500], "level": "job", "target": None,
+                           "added_by": user["name"], "added_at": now_iso(), "source": fact_where(f)})
+
+
 def apply_fact(it, f):
     field, val = f["field"], f["parsed"]
     scope = f.get("scope") or FIELDS[field][0]
     if scope == "job_condition":
         conds = it.setdefault("job_conditions", [])
         if not any(norm(c["text"]) == norm(val) for c in conds):
-            loc = f.get("location") or {}
-            where = (f"page {loc['page']}, " if loc.get("page") else "") + f"line {loc.get('line', '?')}"
-            conds.append({"id": "jc_" + new_id("x")[-8:], "text": val, "source": f"{f['source_label']}, {where}",
-                          "resolved": False})
+            conds.append({"id": "jc_" + new_id("x")[-8:], "text": val, "source": fact_where(f), "resolved": False})
         return
     key = INTAKE_KEY.get(field, field)
     weeks = it.get("weeks")
@@ -695,6 +706,8 @@ def apply_fact(it, f):
         p["capacity"][f["week"] - 1] = val
     else:
         p[key] = val.lower() if field == "partner_email" else val
+        if field == "conditions":
+            p["conditions_source"] = fact_where(f)
 
 
 @router.post("/readings/apply")
@@ -716,19 +729,23 @@ async def apply_readings(body: ApplyIn, user=Depends(current_user)):
     if e:
         raise HTTPException(422, e)
     it = json.loads(json.dumps(p["intake"]))
+    exclusions = list(p.get("exclusions") or [])
     for f in sorted(chosen, key=lambda x: x["field"] != "weeks"):
+        if f.get("scope") == "job_exclusion":
+            apply_exclusion(exclusions, f, user)
+            continue
         if FIELDS[f["field"]][0] in ("own", "partner") and f["field"] in WEEKLY and not it.get("weeks"):
             raise HTTPException(422, ["Set the number of weeks before using weekly capacity readings."])
         apply_fact(it, f)
-    await claim_rev(p, body.rev, {"intake": it, "name": it.get("job_name") or p["name"]})
+    await claim_rev(p, body.rev, {"intake": it, "name": it.get("job_name") or p["name"], "exclusions": exclusions})
     await db.facts.update_many({"fact_id": {"$in": [f["fact_id"] for f in chosen]}}, {"$set": {"status": "applied", "applied_at": now_iso()}})
     await log_event(p["project_id"], org(user), "apply", f"{len(chosen)} reading(s) used in the job details.",
                     details=[f"{f['label']} ({f['partner_name'] or f['site_id'] or 'job'}{' wk ' + str(f['week']) if f['week'] else ''}) = {f['value']} · from \"{f['source_label']}\" {('page ' + str(f['location']['page']) + ', ') if (f.get('location') or {}).get('page') else ''}line {(f.get('location') or {}).get('line', '?')}" for f in chosen])
     recalc = f"Applied {len(chosen)} reading{'s' if len(chosen) != 1 else ''} to the job details."
     p2 = await db.projects.find_one({"project_id": p["project_id"]}, {"_id": 0})
     cur = await db.versions.find_one({"version_id": p2.get("current_version_id")}, {"_id": 0}) if p2.get("current_version_id") else None
-    if cur and all(f["scope"] == "job_condition" for f in chosen):
-        recalc += " Job-wide conditions don't change any partner's terms, so the plan was not recalculated."
+    if cur and all(f["scope"] in ("job_condition", "job_exclusion") for f in chosen):
+        recalc += " Job-wide conditions and exclusions don't change any partner's terms, so the plan was not recalculated."
         cur = None
     if cur:
         owners = [x for x in L.partner_owners(cur) if x in {q["partner_id"] for q in it["partners"]}]

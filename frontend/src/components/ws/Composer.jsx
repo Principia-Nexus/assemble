@@ -116,7 +116,7 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
     <div className="flex flex-col items-center px-3 pb-3 pt-2 sm:px-6 sm:pb-4" data-testid="composer-dock">
       <div className="pointer-events-auto w-full max-w-[760px]">
         {open && (
-          <div className="ws-tray-in mb-2 flex max-h-[40vh] flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF]/95 shadow-[0_8px_30px_-12px_rgba(26,40,56,.3)] backdrop-blur" data-testid="conversation-tray">
+          <div className="ws-tray-in mb-2 flex max-h-[28vh] flex-col overflow-hidden rounded-2xl border border-[#E2E8F0]/80 bg-[#FFFFFF]/70 shadow-[0_8px_30px_-12px_rgba(26,40,56,.3)] backdrop-blur-md" data-testid="conversation-tray">
             <div className="flex items-center border-b border-[#F1F5F9] px-3 py-1.5">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Conversation</p>
               <button type="button" className="ml-auto rounded p-1 text-[#64748B] hover:bg-[#F1F5F9]" onClick={() => setOpen(false)} aria-label="Collapse conversation" data-testid="tray-collapse"><ChevronDown className="h-4 w-4" /></button>
@@ -124,7 +124,7 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-2" role="log" aria-live="polite">
               {msgs.map((m) => (
                 <div key={m.msg_id} className={m.role === "user" ? "flex justify-end" : ""} data-testid={`msg-${m.role}`}>
-                  <div className={`max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-[13px] leading-relaxed ${m.role === "user" ? "bg-[#1A2838] text-white" : m.mode === "error" ? "bg-[#FBEFEF] text-[#A93A3A]" : "bg-white text-[#1A2838]"}`}>
+                  <div className={`max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-[13px] leading-relaxed ${m.role === "user" ? "bg-[#1A2838] text-white" : m.mode === "error" ? "bg-[#FBEFEF] text-[#A93A3A]" : "bg-white/90 text-[#1A2838]"}`}>
                     {m.text}
                     {m.errors?.length > 0 && <ul className="mt-1 list-disc pl-4 text-xs text-[#A93A3A]">{m.errors.map((e) => <li key={e}>{e}</li>)}</ul>}
                     {m.batch && m.wrote && <Receipt batch={m.batch} onUndo={undo} undone={undone[m.batch.batch_id]} />}

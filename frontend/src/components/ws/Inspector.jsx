@@ -155,6 +155,7 @@ export default function Inspector({ target, sheet, items, edges, run, onSheet, o
             : (
               <div className="space-y-3 text-sm text-[#1A2838]">
                 {target.scope && <p className="text-[#64748B]">Applies to {target.scope}</p>}
+                {target.note && <p className="text-[#475569]" data-testid="inspector-note">{target.note}</p>}
                 {target.source && <p className="text-xs text-[#64748B]">Source: {typeof target.source === "string" ? target.source : target.source.label || target.source.doc_id}</p>}
                 {target.kind === "open_scope" ? (
                   <div className="flex flex-col gap-2">
@@ -163,7 +164,7 @@ export default function Inspector({ target, sheet, items, edges, run, onSheet, o
                     <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("check")} data-testid="inspector-open-assign">Assign in the plan</Button>
                   </div>
                 ) : (
-                  <Button size="sm" variant="outline" className="w-full bg-white" onClick={() => openTool({ finding: "check", requirement: "qualify" }[target.kind] || "details")} data-testid="inspector-resolve">
+                  <Button size="sm" variant="outline" className="w-full bg-white" onClick={() => openTool({ finding: "check", requirement: "qualify" }[target.kind] || "details")} data-testid={target.kind === "requirement" ? "inspector-open-qualify" : "inspector-resolve"}>
                     {{ finding: "Edit allocation", requirement: "Review requirement" }[target.kind] || "Edit job details"}
                   </Button>
                 )}

@@ -168,7 +168,7 @@ export default function QuoteReview() {
             <List title="Conditions" items={s.conditions} testId="quote-conditions-view" />
             {s.terms && <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Terms</p><p className="mt-1 whitespace-pre-wrap text-sm">{s.terms}</p></div>}
             <p className="font-mono text-[11px] text-slate-400">Version {s.number} · {q.digest}</p>
-            {(q.responses || []).map((r) => <p key={r.receipt_id} className="rounded bg-slate-50 px-3 py-2 text-xs" data-testid="quote-receipt">{r.signer_name} ({r.email}) {r.action.replace("_", " ")} {r.version} at {new Date(r.at).toLocaleString()}. Receipt {r.receipt_id}.</p>)}
+            {(q.responses || []).map((r) => <p key={r.receipt_id} className="rounded bg-slate-50 px-3 py-2 text-xs" data-testid="quote-receipt">{r.signer_name} ({r.email}) {{ accept: "accepted", decline: "declined", request_changes: "requested changes to" }[r.action] || r.action} {r.version} at {new Date(r.at).toLocaleString()}. Receipt {r.receipt_id}.</p>)}
             {["issued", "changes_requested"].includes(q.state) && <Respond token={token} q={q} session={session} onDone={load} preset={preset} onPresetUsed={clearPreset} />}
             <Ask token={token} session={session} canDraft={q.state === "issued"} onUseDraft={setPreset} />
           </article>

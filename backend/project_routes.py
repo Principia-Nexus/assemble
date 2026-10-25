@@ -135,9 +135,15 @@ async def sheet(project_id):
     labels = [s["label"] for s in await db.sources.find({"project_id": project_id}, {"_id": 0, "label": 1}).to_list(50)]
     reqs = Q.requirements(p, labels)
     out["qual"] = {"requirements": reqs, "evidence": p.get("evidence") or [], "exclusions": p.get("exclusions") or []}
+    out["gap"]["open_conditions"] = [c for c in out["gap"]["open_conditions"] if not Q.tracked(c["text"])]
     for k in ("current", "preview"):
         if out[k]:
             out[k]["qualification"] = Q.assess(out[k]["version"], p, reqs)
+            ch = out[k]["checker"]
+            ch["open_conditions"] = [c for c in ch["open_conditions"] if not Q.tracked(c["text"])]
+            for r in ch["rules"]:
+                if "open_count" in r:
+                    r["open_count"] = len(ch["open_conditions"])
     out["project"]["plan_selected"] = bool(cur) and p.get("plan_selected", True)
     acc = await db.quotes.find_one({"project_id": project_id, "state": "accepted"}, {"_id": 0, "number": 1}, sort=[("created_at", -1)])
     out["quotes"] = {"accepted": acc["number"] if acc else None}

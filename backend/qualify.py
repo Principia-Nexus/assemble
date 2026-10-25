@@ -37,16 +37,34 @@ def suggestions(it, source_labels=()):
 CODE_RE = re.compile(r"\b(C-\d{1,2}|B)\b(?=[^.]{0,60}\b(licen[cs]e|licensed|class|contractor|performer)\b)|\b(licen[cs]e|licensed)\b[^.]{0,40}\b(C-\d{1,2})\b", re.I)
 
 
+PAGE_RE = re.compile(r"\bpage (\d+)", re.I)
+
+
+def _src(src, default):
+    if isinstance(src, dict):
+        return {"label": src.get("label") or default, "page": src.get("page")}
+    m = PAGE_RE.search(src or "")
+    return {"label": src or default, "page": int(m.group(1)) if m else None}
+
+
+def tracked(text):
+    """A condition made only of licence statements is tracked as a requirement, not as a separate open condition."""
+    parts = [x for x in re.split(r"(?<=[.;])\s+", (text or "").strip()) if x.strip()]
+    return bool(parts) and all(CODE_RE.search(x) for x in parts)
+
+
 def sourced(it):
-    """Explicit licence requirements stated in saved job conditions (from documents/chat) - never dismissable."""
+    """Explicit licence requirements stated in saved job or firm conditions (from documents/chat) - never dismissable."""
     out = {}
-    for c in it.get("job_conditions") or []:
-        for m in CODE_RE.finditer(c.get("text") or ""):
+    stated = [(c.get("text") or "", c.get("source"), None, "Job condition") for c in it.get("job_conditions") or []]
+    stated += [(p.get("conditions") or "", p.get("conditions_source"), p["partner_id"], f"{p.get('name')} terms") for p in it.get("partners") or []]
+    for text, src, firm, default in stated:
+        for m in CODE_RE.finditer(text):
             code = (m.group(1) or m.group(4)).upper()
-            src = c.get("source") or {}
-            out.setdefault(code, {"req_id": f"doc-{code}", "code": code, "label": next((x["label"] for x in RULES["classes"] if x["code"] == code), code),
-                                  "sites": "all", "origin": "document", "status": "required", "reason": c["text"][:200],
-                                  "source": {"label": src.get("label") if isinstance(src, dict) else str(src) or "Job condition", "page": (src or {}).get("page") if isinstance(src, dict) else None}})
+            rid = f"doc-{code}" + (f"-{firm}" if firm else "")
+            out.setdefault(rid, {"req_id": rid, "code": code, "label": next((x["label"] for x in RULES["classes"] if x["code"] == code), code),
+                                 "sites": "all", "origin": "document", "status": "required", "reason": text[:200],
+                                 "source": _src(src, default), **({"firm": firm} if firm else {})})
     return list(out.values())
 
 
@@ -61,8 +79,8 @@ def requirements(p, source_labels=()):
     return stored + docs + sug
 
 
-def _applies(r, sid):
-    return r.get("applies_to") != "prime" and (r["sites"] == "all" or sid in r["sites"])
+def _applies(r, sid, owner=None):
+    return r.get("applies_to") != "prime" and r.get("firm") in (None, owner) and (r["sites"] == "all" or sid in r["sites"])
 
 
 def _site_result(owner, sid, reqs, evidence, today):
@@ -76,10 +94,10 @@ def _site_result(owner, sid, reqs, evidence, today):
         reasons.append(msg)
         if RANK[st] > RANK[worst]:
             worst = st
-    active = {r["code"].upper() for r in reqs if _applies(r, sid) and r["status"] in ACTIVE}
+    active = {r["code"].upper() for r in reqs if _applies(r, sid, owner) and r["status"] in ACTIVE}
     relevant = any(e["license_class"].upper() in active for e in mine)
     for r in reqs:
-        if not _applies(r, sid) or r["status"] == "dismissed":
+        if not _applies(r, sid, owner) or r["status"] == "dismissed":
             continue
         if r["status"] == "suggested":
             bump("review_needed", f"{r['label']}: suggested requirement not reviewed yet.")

@@ -107,7 +107,11 @@ def snapshot(s, items=(), edges=()):
             snap[key + ("_selected_terms" if key == "current" else "_private_draft")] = {
                 "version": ver["number"], "assignments": ver["assignments"], "adjustments_cents": ver.get("adjustments") or {},
                 "checker": ch["overall"], "total_cents": ch.get("total_cents"),
-                "failing": [f"{r['label']}: {' '.join(r['details'])}" for r in ch["rules"] if r["status"] != "pass"][:8]}
+                "failing": [f"{r['label']}: {' '.join(r['details'])}" for r in ch["rules"] if r["status"] != "pass"][:8],
+                "qualification_by_site": {k: {"result": x["status"], "reasons": x["reasons"][:4]} for k, x in v["qualification"]["sites"].items()}}
+    snap["requirements"] = [{"code": r["code"], "status": r["status"], "origin": r["origin"], "firm": r.get("firm")} for r in (s.get("qual") or {}).get("requirements") or []][:30]
+    snap["licence_evidence"] = [{k: e.get(k) for k in ("partner_id", "license_class", "observed_status", "observed_on", "expires", "reviewed_by")}
+                                for e in (s.get("qual") or {}).get("evidence") or []][:30]
     if s.get("current"):
         snap["owner_responses"] = [{"firm": p["name"], "status": p["status"]} for p in s["current"]["partners"]]
     snap["work_items"] = [{k: i.get(k) for k in ("item_id", "kind", "title", "parent_id", "firm_id", "site_ids", "status",

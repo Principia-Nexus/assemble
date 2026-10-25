@@ -60,7 +60,7 @@ export function conditions(sheet) {
     if (!unused.some((n) => t.includes(n))) out.push({ id: `unk-${i}`, derived: true, kind: "unknown", title: t });
   });
   (sheet.gap?.open_conditions || []).forEach((c, i) => { if (!unused.includes(c.scope)) out.push({ id: `cond-${i}`, derived: true, kind: "condition", title: c.text, scope: c.scope, source: c.source }); });
-  (sheet.qual?.requirements || []).filter((r) => r.status === "suggested").forEach((r) => out.push({ id: `req-${r.req_id}`, derived: true, kind: "requirement", title: `${r.label}: review needed`, scope: r.reason }));
+  (sheet.qual?.requirements || []).filter((r) => r.status === "suggested").forEach((r) => out.push({ id: `req-${r.req_id}`, derived: true, kind: "requirement", title: `${r.label}: review needed`, note: r.reason, source: r.source }));
   const v = planVersion(sheet);
   (((sheet.preview || sheet.current)?.qualification?.coverage?.open) || []).forEach((sid) => {
     const s = (v?.sites || []).find((x) => x.site_id === sid);

@@ -176,7 +176,7 @@ export default function ProjectSheet() {
           {q && conds.length > 0 && <p className="mx-auto max-w-[1440px] px-4 pb-2 sm:px-6 text-xs text-amber-800" data-testid="filter-conditions-note">{conds.length} open condition{conds.length === 1 ? "" : "s"} in this project</p>}
         </div>
         <div className="relative flex min-h-0 flex-1">
-          <main key={view} className="ws-view-in min-w-0 flex-1" data-testid={`view-${view}`}>
+          <main key={view} className="ws-view-in min-w-0 flex-1" onPointerDown={() => composer.current?.close()} data-testid={`view-${view}`}>
             {view === "graph" && <GraphView {...viewProps} edges={edges} focus={hot.size ? hot : null} run={runOps} layout={sheet.project.layout} />}
             {view === "list" && <ListView {...viewProps} run={runOps} />}
             {view === "week" && <WeekView {...viewProps} />}

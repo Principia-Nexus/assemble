@@ -123,6 +123,8 @@ async def add_evidence(body: EvidenceIn, user=Depends(current_user)):
     seen = L.iso_date(body.observed_on, "Observed on", e) if body.observed_on else None
     if body.observed_status and body.observed_status not in ("active", "expired", "suspended", "inactive", "revoked"):
         e.append("Observed status must be active, expired, suspended, inactive or revoked.")
+    if seen and seen > L.today_pacific().isoformat():
+        e.append("Observed on cannot be in the future.")
     if body.observed_status and not seen:
         e.append("Record the date you observed that status.")
     if body.observed_status and not (body.source_record or "").strip():

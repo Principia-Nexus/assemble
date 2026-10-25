@@ -152,6 +152,9 @@ def snapshot_of(q, p, firm_name, ready=None):
         exc += [x["text"] for x in ready["exclusions"] if x["text"] not in exc]
         con = list(snap.get("conditions") or [])
         con += [c["text"] for c in ready["conditions"] if c["decision"] == "in_offer" and c["text"] not in con]
+        names = sorted({x["name"] for x in p["intake"].get("partners") or [] if x.get("name")}, key=len, reverse=True)
+        scrub = lambda t: re.sub("|".join(re.escape(n) for n in names), "the subcontractor", t, flags=re.I) if names else t  # noqa: E731
+        exc, con = [scrub(x) for x in exc], [scrub(x) for x in con]
         snap.update(exclusions=exc, conditions=con, not_covered=ready["not_covered"])
     return snap
 
@@ -175,7 +178,7 @@ async def readiness(p, q):
                 blockers.append(f"Open scopes ({', '.join(qa['coverage']['open'])}) need a partial-quote review: confirm what the quote does not cover.")
             items = await db.items.find({"project_id": p["project_id"], "deleted": {"$ne": True}}, {"_id": 0, "item_id": 1, "site_ids": 1}).to_list(2000)
             site_of = {i["item_id"]: (i.get("site_ids") or [None])[0] for i in items if len(i.get("site_ids") or []) == 1}
-            edges = await db.edges.find({"project_id": p["project_id"], "kind": {"$in": ["prerequisite", "uses_input"]}, "deleted": {"$ne": True}}, {"_id": 0}).to_list(2000)
+            edges = await db.item_edges.find({"project_id": p["project_id"], "kind": {"$in": ["prerequisite", "uses_input"]}, "deleted": {"$ne": True}}, {"_id": 0}).to_list(2000)
             for e in edges:
                 a, b = site_of.get(e["from_id"]), site_of.get(e["to_id"])
                 if a in qa["coverage"]["open"] and b and b not in qa["coverage"]["open"]:

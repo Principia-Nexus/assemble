@@ -148,6 +148,7 @@ def validate_intake(raw):
             "advance_pct": whole(p.get("advance_pct"), f"{label} advance %", e, 0, 100),
             "balance_terms": text(p.get("balance_terms"), f"{label} balance terms", e, 300),
             "conditions": text(p.get("conditions"), f"{label} conditions", e, 1000),
+            "conditions_source": text(p.get("conditions_source"), f"{label} conditions source", e, 300) if p.get("conditions") else None,
             "exclusions": text(p.get("exclusions"), f"{label} exclusions", e, 1000),
             "scope": text(p.get("scope"), f"{label} scope", e, 1000),
             "valid_until": iso_date(p.get("valid_until"), f"{label} valid until", e),

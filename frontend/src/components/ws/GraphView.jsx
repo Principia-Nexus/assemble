@@ -182,7 +182,7 @@ export default function GraphView({ sheet, items, edges, pkgs, conds, selectedId
       <div ref={scroller} onPointerDown={startPan} onClickCapture={(e) => { if (suppress.current) { e.stopPropagation(); e.preventDefault(); } }}
         className={`ws-dots h-full touch-none overflow-hidden select-none ${panning ? "cursor-grabbing" : "cursor-grab"}`} data-testid="graph-view">
         <div style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", transition: panning || dragId ? "none" : "transform .15s ease-out" }} className="min-w-full">
-          <div ref={contentRef} className="relative mx-auto flex max-w-[1440px] flex-col gap-5 px-4 py-6 pb-44 sm:px-6" data-testid="graph-canvas">
+          <div ref={contentRef} className="relative mx-auto flex max-w-[1440px] flex-col gap-5 py-6 pb-44 pl-4 pr-16 sm:px-6" data-testid="graph-canvas">
             {empty && <p data-testid="graph-empty" className="max-w-md text-sm text-[#64748B]">Nothing here yet. Describe the job below, or use Add to enter a work item.</p>}
             {visiblePkgs.length > 0 && (
               <Frame title={sheet.preview ? "Plan · private draft" : sheet.current ? "Plan" : "Firms and sites"} count={`${visiblePkgs.length} package${visiblePkgs.length === 1 ? "" : "s"}`} testId="graph-plan-frame" open={!closed.plan} onToggle={() => toggle("plan")}>
