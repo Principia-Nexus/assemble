@@ -33,7 +33,7 @@ function PartnerCard({ p, act, busy, demoPassword, blocked }) {
           <h3 className="text-base font-semibold text-slate-900">{p.name}</h3>
           <span className="font-mono text-sm font-semibold">{money(p.terms.price_total_cents)}</span>
         </div>
-        <StatusPill testId={`partner-card-status-${id}`} tone={s.tone} label={s.label} />
+        {p.status !== "no_link" && <StatusPill testId={`partner-card-status-${id}`} tone={s.tone} label={s.label} />}
       </div>
       <dl className="grid grid-cols-2 gap-x-3 gap-y-2 p-4 text-xs">
         <dt className="text-slate-500">Sites</dt><dd className="font-mono">{p.terms.sites.map((x) => `${x.site_id}·w${x.week}`).join(", ")}</dd>
@@ -49,12 +49,14 @@ function PartnerCard({ p, act, busy, demoPassword, blocked }) {
           <>
             <div className="flex gap-2">
               <input readOnly value={url} className="h-9 min-w-0 flex-1 rounded border border-slate-200 bg-slate-50 px-2 font-mono text-[11px]" data-testid={`partner-card-link-${id}`} onFocus={(e) => e.target.select()} />
-              <Button size="sm" variant="outline" className="h-9" onClick={copy} data-testid={`partner-card-copy-link-${id}`}><Copy className="h-4 w-4" /></Button>
+              <Button size="sm" variant="outline" className="h-9" onClick={copy} aria-label={`Copy review link for ${p.name}`} data-testid={`partner-card-copy-link-${id}`}><Copy className="h-4 w-4" /></Button>
             </div>
-            {p.link.shared_at ? (
-              <p className="text-[11px] text-slate-500">You marked this as shared {fmtTime(p.link.shared_at)}.</p>
-            ) : p.response || p.status === "needs_rereview" ? (
-              <p className="text-[11px] text-slate-500">They have opened and answered this link.</p>
+            {p.status === "needs_rereview" ? (
+              <p data-testid={`partner-card-history-${id}`} className="text-[11px] text-amber-800">Answered previous terms; revised terms await review.</p>
+            ) : p.response ? (
+              <p data-testid={`partner-card-history-${id}`} className="text-[11px] text-slate-500">Answered these terms {fmtTime(p.response.created_at)}.</p>
+            ) : p.link.shared_at ? (
+              <p className="text-[11px] text-slate-500">You marked this as shared {fmtTime(p.link.shared_at)}. No answer yet.</p>
             ) : (
               <Button size="sm" variant="outline" className="w-full" disabled={busy} onClick={() => act("post", `/project/links/${p.link.token}/shared`, {}, "Marked as shared")} data-testid={`partner-card-mark-shared-${id}`}>
                 <Send className="h-4 w-4" /> I've shared it with them

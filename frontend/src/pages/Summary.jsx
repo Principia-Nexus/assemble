@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 import { Printer, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api, errText } from "@/lib/api";
-import { CHECK, OVERALL, STATUS, money, fmtDate, fmtTime } from "@/lib/format";
+import { STATUS, money, fmtDate, fmtTime } from "@/lib/format";
 import { Loading } from "@/App";
 import { RouteDenied } from "@/components/RouteDenied";
+import { ruleView } from "@/components/sheet/CheckerPanel";
+import { answered, nextStep, scopedResult } from "@/lib/planState";
 
 const ACTION = { confirm: "Confirmed proposed terms", request_change: "Requested a change", decline: "Declined" };
 
@@ -97,22 +99,28 @@ export default function Summary() {
           <p className="text-sm text-slate-600">Customer: {it.customer_name || "Unknown"} · Starts {fmtDate(it.start_date)} · {it.weeks ?? "?"} weeks · Ceiling {money(it.budget_ceiling_cents)}</p>
           <p data-testid="summary-date" className="text-xs text-slate-500">Prepared {fmtTime(printedAt, true)}{cur ? ` · current plan v${cur.version.number}` : ""}{sheet.preview ? ` · amendment preview v${sheet.preview.version.number} open (not included)` : ""}</p>
         </header>
-        {!cur ? <p className="text-sm text-slate-500">No candidate plan yet.</p> : (
-          <>
-            <Section title="Checks" testId="summary-checks">
-              <p className="mb-2 text-sm font-semibold">{OVERALL[cur.checker.overall].label} · total {money(cur.checker.total_cents)}{cur.checker.headroom_cents != null ? ` · headroom ${money(cur.checker.headroom_cents)}` : ""}</p>
-              <ul className="space-y-1 text-xs">
-                {cur.checker.rules.map((r) => <li key={r.key}><span className="font-semibold">{CHECK[r.status].label}: {r.label}.</span> {r.details.join(" ")}</li>)}
-              </ul>
-              <p className="mt-2 text-[11px] text-slate-500">{cur.checker.note}</p>
-            </Section>
-            <Section title="Contributions" testId="summary-contributions"><Contributions cur={cur} /></Section>
-            <Section title="Exact responses" testId="summary-responses"><Responses cur={cur} /></Section>
-          </>
+        {cur && (
+          <Section title="Decision" testId="summary-decision">
+            <p className="text-sm font-semibold">{scopedResult(cur.checker).label} · {money(cur.checker.total_cents)} of {money(cur.checker.ceiling_cents)}</p>
+            <p className="mt-1 text-sm text-slate-700">{cur.partners.filter(answered).length} of {cur.partners.length} partners answered these terms · {open.length ? `${open.length} item${open.length > 1 ? "s" : ""} outstanding` : "nothing outstanding recorded"}</p>
+            <p className="mt-1 text-sm text-slate-700">Next: {nextStep(sheet).text}</p>
+          </Section>
         )}
-        <Section title="Unresolved conditions" testId="summary-conditions">
+        <Section title="Outstanding work" testId="summary-conditions">
           {open.length ? <ul className="list-disc space-y-1 pl-5 text-sm">{open.map((c) => <li key={c}>{c}</li>)}</ul> : <p className="text-sm text-slate-500">None recorded.</p>}
         </Section>
+        {!cur ? <p className="text-sm text-slate-500">No candidate plan yet.</p> : (
+          <>
+            <Section title="Contributions" testId="summary-contributions"><Contributions cur={cur} /></Section>
+            <Section title="Exact responses" testId="summary-responses"><Responses cur={cur} /></Section>
+            <Section title="Supporting checks" testId="summary-checks">
+              <ul className="space-y-1 text-xs">
+                {cur.checker.rules.map((r) => <li key={r.key}><span className="font-semibold">{ruleView(r, cur.checker).label}: {r.label}.</span> {r.details.join(" ")}</li>)}
+              </ul>
+              {cur.checker.note && <p className="mt-2 text-[11px] text-slate-500">{cur.checker.note}</p>}
+            </Section>
+          </>
+        )}
         <footer className="border-t border-slate-300 pt-4 text-[11px] leading-relaxed text-slate-500">
           Confirmations cover proposal-stage terms only. They do not hold crews, award the job, form a contract or start mobilization. Full history is kept in Assemble.
         </footer>

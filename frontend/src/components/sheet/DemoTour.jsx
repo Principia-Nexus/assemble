@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Minus, Plus, Sparkles, X } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useDemoContent } from "@/lib/demoContent";
+import { money } from "@/lib/format";
 
 const KEY = "assemble_tour_step";
 
@@ -90,6 +91,11 @@ export default function DemoTour({ sheet, act, busy, goTo, onClose }) {
           <div className="space-y-2 p-4">
             <h3 data-testid="demo-tour-title" className="text-base font-bold text-slate-900">{step.title}</h3>
             <p className="text-sm leading-relaxed text-slate-600">{step.body}</p>
+            {sheet.current && (sheet.current.version.number > 1 || sheet.preview) && (
+              <p data-testid="demo-tour-state-note" className="rounded-sm bg-slate-50 p-2 text-xs text-slate-600">
+                These steps describe the example from a fresh copy. Your copy right now: plan v{sheet.current.version.number} · {money(sheet.current.checker.total_cents)}{sheet.preview ? ` · preview v${sheet.preview.version.number} open` : ""}. Reset your demo copy to follow along exactly.
+              </p>
+            )}
             <div className="h-1 overflow-hidden rounded bg-slate-100"><div className="h-full bg-slate-900 transition-[width] duration-300" style={{ width: `${((idx + 1) / tour.length) * 100}%` }} /></div>
           </div>
           <div className="flex items-center justify-between gap-1 border-t border-slate-200 px-3 py-3">

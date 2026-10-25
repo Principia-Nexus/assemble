@@ -17,6 +17,7 @@ const FS = {
 const who = (r) => [r.partner_name, r.site_id, r.week ? `week ${r.week}` : null].filter(Boolean).join(" · ") || "Job";
 const usableOf = (r) => r.reading && ["proposed", "corrected"].includes(r.reading.status);
 const rank = (r) => (r.conflict || r.facts.some((f) => f.status === "invalid") ? 0 : usableOf(r) ? 1 : 2);
+const done = (r) => rank(r) === 2;
 const tid = (t) => t.replace(/[^a-z0-9]+/gi, "-");
 
 function FactLine({ f, current, onRead }) {
@@ -120,20 +121,27 @@ export default function ReadingsTable({ readings, selected, setSelected, onRead 
   const toggle = (id) => setSelected(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
   const sorted = [...readings].sort((a, b) => rank(a) - rank(b));
   const siteGroups = {};
-  sorted.forEach((r) => { if (r.scope === "site" && rank(r) > 0) (siteGroups[r.field] = siteGroups[r.field] || []).push(r); });
+  sorted.forEach((r) => { if (r.scope === "site" && rank(r) === 1) (siteGroups[r.field] = siteGroups[r.field] || []).push(r); });
   const grouped = new Set(Object.values(siteGroups).filter((g) => g.length > 3).flat().map((r) => r.target));
   const shownGroups = new Set();
+  const item = (r) => {
+    if (!grouped.has(r.target)) return <Reading key={r.target} r={r} selected={selected} toggle={toggle} onRead={onRead} />;
+    if (shownGroups.has(r.field)) return null;
+    shownGroups.add(r.field);
+    return <Group key={r.field} field={r.field} items={siteGroups[r.field]} selected={selected} setSelected={setSelected} toggle={toggle} onRead={onRead} />;
+  };
+  const active = sorted.filter((r) => !done(r));
+  const finished = sorted.filter(done);
   return (
     <div data-testid="readings-table" className="rounded-md border border-slate-200 bg-white">
-      <p className="eyebrow border-b border-slate-200 p-4">Readings · items needing attention first</p>
-      <ul className="stagger divide-y divide-slate-100">
-        {sorted.map((r) => {
-          if (!grouped.has(r.target)) return <Reading key={r.target} r={r} selected={selected} toggle={toggle} onRead={onRead} />;
-          if (shownGroups.has(r.field)) return null;
-          shownGroups.add(r.field);
-          return <Group key={r.field} field={r.field} items={siteGroups[r.field]} selected={selected} setSelected={setSelected} toggle={toggle} onRead={onRead} />;
-        })}
-      </ul>
+      <p className="eyebrow border-b border-slate-200 p-4">Readings · new facts, conflicts and missing information first</p>
+      {active.length > 0 ? <ul className="stagger divide-y divide-slate-100">{active.map(item)}</ul> : <p className="p-4 text-sm text-slate-500">Nothing new to review.</p>}
+      {finished.length > 0 && (
+        <details className="border-t border-slate-200">
+          <summary className="cursor-pointer p-4 text-sm font-semibold text-slate-700" data-testid="readings-done-toggle">Already used or rejected · {finished.length}</summary>
+          <ul className="divide-y divide-slate-100 border-t border-slate-100">{finished.map((r) => <Reading key={r.target} r={r} selected={selected} toggle={toggle} onRead={onRead} />)}</ul>
+        </details>
+      )}
     </div>
   );
 }

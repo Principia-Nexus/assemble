@@ -3,9 +3,9 @@ import { History, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 
-export function Brand({ light = false }) {
+export function Brand({ light = false, large = false }) {
   return (
-    <Link to="/" data-testid="brand-home-link" className={`text-2xl font-semibold tracking-tight sm:text-[28px] ${light ? "text-[#FFFFFF]" : "text-[#0E5E8C]"}`}>
+    <Link to="/" data-testid="brand-home-link" className={`font-semibold tracking-tight ${large ? "text-[31px] sm:text-[36px]" : "text-2xl sm:text-[28px]"} ${light ? "text-[#FFFFFF]" : "text-[#1A2838]"}`}>
       Assemble
     </Link>
   );
@@ -30,7 +30,7 @@ export default function AppHeader({ onHistory }) {
             <Link to="/reviews"><Inbox className="h-4 w-4" /> <span className="hidden sm:inline">My reviews</span></Link>
           </Button>
           <Button variant="outline" size="sm" onClick={logout} data-testid="header-logout-button"
-            className="rounded-none border-2 border-[#0E5E8C] bg-transparent text-sm font-semibold text-[#0E5E8C] hover:bg-[#0E5E8C] hover:text-[#FFFFFF]">
+            className="rounded-none border-2 border-[#1A2838] bg-transparent text-sm font-semibold text-[#1A2838] hover:bg-[#1A2838] hover:text-[#FFFFFF]">
             Sign out
           </Button>
         </div>

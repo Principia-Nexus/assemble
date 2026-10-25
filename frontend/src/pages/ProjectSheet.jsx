@@ -4,9 +4,7 @@ import { RotateCcw, Sparkles } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { StatusPill } from "@/components/StatusPill";
 import { api, errList } from "@/lib/api";
-import { OVERALL } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { Loading } from "@/App";
 import Stepper, { stepInfo } from "@/components/sheet/Stepper";
@@ -17,6 +15,7 @@ import PartnersTask from "@/components/sheet/PartnersTask";
 import DecideTask from "@/components/sheet/DecideTask";
 import HistoryDrawer from "@/components/sheet/HistoryDrawer";
 import DemoTour from "@/components/sheet/DemoTour";
+import PlanStrip from "@/components/sheet/PlanStrip";
 import { clearDemoContent } from "@/lib/demoContent";
 import { RouteDenied } from "@/components/RouteDenied";
 
@@ -76,7 +75,6 @@ export default function ProjectSheet() {
   const reset = async () => { clearDemoContent(); await act("post", "/project/demo-reset", {}, "Demo copy reset"); };
 
   const props = { sheet, act, busy, goTo: setSelected, user };
-  const overall = sheet?.current?.checker?.overall;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -116,18 +114,10 @@ export default function ProjectSheet() {
           <CreateProject act={act} busy={busy} />
         ) : (
           <>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h1 data-testid="project-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                  {sheet.intake.job_name || sheet.project.name}
-                </h1>
-              </div>
-              {sheet.current && (
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <StatusPill testId="project-overall-status" tone={OVERALL[overall].tone} label={OVERALL[overall].label} />
-                </div>
-              )}
-            </div>
+            <h1 data-testid="project-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              {sheet.intake.job_name || sheet.project.name}
+            </h1>
+            <PlanStrip sheet={sheet} goTo={setSelected} />
             <Stepper info={info} selected={selected} onSelect={setSelected} />
             <div key={selected} className="rise mt-6">
               {selected === "intake" && <IntakeTask key={sheet.project.rev} {...props} />}

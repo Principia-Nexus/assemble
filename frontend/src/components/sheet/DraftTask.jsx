@@ -29,10 +29,16 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
   return (
     <section data-testid="task-draft" className="space-y-6">
       <TaskHeader step={2} title="Prepare a draft">
-        <Button onClick={generate} disabled={busy} data-testid="draft-generate-button">{busy ? "Checking…" : failing ? "Regenerate with these crews" : "Generate and check candidate"}</Button>
+        <Button onClick={generate} disabled={busy || !!sheet.preview} data-testid="draft-generate-button">{busy ? "Checking…" : failing ? "Regenerate with these crews" : "Generate and check candidate"}</Button>
         {sheet.current && !linksExist && !failing && <Button variant="outline" onClick={() => goTo("ask")} data-testid="draft-next-button">Go to partners</Button>}
       </TaskHeader>
       <ErrorList errors={errors} testId="draft-errors" />
+      {sheet.preview && (
+        <div data-testid="draft-preview-open-notice" role="status" className="flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+          <p><span className="font-semibold">Proposed changes v{sheet.preview.version.number} are open.</span> Select or discard them before generating another candidate.</p>
+          <Button size="sm" onClick={() => goTo("decide")} data-testid="draft-open-preview-button">Open preview</Button>
+        </div>
+      )}
       {failing && !linksExist && (
         <p data-testid="draft-repair-notice" role="status" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
           <span className="font-semibold">Repair this draft first.</span>

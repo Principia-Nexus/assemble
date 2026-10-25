@@ -507,8 +507,7 @@ def check(v):
     elif overall == "unknown":
         note = "Some checks cannot run because inputs are unknown. Nothing is assumed for them."
     else:
-        note = ("This candidate passes every check. It came from a single greedy pass, so the search is incomplete "
-                "and cheaper valid plans may exist.")
+        note = "One workable arrangement; other arrangements may exist."
     return {"overall": overall, "rules": rules, "weekly": weekly_load(v), "total_cents": total,
             "open_conditions": open_conditions(v, v),
             "ceiling_cents": ceiling, "headroom_cents": headroom, "note": note}

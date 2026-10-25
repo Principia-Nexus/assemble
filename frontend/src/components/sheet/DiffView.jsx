@@ -3,7 +3,7 @@ import { money, slug } from "@/lib/format";
 
 const STATE = {
   unchanged: { label: "Unchanged", tone: "confirmed" },
-  changed: { label: "Changed: must review again", tone: "pending" },
+  changed: { label: "Changed by this amendment: must review", tone: "pending" },
   added: { label: "New: must review", tone: "pending" },
   removed: { label: "Removed from plan", tone: "declined" },
 };
@@ -35,7 +35,7 @@ export default function DiffView({ diff }) {
       {diff.sites.length > 0 && (
         <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
           <table className="w-full min-w-[480px] text-xs">
-            <thead><tr className="text-left font-mono text-[10px] text-slate-500"><th className="p-2">Site</th><th className="p-2">Before</th><th className="p-2">After</th></tr></thead>
+            <thead><tr className="text-left font-mono text-[10px] text-slate-500"><th className="p-2">Site</th><th className="p-2">Current plan</th><th className="p-2">Proposed</th></tr></thead>
             <tbody>
               {diff.sites.map((s) => (
                 <tr key={s.site_id} className="border-t border-slate-100" data-testid={`amend-diff-site-${s.site_id}`}>
@@ -48,8 +48,21 @@ export default function DiffView({ diff }) {
           </table>
         </div>
       )}
+      <PartnerDiffs list={diff.partners.filter((p) => p.state !== "unchanged")} />
+      {diff.partners.some((p) => p.state === "unchanged") && (
+        <details className="rounded-md border border-slate-200 bg-white p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-700" data-testid="amend-diff-unchanged-toggle">Unchanged partners · {diff.partners.filter((p) => p.state === "unchanged").length}</summary>
+          <div className="mt-3"><PartnerDiffs list={diff.partners.filter((p) => p.state === "unchanged")} /></div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function PartnerDiffs({ list }) {
+  return (
       <div className="grid gap-3 md:grid-cols-2">
-        {diff.partners.map((p) => {
+        {list.map((p) => {
           const carries = p.state === "unchanged" && CARRY.includes(p.current_status);
           return (
             <div key={p.partner_id} data-testid={`amend-diff-partner-${slug(p.partner_id)}`} className="rounded-md border border-slate-200 bg-white p-3">
@@ -58,17 +71,16 @@ export default function DiffView({ diff }) {
                 <StatusPill testId={`amend-diff-partner-state-${slug(p.partner_id)}`} tone={STATE[p.state].tone} label={STATE[p.state].label} />
               </div>
               <div className="mt-2 grid grid-cols-2 gap-3">
-                <div><p className="eyebrow mb-1">Before</p><Side t={p.before} kind="before" /></div>
-                <div><p className="eyebrow mb-1">After</p><Side t={p.after} kind="after" /></div>
+                <div><p className="eyebrow mb-1">Current plan</p><Side t={p.before} kind="before" /></div>
+                <div><p className="eyebrow mb-1">Proposed</p><Side t={p.after} kind="after" /></div>
               </div>
               {p.state === "unchanged" && (
-                <p className="mt-2 text-[11px] text-slate-500">{carries ? "Their current response carries over if still valid." : "No current response to carry over."}</p>
+                <p className="mt-2 text-[11px] text-slate-500">{carries ? "Their current response carries over if still valid." : "Already awaiting a response; not caused by this change."}</p>
               )}
               {p.changes.length > 0 && p.state === "changed" && <p className="mt-2 text-[11px] text-amber-800">Changed: {p.changes.join(", ").replaceAll("_cents", "").replaceAll("_", " ")}</p>}
             </div>
           );
         })}
       </div>
-    </div>
   );
 }

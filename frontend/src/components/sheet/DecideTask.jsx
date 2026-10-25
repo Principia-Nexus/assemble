@@ -5,15 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusPill } from "@/components/StatusPill";
 import { STATUS, money, fmtTime, slug } from "@/lib/format";
+import { openConditions } from "@/lib/planState";
 import { TaskHeader, ErrorList } from "./Stepper";
 import { useDemoContent } from "@/lib/demoContent";
 import AmendmentPanel from "./AmendmentPanel";
 import ChangeRequests from "./ChangeRequests";
-
-export function openConditions(cur) {
-  const fromResponses = cur.partners.filter((p) => p.response?.conditions).map((p) => ({ scope: p.name, text: p.response.conditions, source: "their response" }));
-  return [...(cur.checker.open_conditions || []), ...fromResponses];
-}
 
 function nextAction(sheet) {
   const cur = sheet.current;

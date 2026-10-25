@@ -269,9 +269,22 @@ def readings_from(facts):
     return out
 
 
+async def migrate_job_conditions(facts):
+    for f in facts:
+        if f["field"] == "conditions" and f.get("scope") == "partner" and not f.get("partner_name"):
+            issues = [i for i in f.get("issues") or [] if i != "No partner named for this fact."]
+            upd = {"scope": "job_condition", "label": "Job condition", "issues": issues,
+                   "target": "job_condition|" + norm(f.get("value") or "")[:80]}
+            if f.get("status") == "invalid" and not issues:
+                upd["status"] = "proposed"
+            await db.facts.update_one({"fact_id": f["fact_id"]}, {"$set": upd})
+            f.update(upd)
+
+
 async def readings_payload(project_id):
     sources = await db.sources.find({"project_id": project_id}, {"_id": 0}).sort("order", 1).to_list(100)
     facts = await db.facts.find({"project_id": project_id}, {"_id": 0}).to_list(2000)
+    await migrate_job_conditions(facts)
     return {"sources": sources, "readings": readings_from(facts)}
 
 

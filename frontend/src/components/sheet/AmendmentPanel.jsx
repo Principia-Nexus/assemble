@@ -54,6 +54,8 @@ function Editor({ v, rows, setRows, adj, setAdj }) {
   );
 }
 
+const CARRY = ["confirmed", "confirmed_conditional", "declined", "change_requested"];
+
 export default function AmendmentPanel({ sheet, act, busy }) {
   const pv = sheet.preview;
   const v = pv.version;
@@ -71,12 +73,14 @@ export default function AmendmentPanel({ sheet, act, busy }) {
     setErrors(r.ok ? [] : r.errors);
   };
   const review = pv.diff?.partners.filter((p) => p.state !== "unchanged" && p.state !== "removed") || [];
+  const pending = pv.diff?.partners.filter((p) => p.state === "unchanged" && !CARRY.includes(p.current_status)) || [];
   const d = pv.diff;
   const delta = d && d.total_after_cents != null && d.total_before_cents != null ? d.total_after_cents - d.total_before_cents : null;
   const lead = d ? [
     `${d.sites.length} site${d.sites.length === 1 ? "" : "s"} change${d.sites.length === 1 ? "s" : ""}`,
     delta == null ? "total unknown" : `${delta >= 0 ? "+" : "-"}${money(Math.abs(delta))}`,
-    `${review.length} partner${review.length === 1 ? "" : "s"} need${review.length === 1 ? "s" : ""} review`,
+    review.length ? `${review.map((p) => p.name).join(", ")} must review` : "no partner's terms change",
+    ...(pending.length ? [`${pending.length} already awaiting a response`] : []),
   ].join(" · ") : null;
   const selectBlock = dirty ? "Save and recheck your edits before selecting." : failing ? "This preview fails a check. Repair it before selecting." : null;
 
@@ -84,7 +88,7 @@ export default function AmendmentPanel({ sheet, act, busy }) {
     <div data-testid="amendment-panel" className="space-y-5 rounded-md border-2 border-amber-300 bg-amber-50/40 p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="eyebrow text-amber-800">Amendment preview v{v.number} · not selected</p>
+          <p className="eyebrow text-amber-800">Proposed changes · preview v{v.number} · not selected</p>
           <h3 data-testid="amend-lead" className="mt-1 text-lg font-bold tabular-nums text-slate-900">{lead || "Revised terms, not yet selected"}</h3>
           <p className="text-xs text-slate-600">Current plan v{sheet.current.version.number} and every valid response stay in force until you select this.</p>
         </div>
@@ -99,7 +103,9 @@ export default function AmendmentPanel({ sheet, act, busy }) {
                 <AlertDialogDescription asChild>
                   <div className="space-y-2 text-sm text-slate-600" data-testid="amend-select-summary">
                     <p>Total <span className="font-semibold tabular-nums text-slate-900">{money(pv.checker.total_cents)}</span>{delta != null && ` (${delta >= 0 ? "+" : "-"}${money(Math.abs(delta))} vs v${sheet.current.version.number})`} · checker: {pv.checker.overall}.</p>
-                    <p>{review.length ? `Must review again: ${review.map((p) => p.name).join(", ")}.` : "No partner's terms changed."} Unchanged partners carry their response over only if it is still valid.</p>
+                    <p>{review.length ? `Changed by this amendment, must review: ${review.map((p) => p.name).join(", ")}.` : "No partner's terms change."}</p>
+                    {pending.length > 0 && <p>Already awaiting a response (not caused by this change): {pending.map((p) => p.name).join(", ")}.</p>}
+                    <p>Unchanged partners keep a valid response.</p>
                     <p>v{sheet.current.version.number} and its responses are kept as history.</p>
                   </div>
                 </AlertDialogDescription>
@@ -117,10 +123,10 @@ export default function AmendmentPanel({ sheet, act, busy }) {
       {pv.diff && <DiffView diff={pv.diff} />}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-4">
-          <ScheduleGrid version={v} checker={pv.checker} testPrefix="preview" />
-          <details className="group" open>
-            <summary className="cursor-pointer text-sm font-semibold text-slate-800" data-testid="amend-editor-toggle">Edit the preview</summary>
+          <details className="group rounded-md border border-slate-200 bg-white p-4" open={dirty || errors.length > 0 || undefined}>
+            <summary className="cursor-pointer text-sm font-semibold text-slate-800" data-testid="amend-editor-toggle">Edit details · full proposed schedule</summary>
             <div className="mt-3 space-y-3">
+              <ScheduleGrid version={v} checker={pv.checker} testPrefix="preview" />
               <Editor v={v} rows={rows} setRows={setRows} adj={adj} setAdj={setAdj} />
               <ErrorList errors={errors} testId="amend-errors" />
               <div className="flex items-center gap-3">

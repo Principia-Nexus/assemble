@@ -12,8 +12,7 @@ export function stepInfo(sheet) {
   const hasIntake = !!sheet.intake.weeks && sheet.intake.sites.length > 0;
   const partners = sheet.current?.partners || [];
   const failing = sheet.current?.checker.overall === "fail";
-  const reached = (p) => !!p.response || p.status === "needs_rereview" || !!p.link?.shared_at;
-  const allAsked = partners.length > 0 && partners.every(reached);
+  const allAsked = partners.length > 0 && partners.every((p) => ["confirmed", "confirmed_conditional", "declined", "change_requested"].includes(p.status));
   const done = { intake: hasIntake, draft: !!sheet.current && !failing, ask: allAsked, decide: false };
   const current = sheet.preview ? "decide" : !hasIntake ? "intake" : !sheet.current || failing ? "draft" : !allAsked ? "ask" : "decide";
   return { done, current };

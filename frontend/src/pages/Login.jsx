@@ -116,7 +116,7 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-[#FFFFFF]">
       <section className="stagger flex w-full max-w-md flex-col justify-center gap-8 px-5 py-10 sm:px-8">
         <div className="flex flex-col items-center gap-3 text-center">
-          <Brand />
+          <Brand large />
         </div>
         {next?.startsWith("/review/") && (
           <p data-testid="signin-review-notice" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
