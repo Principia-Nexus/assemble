@@ -141,7 +141,7 @@ export default function Login() {
               <Field id="name" label="Your name" value={form.name} onChange={set("name")} required data-testid="register-name-input" />
               <Field id="firm" label="Firm name" value={form.firm_name} onChange={set("firm_name")} required data-testid="register-firm-input" />
               <Field id="remail" label="Email" type="email" value={form.email} onChange={set("email")} required data-testid="register-email-input" />
-              <Field id="rpassword" label="Password (8+ characters)" type="password" value={form.password} onChange={set("password")} required data-testid="register-password-input" />
+              <Field id="rpassword" label="Password" type="password" value={form.password} onChange={set("password")} required data-testid="register-password-input" />
               <Button type="submit" className="h-11 w-full" disabled={busy} data-testid="register-submit-button">
                 {busy ? "Creating…" : "Create account"}
               </Button>
