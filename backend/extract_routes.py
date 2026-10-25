@@ -144,10 +144,11 @@ def locate(src, excerpt):
         idx = m.start() if m else -1
     if idx < 0:
         return None
-    starts = src.get("page_starts")
-    if starts:
-        page = sum(1 for s in starts if s <= idx)
-        return {"offset": idx, "page": page, "line": text[starts[page - 1]:idx].count("\n")}
+    # The page is the nearest preceding [Page N] marker, so batches and skipped pages cite the real PDF page.
+    marks = list(re.finditer(r"^\[Page (\d+)\]\n", text[:idx + 1], re.M))
+    if marks:
+        m = marks[-1]
+        return {"offset": idx, "page": int(m.group(1)), "line": text[m.end():idx].count("\n") + 1}
     return {"offset": idx, "line": text[:idx].count("\n") + 1}
 
 

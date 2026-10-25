@@ -292,7 +292,7 @@ async def edit_quote(qid: str, body: DraftIn, user=Depends(current_user)):
     q = await db.quotes.find_one_and_update({"quote_id": qid, "state": "draft"}, {"$set": {**f, "updated_at": now_iso()}}, return_document=ReturnDocument.AFTER)
     if not q:
         raise HTTPException(409, "This quote was issued in another tab. Reload.")
-    return {"quote": view(q), "missing": missing(q), "preview": snapshot_of(q, p, await firm_name(p))}
+    return {"quote": view(q), "missing": missing(q), "preview": snapshot_of(q, p, await firm_name(p), await readiness(p, q))}
 
 
 @router.get("/quotes/{qid}/preview")

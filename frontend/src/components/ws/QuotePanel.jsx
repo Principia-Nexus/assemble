@@ -29,6 +29,8 @@ function Draft({ q, onSaved }) {
       onSaved(data.quote, false);
     } catch (e) { setErrors(errList(e)); }
   };
+  const [ack, setAck] = useState(!!q.partial_ack);
+  const decisions = () => Object.fromEntries((preview?.readiness?.conditions || []).filter((c) => c.decision).map((c) => [c.text, c.decision]));
   const decide = async (patch) => {
     try {
       const { data } = await api.put(`/project/quotes/${q.quote_id}`, { fields: patch });
@@ -74,17 +76,17 @@ function Draft({ q, onSaved }) {
           )}
           {preview.readiness?.not_covered.length > 0 && (
             <label className="mt-2 flex items-start gap-2 text-xs text-slate-700" data-testid="quote-partial">
-              <input type="checkbox" className="mt-0.5" checked={!!q.partial_ack} onChange={(e) => decide({ partial_ack: e.target.checked })} data-testid="quote-partial-ack" />
+              <input type="checkbox" className="mt-0.5" checked={ack} onChange={(e) => { setAck(e.target.checked); decide({ partial_ack: e.target.checked }); }} data-testid="quote-partial-ack" />
               <span>Partial quote. It states it does not cover: <b>{preview.readiness.not_covered.join(", ")}</b>. I reviewed the included work, exclusions and dependencies.</span>
             </label>
           )}
           {preview.readiness?.conditions.length > 0 && (
-            <ul className="mt-2 space-y-1.5" data-testid="quote-conditions">
+            <ul className="mt-2 space-y-1.5" data-testid="quote-condition-decisions">
               {preview.readiness.conditions.map((c, i) => (
                 <li key={c.text} className="flex flex-wrap items-center gap-2 text-xs text-slate-700" data-testid={`quote-condition-${i}`}>
                   <span className="min-w-0 flex-1">{c.text}</span>
                   {[["in_offer", "Put in offer"], ["resolved", "Resolved"]].map(([k, l]) => (
-                    <button key={k} type="button" onClick={() => decide({ condition_decisions: { ...(q.condition_decisions || {}), [c.text]: k } })} data-testid={`quote-condition-${i}-${k}`}
+                    <button key={k} type="button" onClick={() => decide({ condition_decisions: { ...decisions(), [c.text]: k } })} data-testid={`quote-condition-${i}-${k}`}
                       className={`rounded-full border px-2 py-0.5 transition-colors ${c.decision === k ? "border-[#1A2838] bg-[#1A2838] text-white" : "border-slate-200 hover:border-slate-400"}`}>{l}</button>
                   ))}
                 </li>

@@ -8,10 +8,7 @@ import CheckerPanel from "./CheckerPanel";
 
 export default function DraftTask({ sheet, act, busy, goTo }) {
   const partners = sheet.intake.partners;
-  const initial = sheet.current?.version.partners
-    ? Object.keys(sheet.current.version.assignments).length && [...new Set(Object.values(sheet.current.version.assignments).map((a) => a.owner))]
-    : [];
-  const [chosen, setChosen] = useState(() => (sheet.current ? partners.map((p) => p.partner_id).filter((id) => (initial || []).includes(id)) : partners.map((p) => p.partner_id)));
+  const [chosen, setChosen] = useState(() => partners.map((p) => p.partner_id));
   const [includeOwn, setIncludeOwn] = useState(true);
   const [errors, setErrors] = useState([]);
   const toggle = (id) => setChosen(chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id]);

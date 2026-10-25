@@ -15,9 +15,9 @@ function Requirement({ r, act, busy }) {
         <p className="text-sm font-semibold text-slate-900">{r.label} <span className={`ml-1 text-xs font-medium ${cls}`} data-testid={`req-status-${r.req_id}`}>{st}</span></p>
         <p className="text-xs text-slate-500">{r.reason || r.source?.label}{r.sites !== "all" ? ` · ${r.sites.join(", ")}` : ""}{r.dismiss_reason ? ` · dismissed: ${r.dismiss_reason}` : ""}</p>
       </div>
-      {r.status === "suggested" && why === null && (
+      {(r.status === "suggested" || (r.status === "required" && r.origin === "organizer")) && why === null && (
         <div className="flex gap-1.5">
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => act("post", `/project/requirements/${r.req_id}/confirm`, {}, "Review recorded")} data-testid={`req-confirm-${r.req_id}`}>Confirm</Button>
+          {r.status === "suggested" && <Button size="sm" variant="outline" disabled={busy} onClick={() => act("post", `/project/requirements/${r.req_id}/confirm`, {}, "Review recorded")} data-testid={`req-confirm-${r.req_id}`}>Confirm</Button>}
           <Button size="sm" variant="ghost" disabled={busy} onClick={() => setWhy("")} data-testid={`req-dismiss-${r.req_id}`}>Dismiss</Button>
         </div>
       )}

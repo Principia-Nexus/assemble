@@ -55,6 +55,8 @@ def _site_result(owner, sid, reqs, evidence, today):
         reasons.append(msg)
         if RANK[st] > RANK[worst]:
             worst = st
+    active = {r["code"].upper() for r in reqs if _applies(r, sid) and r["status"] in ACTIVE}
+    relevant = any(e["license_class"].upper() in active for e in mine)
     for r in reqs:
         if not _applies(r, sid) or r["status"] == "dismissed":
             continue
@@ -69,8 +71,10 @@ def _site_result(owner, sid, reqs, evidence, today):
                            + (f" (expires {e['expires']})" if e.get("expires") else "") + ".")
         elif match:
             bump("does_not_fit", f"{r['label']}: the only evidence expired on {match[0]['expires']}.")
-        elif mine:
+        elif mine and not relevant:
             bump("does_not_fit", f"{r['label']}: evidence on file is {', '.join(sorted({e['license_class'] for e in mine}))}, not {r['code']}.")
+        elif mine:
+            bump("evidence_needed", f"{r['label']}: no {r['code']} evidence on file yet (has {', '.join(sorted({e['license_class'] for e in mine}))}).")
         else:
             bump("evidence_needed", f"{r['label']}: no licence evidence on file.")
     if not reasons:

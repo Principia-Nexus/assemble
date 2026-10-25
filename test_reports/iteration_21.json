@@ -1,0 +1,49 @@
+{
+  "summary": "Tested Phase 1 ('Make the Construction Workflow Dependable') on the backend and frontend. Backend: new test file test_iter22_qualification.py (13 tests: 12 pass, 1 xfail that records a logic issue). Full suite: 150 passed, 1 xfailed. UI (Playwright, fresh visitors, 12-branch example), working: the C-10 'review needed' requirement card; primary-action sequence Draft plan -> Review draft -> (Select plan) -> Send for review; draft-qualification shows Coverage / Qualification / Budget and schedule separately; package cards go Review needed -> Evidence needed -> Fits / Does not fit; evidence list reads 'Evidence reviewed by <name>, <date>'; Select plan is disabled when a site does not fit (server returns 409); redraft never uses Birch/Redwood, and open sites show as 'Sxx ...: qualified firm needed' cards and an 'Open scopes' package with the 3 inspector actions; Dismiss needs a reason of 5+ chars; C-39 is added as 'Required'; job exclusion 'Ceiling repairs' is added; quote-blockers lists qualification / open scopes / select plan / conditions / partner confirmations, there is no Issue button, and the API returns 422; the snapshot carries the exclusion and not_covered; solo quote issues; a 30-page / 59k-char PDF read in batches (20 of 30 -> 30 of 30 in about 48s, all squares green); applying a reading toasts 'Applied 1 reading to the job details.'; advance + 'leave S03 open' drafts privately (unselected, 0 links). Found 2 HIGH bugs (quote decisions UI, batch page citations), 1 medium logic issue and a few minor ones.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "extract_routes.continue_reading -> run_extraction / locate()", "issue": "Citations for pages read in later batches point to the wrong page. continue_reading passes {**src, 'text': chunk_text} together with the original page_starts, which only covers the first batch. So locate() finds the excerpt at a small offset inside the chunk and maps it to page 1-20. page_starts is also never extended for the appended pages (the 30-page PDF has len(page_starts)=20). Seen live: the reading 'Replace 2x4 troffer fixtures ... drawing E-24' (page 24) is cited as 'large30.pdf · page 4, line 5', and the fact for E-21 has location page 1. Fix: extend page_starts with the offsets of the appended chunk (based on the full source text) and locate against the full text, or offset locate by the chunk start.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "qualify._site_result", "issue": "A firm with valid evidence for one class but none for a second required class is marked 'does_not_fit' ('evidence on file is C-10, not C-39') rather than 'evidence_needed'. Adding an organizer requirement C-39 turned Alder (valid C-10) into 'Does not fit' for every site, so drafting will block it. The wrong-class rule should only apply when the evidence is meant for that requirement, or missing evidence for an extra class should give evidence_needed. Recorded as an xfail test."},
+      {"endpoint": "PUT /api/project/quotes/{id}", "issue": "The edit response 'preview' is snapshot_of(q,p,name) without readiness, so it lacks the merged job exclusions and not_covered. GET /preview is correct. It is inconsistent if a client uses the PUT preview."},
+      {"endpoint": "assistant advance mode (LLM reply text)", "issue": "Reply to 'move it forward, but leave S03 open' says 'The app will run the checks and prepare private review links for assigned firms'. No links are created (correct behaviour), but the wording contradicts it. Update the advance prompt/wording."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "QuotePanel Draft.decide()", "issue": "The q prop goes stale because onSaved(data.quote,false) does not update the parent (QuotePanel only reloads when reload=true). Each condition decision sends {...q.condition_decisions (stale, empty), [text]: k}, so it overwrites the earlier decisions. Reproduced: condition 0 'Put in offer', then condition 1 'Resolved' -> condition 0 became undecided again and the blocker read '(1 open)'. With 2 or more conditions a user cannot clear the 'Decide each material condition' blocker without reopening the panel between clicks. Fix: keep local q state (setQ(data.quote)), or build decisions from preview.readiness.conditions.", "selector": "[data-testid^=quote-condition-]", "priority": "HIGH"},
+      {"component": "QuotePanel partial ack", "issue": "The quote-partial-ack checkbox is controlled by the stale q.partial_ack. After clicking it, the server stores partial_ack=true (the open-scope blocker disappears) but the checkbox stays unchecked, so it cannot be unticked.", "selector": "[data-testid=quote-partial-ack]", "priority": "MEDIUM"},
+      {"component": "QuotePanel", "issue": "data-testid 'quote-conditions' is used twice (the conditions Textarea and the readiness conditions ul).", "selector": "[data-testid=quote-conditions]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Redraft after Does-not-fit", "issue": "On redraft, DraftTask preselects only the firms in the current plan. In the 12-branch example v1 used only Redwood/Alder/Birch, so Cedar and Dogwood were unchecked. The redraft left 8 sites open even though Cedar and Dogwood (evidence needed, not blocked) could take them; via the API with all firms they do get used. Consider preselecting every firm that is not blocked, or pointing to the unchecked firms in the open-scope notice.", "affected_selectors": ["[data-testid^=draft-include-]", "[data-testid=draft-generate-button]"]}
+    ],
+    "design_issues": [
+      {"screen": "Requirements and evidence / Quote", "issues": ["evidence-expires (type=date) and quote-valid-until (datetime-local) use the browser's native picker, not the shadcn calendar", "No way to remove an organizer-added 'Required' requirement from the UI (no Dismiss/Remove on required rows)"]},
+      {"screen": "Send for review sheet", "issues": ["Redwood's price ($89,600) drops below the long site list in large mono text, while the other firms show the price top-right. Alignment is inconsistent."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter22_qualification.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "HIGH: QuotePanel Draft - keep q in local state after each PUT (or derive decisions from preview.readiness.conditions) so condition decisions accumulate and the partial-ack checkbox reflects server state",
+    "HIGH: extract_routes.continue_reading - extend page_starts for appended batch text and compute fact locations against the full source text so page citations are correct for batches 2+",
+    "MEDIUM: qualify._site_result - missing evidence for an additional required class should be 'evidence_needed', not 'does_not_fit' because of evidence on file for another class",
+    "LOW: on redraft, preselect every firm that is not blocked (or flag the unchecked ones that could fill open scopes)",
+    "LOW: deduplicate the 'quote-conditions' testid; PUT quote preview should include readiness merges; fix the advance reply text that mentions preparing review links"
+  ],
+  "critical_code_review_comments": [
+    "quote_routes.readiness dependency check only considers items with exactly one site_id; multi-site tasks that depend on an open site are not caught",
+    "QuotePanel.jsx Draft: onSaved(_, false) is a no-op in the parent, so every q-derived control after a decide() is stale",
+    "qual_routes.remove_evidence / remove_exclusion return 200 even when the id does not exist (no 404)",
+    "readiness: firm-level exclusions are carried into the snapshot even for firms with no sites in the current plan"
+  ],
+  "updated_files": ["/app/backend/tests/test_iter22_qualification.py"],
+  "success_rate": {"backend": "100% of the regression suite (150/150); 1 xfail records a logic issue", "frontend": "~85% (all listed flows work; the quote multi-condition decisions and partial-ack display are broken)"},
+  "test_credentials": "organizer@demo.assemble.test / synthetic-demo with localStorage assemble_visitor",
+  "seed_data_creation": "Sandboxes from visitor ids ui22-aff3a6f1ca (12-branch: C-10 confirmed, evidence for alder/birch/redwood, C-39, exclusion, v2 with 8 open sites, draft quote), ui22b-34b7c01bfe (project prj_01c79e610bce with the 30-page PDF), ui22c-28b8f779da (C-10 dismissed, v1 selected, draft quote). Test PDF generator: /tmp/mkpdf.py (uses backend/pdf_sample.make_pdf).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Card testids: card-plan-<firm>, card-qual-plan-<firm>, card-req-sug-C-10, card-open-Sxx, card-plan-unassigned. Inspector: inspector-open-qualify, inspector-resolve. The Draft plan sheet opens via primary-action. To retest the quote decisions: use a 12-branch plan v1 (2 open conditions), click quote-condition-0-in_offer then quote-condition-1-resolved, and confirm both stay selected. For citations: upload /tmp/large30.pdf and check that a page-24 excerpt is cited as page 24. Dependency (prerequisite/uses_input) partial blocker not tested; it needs site tasks created via the LLM chat.",
+  "rca of the issue": "Quote decisions: Draft receives q from QuotePanel; decide() calls onSaved(data.quote,false), and the parent only reloads when reload is true, so q.condition_decisions and q.partial_ack never update. Each later PUT replaces condition_decisions with a dict holding just one entry. Batch citations: continue_reading calls run_extraction with text=chunk_text but keeps src.page_starts from the first batch. locate() searches src['text'] (the chunk), gets a small offset and maps it through the first batch's page_starts, giving page 1..20; the appended text never adds new page_starts."
+}
