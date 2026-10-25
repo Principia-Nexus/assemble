@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { MessageSquare, RotateCcw, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import AssistantPanel from "@/components/sheet/AssistantPanel";
+import TraceGraph from "@/components/sheet/TraceGraph";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -137,10 +138,12 @@ export default function ProjectSheet() {
           <PlanStrip sheet={sheet} goTo={select} />
           <Stepper info={info} selected={selected} onSelect={select} />
         </div>
-        <div className="no-print mt-4 flex flex-wrap gap-2 text-xs" data-testid="plan-scope-chips">
-          {sheet.current && <span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 font-semibold text-slate-800" data-testid="chip-current">Current review · plan v{sheet.current.version.number}</span>}
-          {sheet.preview && <span className="rounded-full border border-dashed border-amber-400 bg-amber-50 px-2.5 py-1 font-semibold text-amber-900" data-testid="chip-draft">Private draft · v{sheet.preview.version.number} · not selected</span>}
-        </div>
+        {sheet.preview && (
+          <div className="no-print mt-4 flex flex-wrap gap-2 text-xs" data-testid="plan-scope-chips">
+            <span className="rounded-full border border-dashed border-amber-400 bg-amber-50 px-2.5 py-1 font-semibold text-amber-900" data-testid="chip-draft">Private draft</span>
+          </div>
+        )}
+        <div className="mt-4"><TraceGraph rev={sheet.project.rev} /></div>
         <div key={selected} className="rise mt-4">
           {selected === "intake" && <IntakeTask key={sheet.project.rev} {...props} />}
           {selected === "draft" && <DraftTask {...props} />}

@@ -11,23 +11,6 @@ import { useDemoContent } from "@/lib/demoContent";
 import AmendmentPanel from "./AmendmentPanel";
 import ChangeRequests from "./ChangeRequests";
 
-function nextAction(sheet) {
-  const cur = sheet.current;
-  if (!cur) return "Make a draft first.";
-  if (sheet.preview) return "Review the amendment preview below. Save and recheck any edits, then discard it or select it.";
-  if (cur.checker.overall === "fail") return "The current plan fails";
-  const open = sheet.change_requests.filter((c) => c.status === "open");
-  if (open.length) return `Resolve ${open.length} open change request(s): open one as an amendment preview or close it.`;
-  const st = cur.partners.map((p) => p.status);
-  if (st.includes("declined")) return "A partner declined. Their sites now have no confirmed owner; amend the plan to cover the gap.";
-  if (st.some((s) => ["no_link", "link_not_shared", "awaiting", "needs_rereview", "expired"].includes(s)))
-    return "Some partners have not answered these exact terms yet. No response is not agreement.";
-  if (cur.checker.overall === "unknown") return "Every partner answered, but some checks cannot run because inputs are unknown.";
-  const n = openConditions(cur).length;
-  if (n) return `Every partner confirmed these terms and the checks pass, but ${n} condition${n > 1 ? "s are" : " is"} still open. Resolve ${n > 1 ? "them" : "it"} with the customer and partners before you commit to the bid.`;
-  return "Every partner confirmed these proposal-stage terms, and this version passes recorded checks. This is not an award, contract or crew hold.";
-}
-
 function Fact({ label, value, tone, testId }) {
   const tones = { ok: "text-emerald-800", bad: "text-red-800", wait: "text-amber-800", none: "text-slate-700" };
   return (
@@ -103,12 +86,11 @@ export default function DecideTask(props) {
   const conds = openConditions(cur);
   return (
     <section data-testid="task-decide" className="space-y-6">
-      <TaskHeader step={4} title="Decide" lead="Each partner's status against the exact terms they saw, open conditions, and any gap.">
+      <TaskHeader step={4} title="Decide">
         {!sheet.preview && <Button onClick={() => act("post", "/project/preview", { rev: sheet.project.rev }, "Amendment preview opened")} disabled={busy} data-testid="decide-start-amendment-button">Start amendment preview</Button>}
         {!sheet.preview && <Button variant="outline" onClick={() => setShowForm(!showForm)} data-testid="decide-log-change-button">Log customer change</Button>}
         <Button variant="ghost" asChild data-testid="decide-summary-link"><Link to="summary"><FileText className="h-4 w-4" /> Printable summary</Link></Button>
       </TaskHeader>
-      <div data-testid="decide-next-action" className="rounded-md border-l-4 border-slate-900 bg-white p-4 text-sm text-slate-800"><span className="eyebrow mr-2">Next</span>{nextAction(sheet)}</div>
       <SummaryStrip cur={cur} />
       {conds.length > 0 && (
         <div data-testid="decide-open-conditions" className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

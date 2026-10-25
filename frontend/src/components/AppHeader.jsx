@@ -19,9 +19,9 @@ export default function AppHeader({ onHistory }) {
   return (
     <header className="no-print sticky top-0 z-30 border-b border-[#E5E7EB] bg-[#FFFFFF]">
       <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6">
-        <div className="flex min-w-0 items-baseline gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <Brand />
-          <span data-testid="header-user-name" className="hidden truncate border-l border-slate-200 pl-3 text-sm text-slate-500 md:inline">
+          <span data-testid="header-user-name" className="hidden truncate border-l border-slate-300 pl-3 text-sm leading-5 text-slate-500 md:inline">
             {user?.firm_name || user?.name}
           </span>
         </div>

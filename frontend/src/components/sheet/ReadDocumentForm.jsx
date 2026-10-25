@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { api, errList } from "@/lib/api";
-import { useDemoContent } from "@/lib/demoContent";
 import { ErrorList } from "./Stepper";
 
 const TEXT_EXT = [".txt", ".md", ".eml", ".csv"];
@@ -14,7 +13,6 @@ const EMPTY = { kind: "brief", label: "", source_date: "", text: "", filename: n
 
 export default function ReadDocumentForm({ intake, synthetic, onRead }) {
   const [f, setF] = useState(EMPTY);
-  const demo = useDemoContent(synthetic);
   const [pdf, setPdf] = useState(null);
   const [errors, setErrors] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -47,19 +45,7 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
     if (file) takeFile(file);
   };
 
-  const [preparing, setPreparing] = useState(false);
-  const loadSamplePdf = async (scanned = false) => {
-    setPreparing(true);
-    setErrors([]);
-    try {
-      const { data } = await api.get(`/project/sample-pdf${scanned ? "?scanned=true" : ""}`, { responseType: "blob" });
-      const q = demo?.pdf || {};
-      const label = scanned ? q.scanned_label : q.label;
-      setF({ ...EMPTY, kind: q.kind || "quote", label: label || "", source_date: q.source_date || "" });
-      takeFile(new File([data], (scanned ? "scanned-" : "") + (q.filename || "sample.pdf"), { type: "application/pdf" }));
-    } catch (e) { setErrors(errList(e)); }
-    finally { setPreparing(false); }
-  };
+  const preparing = false;
   const [dragging, setDragging] = useState(false);
   const onDrop = (e) => {
     e.preventDefault();
@@ -94,7 +80,7 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
     }
   };
 
-  const sel = "mt-1 h-9 w-full rounded-md border border-input bg-white px-2 text-sm";
+  const sel = "h-9 w-full rounded-md border border-input bg-white px-2 text-sm";
   return (
     <div data-testid="read-document-form"
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -106,37 +92,28 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
           Drop a PDF or text file to read it
         </div>
       )}
-      {synthetic && demo && (
-        <div className="flex flex-wrap gap-2">
-          {demo.documents.map((s) => (
-            <Button key={s.key} size="sm" variant="outline" onClick={() => { setPdf(null); setF({ ...s, filename: null }); }} data-testid={`read-sample-${s.key}-button`}>{s.label}</Button>
-          ))}
-          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(false)} disabled={preparing} data-testid="read-sample-pdf-button">{demo.pdf.label}</Button>
-          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(true)} disabled={preparing} data-testid="read-sample-scanned-pdf-button">{demo.pdf.scanned_label}</Button>
-        </div>
-      )}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div>
-          <Label className="text-xs font-semibold text-slate-700" htmlFor="doc-kind">Kind</Label>
+      <div className="grid items-end gap-3 sm:grid-cols-3">
+        <div className="space-y-1">
+          <Label className="block text-xs font-semibold text-slate-700" htmlFor="doc-kind">Kind</Label>
           <select id="doc-kind" className={sel} value={f.kind} onChange={set("kind")} data-testid="read-kind-select">
             <option value="brief">Customer brief</option><option value="quote">Partner quote</option>
             <option value="email">Email</option><option value="other">Other document</option>
           </select>
         </div>
-        <div>
-          <Label className="text-xs font-semibold text-slate-700" htmlFor="doc-label">Label</Label>
-          <Input id="doc-label" className="mt-1 h-9" value={f.label} onChange={set("label")} data-testid="read-label-input" />
+        <div className="space-y-1">
+          <Label className="block text-xs font-semibold text-slate-700" htmlFor="doc-label">Label</Label>
+          <Input id="doc-label" className="h-9" value={f.label} onChange={set("label")} data-testid="read-label-input" />
         </div>
-        <div>
-          <Label className="text-xs font-semibold text-slate-700" htmlFor="doc-date">Document date (later ones win)</Label>
-          <Input id="doc-date" type="date" className="mt-1 h-9" value={f.source_date || ""} onChange={set("source_date")} data-testid="read-date-input" />
+        <div className="space-y-1">
+          <Label className="block text-xs font-semibold text-slate-700" htmlFor="doc-date">Date</Label>
+          <Input id="doc-date" type="date" className="h-9" value={f.source_date || ""} onChange={set("source_date")} data-testid="read-date-input" />
         </div>
       </div>
       {pdf ? (
         <div data-testid="read-pdf-chosen" className="flex items-center justify-between gap-3 rounded-md border border-dashed border-slate-300 bg-slate-50 p-4 text-sm">
           <div>
             <p className="font-semibold text-slate-900">{pdf.name}</p>
-            <p className="text-xs text-slate-500">PDF · {(pdf.size / 1024).toFixed(0)} KB. Its text is pulled out page by page and kept with the original file. If it is a scan with no text, the pages are read by text recognition (you will be asked to check the result).</p>
+            <p className="text-xs text-slate-500">PDF · {(pdf.size / 1024).toFixed(0)} KB</p>
           </div>
           <Button size="icon" variant="ghost" onClick={() => setPdf(null)} aria-label="Remove PDF" data-testid="read-pdf-remove"><X className="h-4 w-4" /></Button>
         </div>

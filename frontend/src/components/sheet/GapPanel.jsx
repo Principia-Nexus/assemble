@@ -5,7 +5,7 @@ export default function GapPanel({ gap, dirty }) {
   return (
     <aside data-testid="gap-analysis-panel" className="h-fit space-y-5 rounded-md border border-slate-200 bg-white p-5 lg:sticky lg:top-20">
       <div>
-        <p className="eyebrow">Gap check · last saved details</p>
+        <p className="eyebrow">Gaps</p>
         {dirty && <p data-testid="gap-stale-notice" className="mt-2 rounded-sm bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">You have unsaved edits. Save to update this check.</p>}
       </div>
       <dl className="grid grid-cols-2 gap-3 text-sm">
@@ -30,7 +30,6 @@ export default function GapPanel({ gap, dirty }) {
           </tbody>
         </table>
       )}
-      {gap.weekly.length > 0 && <p data-testid="gap-availability-note" className="text-[11px] text-slate-500">Availability needs confirmation for this job.</p>}
       <div>
         <p className="text-xs font-semibold text-slate-700">Unknowns ({gap.unknowns.length})</p>
         {gap.unknowns.length === 0 ? null : (

@@ -94,26 +94,21 @@ def sendable(email):
 
 
 def invitation(organizer_firm, job_name, partner_name, version_number, url):
-    subject = f"{organizer_firm} asks you to review your terms for {job_name}"
-    text = (f"{organizer_firm} prepared plan v{version_number} for {job_name} and asks {partner_name} to review "
-            "the exact sites, dates, price and payment terms proposed for your firm. You can confirm, request a change "
-            "or decline. Confirming does not award the job or form a contract.")
+    subject = f"Review your terms: {job_name}"
+    text = f"{organizer_firm} asks {partner_name} to review sites, dates and price for {job_name}."
     html = (f'<table role="presentation" width="100%"><tr><td style="padding:24px;font-family:Arial,sans-serif;'
-            f'color:#1A2838;font-size:14px;line-height:1.5">'
+            f'color:#1A2838;font-size:15px;line-height:1.5">'
             f'<p>{escape(text)}</p>'
             f'<p><a href="{escape(url)}" style="display:inline-block;background:#1A2838;color:#ffffff;padding:10px 16px;'
-            f'text-decoration:none;border-radius:4px">Open your private review</a></p>'
-            f'<p style="font-size:12px;color:#666">Sign in with this email address to open it. Sent by '
-            f'{escape(EMAIL_FROM_NAME)} on behalf of {escape(organizer_firm)}. We never ask for your password or '
-            f'payment details by email.</p></td></tr></table>')
+            f'text-decoration:none;border-radius:4px">Open review</a></p>'
+            f'<p style="font-size:12px;color:#666">Opens only for this email address.</p></td></tr></table>')
     return subject, text, html
 
 
 def code_html(code):
     return (f'<table role="presentation" width="100%"><tr><td style="padding:24px;font-family:Arial,sans-serif;color:#1A2838">'
-            f'<p>Your Assemble verification code is</p><p style="font-size:28px;letter-spacing:6px;font-weight:bold">{escape(code)}</p>'
-            f'<p style="font-size:12px;color:#666">It expires in 15 minutes. Enter it in the page you were using. '
-            f'We never ask for your password by email.</p></td></tr></table>')
+            f'<p>Your Assemble code</p><p style="font-size:28px;letter-spacing:6px;font-weight:bold">{escape(code)}</p>'
+            f'<p style="font-size:12px;color:#666">Expires in 15 minutes.</p></td></tr></table>')
 
 
 async def send_email(*, to, subject, html):

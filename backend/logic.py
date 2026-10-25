@@ -482,7 +482,7 @@ def check(v):
         pay["details"].append("Every partner's total, advance and balance is zero or more.")
     rules.append(pay)
 
-    co = _rule("conditions", "Stated payment and prerequisite conditions")
+    co = _rule("conditions", "Payment and prerequisites")
     for c in v.get("job_conditions") or []:
         if not c.get("resolved"):
             co["details"].append(f"Job condition (stays open until resolved): {c['text']}")
@@ -505,9 +505,9 @@ def check(v):
     if overall == "fail":
         note = ""
     elif overall == "unknown":
-        note = "Some checks cannot run because inputs are unknown. Nothing is assumed for them."
+        note = "Some inputs are unknown."
     else:
-        note = "One workable arrangement; other arrangements may exist."
+        note = ""
     return {"overall": overall, "rules": rules, "weekly": weekly_load(v), "total_cents": total,
             "open_conditions": open_conditions(v, v),
             "ceiling_cents": ceiling, "headroom_cents": headroom, "note": note}

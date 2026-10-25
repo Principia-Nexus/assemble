@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { money, slug } from "@/lib/format";
-import { TaskHeader, ErrorList } from "./Stepper";
+import { ErrorList } from "./Stepper";
 import ScheduleGrid from "./ScheduleGrid";
 import { openConditions } from "@/lib/planState";
 import CheckerPanel from "./CheckerPanel";
@@ -27,58 +26,50 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
     if (r.ok && linksExist) goTo("decide");
   };
 
+  const chip = (on, disabled) => `lift flex min-w-[180px] flex-1 flex-col items-start rounded-md border px-3 py-2.5 text-left transition-colors sm:flex-none ${
+    disabled ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : on ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white hover:border-slate-400"}`;
   return (
     <section data-testid="task-draft" className="space-y-6">
-      <TaskHeader step={2} title="Draft">
-        <Button onClick={generate} disabled={busy || !!sheet.preview} data-testid="draft-generate-button">{busy ? "Checking…" : failing ? "Regenerate with these crews" : "Check draft"}</Button>
-      </TaskHeader>
+      <h2 className="sr-only">Draft</h2>
       <ErrorList errors={errors} testId="draft-errors" />
       {sheet.preview && (
         <div data-testid="draft-preview-open-notice" role="status" className="flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
-          <p><span className="font-semibold">Proposed changes v{sheet.preview.version.number} are open.</span> Select or discard them before generating another candidate.</p>
+          <p><span className="font-semibold">Proposed changes v{sheet.preview.version.number} are open.</span></p>
           <Button size="sm" onClick={() => goTo("decide")} data-testid="draft-open-preview-button">Open preview</Button>
         </div>
       )}
       {failing && !linksExist && (
-        <p data-testid="draft-repair-notice" role="status" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-          <span className="font-semibold">Repair this draft first.</span>
-        </p>
+        <p data-testid="draft-repair-notice" role="status" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-900">Repair this draft first.</p>
       )}
-      {linksExist && (
-        <p data-testid="draft-links-notice" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-          Review links already exist, so a new candidate opens as an amendment preview. The current plan and its responses stay untouched until you select it.
-        </p>
-      )}
-      <div className="rounded-md border border-slate-200 bg-white p-5">
-        <p className="eyebrow mb-3">Crews to include in this candidate</p>
+      <div className="rounded-md border border-slate-200 bg-white p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="eyebrow">Firms</p>
+          <Button size="sm" onClick={generate} disabled={busy || !!sheet.preview} data-testid="draft-generate-button">{busy ? "Checking…" : failing ? "Recheck" : "Check draft"}</Button>
+        </div>
         {partners.length === 0 && <p className="text-sm text-slate-500">No partners yet. Add them in Check.</p>}
-        <div className="stagger grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {partners.map((p) => (
-            <label key={p.partner_id} className="lift flex cursor-pointer items-start gap-3 rounded border border-slate-200 p-3 hover:border-slate-400">
-              <Checkbox checked={chosen.includes(p.partner_id)} onCheckedChange={() => toggle(p.partner_id)} data-testid={`draft-include-${slug(p.partner_id)}`} aria-label={`Include ${p.name}`} />
-              <span className="text-sm">
-                <span className="block font-semibold text-slate-900">{p.name}</span>
-                <span className="font-mono text-[11px] text-slate-500">{money(p.price_per_site_cents)}/site · cap {(p.capacity || []).map((c) => c ?? "?").join("/")} · max {p.max_sites ?? "?"}</span>
-              </span>
-            </label>
-          ))}
-          <label className="flex cursor-pointer items-start gap-3 rounded border border-slate-200 p-3 hover:border-slate-400">
-            <Checkbox checked={includeOwn && ownCap > 0} disabled={ownCap === 0} onCheckedChange={(v) => setIncludeOwn(!!v)} data-testid="draft-include-own" aria-label="Include your own crew" />
-            <span className="text-sm"><span className="block font-semibold text-slate-900">Your own crew</span>
-              <span className="font-mono text-[11px] text-slate-500">cap {(sheet.intake.own_capacity || []).map((c) => c ?? "?").join("/") || "unknown"}</span>
-              {ownCap === 0 && <span data-testid="draft-own-zero-note" className="block text-[11px] text-slate-500">No capacity entered for your crew, so it can't take sites. Add it in Check.</span>}</span>
-          </label>
+        <div className="stagger flex flex-wrap gap-2" role="group" aria-label="Firms to include">
+          {partners.map((p) => {
+            const on = chosen.includes(p.partner_id);
+            return (
+              <button key={p.partner_id} type="button" aria-pressed={on} onClick={() => toggle(p.partner_id)} className={chip(on)} data-testid={`draft-include-${slug(p.partner_id)}`}>
+                <span className="text-sm font-semibold">{p.name}</span>
+                <span className={`font-mono text-[11px] ${on ? "text-white/70" : "text-slate-500"}`}>{money(p.price_per_site_cents)}/site · cap {(p.capacity || []).map((c) => c ?? "?").join("/")} · max {p.max_sites ?? "?"}</span>
+              </button>
+            );
+          })}
+          <button type="button" aria-pressed={includeOwn && ownCap > 0} disabled={ownCap === 0} onClick={() => setIncludeOwn(!includeOwn)} className={chip(includeOwn && ownCap > 0, ownCap === 0)} data-testid="draft-include-own">
+            <span className="text-sm font-semibold">Your own crew</span>
+            <span className={`font-mono text-[11px] ${includeOwn && ownCap > 0 ? "text-white/70" : ""}`}>cap {(sheet.intake.own_capacity || []).map((c) => c ?? "?").join("/") || "unknown"}</span>
+          </button>
         </div>
       </div>
       {sheet.current ? (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <ScheduleGrid version={sheet.current.version} checker={sheet.current.checker} testPrefix="current" openCount={openConditions(sheet.current).length} />
-          <CheckerPanel checker={sheet.current.checker} notes={sheet.current.version.generator_notes} title={`Checker · plan v${sheet.current.version.number}`} testPrefix="current" />
+          <CheckerPanel checker={sheet.current.checker} notes={sheet.current.version.generator_notes} title="Checker" testPrefix="current" />
         </div>
       ) : (
-        <p data-testid="draft-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
-          No candidate yet. Choose crews and generate one.
-        </p>
+        <p data-testid="draft-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">No candidate yet.</p>
       )}
     </section>
   );

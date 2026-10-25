@@ -36,7 +36,6 @@ export default function EmailInvite({ p, act, busy, id, onCopy }) {
               <p><span className="text-slate-500">To </span><span data-testid="email-invite-to" className="break-all font-mono">{preview.to}</span></p>
               <p><span className="text-slate-500">Subject </span><span data-testid="email-invite-subject">{preview.subject}</span></p>
               <p data-testid="email-invite-body" className="rounded-md border border-slate-200 bg-slate-50 p-3 text-slate-700">{preview.text}</p>
-              <p className="text-xs text-slate-500">The email contains a button to this partner's private review. It opens only for this address.</p>
               {preview.emailed_at && <p className="text-xs text-slate-500">Last emailed {fmtTime(preview.emailed_at)}.</p>}
               {!preview.sendable && <p data-testid="email-invite-blocked" className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">{preview.reason}</p>}
             </div>
