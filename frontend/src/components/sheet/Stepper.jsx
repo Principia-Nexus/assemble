@@ -48,7 +48,7 @@ export function TaskHeader({ step, title, lead, children }) {
       <div className="max-w-2xl">
         <p className="eyebrow">Task {step} of 4</p>
         <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">{title}</h2>
-        <p className="mt-1 text-sm leading-relaxed text-slate-600">{lead}</p>
+        {lead && <p className="mt-1 text-sm leading-relaxed text-slate-600">{lead}</p>}
       </div>
       {children && <div className="flex shrink-0 flex-wrap gap-2">{children}</div>}
     </div>

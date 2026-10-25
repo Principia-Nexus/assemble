@@ -60,7 +60,7 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
 
   return (
     <section data-testid="task-intake" className="space-y-6">
-      <TaskHeader step={1} title="Check this job" lead="Enter what you know. Anything left blank is shown as unknown and is never guessed. Invalid dates, counts or amounts are rejected, not adjusted.">
+      <TaskHeader step={1} title="Check this job">
         <Button onClick={save} disabled={busy} data-testid="intake-save-button">{busy ? "Saving…" : "Save and check gaps"}</Button>
         {sheet.gap.site_count > 0 && sheet.intake.weeks && (
           <Button variant="outline" onClick={() => goTo("draft")} data-testid="intake-next-button">Go to draft</Button>
