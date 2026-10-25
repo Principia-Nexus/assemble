@@ -39,13 +39,13 @@ export default function PlanStrip({ sheet, goTo }) {
           {conds ? <span className="text-amber-800">{conds} open</span> : <span className="text-slate-600">None open</span>}
         </Cell>
       </div>
-      <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <p data-testid="plan-strip-next-text" className="text-sm text-slate-700"><span className="eyebrow mr-2">Next</span>{next.text}</p>
+      <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <p data-testid="plan-strip-next-text" className="text-sm text-slate-700">{next.text}</p>
         {next.href ? (
           <Button size="sm" asChild data-testid="plan-strip-next-button"><Link to={next.href}>{next.label} <ArrowRight className="h-4 w-4" /></Link></Button>
-        ) : (
+        ) : next.label ? (
           <Button size="sm" onClick={go} data-testid="plan-strip-next-button">{next.label} <ArrowRight className="h-4 w-4" /></Button>
-        )}
+        ) : null}
       </div>
     </section>
   );

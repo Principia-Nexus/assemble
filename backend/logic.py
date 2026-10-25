@@ -518,16 +518,51 @@ def _site_view(v, sid):
     s = next(x for x in v["sites"] if x["site_id"] == sid)
     a = v["assignments"].get(sid) or {}
     return {"owner": a.get("owner"), "owner_name": owner_name(v, a.get("owner")) if a.get("owner") else None,
-            "week": a.get("week"), "deadline_week": s.get("deadline_week")}
+            "week": a.get("week"), "deadline_week": s.get("deadline_week"), "name": s.get("name"),
+            "week_start": week_range(v.get("start_date"), a.get("week"))[0],
+            "deadline_end": week_range(v.get("start_date"), s.get("deadline_week"))[1]}
 
 
 def _terms_summary(t):
     if not t:
         return None
-    return {"sites": [f"{s['site_id']} (week {s['week']})" for s in t["sites"]],
+    return {"sites": [f"{s.get('name') or s['site_id']} (week {s['week']}{', from ' + s['week_start'] if s.get('week_start') else ''})"
+                      for s in t["sites"]],
             "price_total_cents": t["price_total_cents"], "advance_cents": t["advance_cents"],
             "balance_cents": t["balance_cents"], "payer": t["payer"], "conditions": t["conditions"],
             "valid_until": t["valid_until"]}
+
+
+TERM_LABELS = {"scope": "scope", "exclusions": "exclusions", "price_per_site_cents": "price per site",
+               "adjustment_cents": "price adjustment", "price_total_cents": "total price", "payer": "payer",
+               "advance_pct": "advance %", "advance_cents": "advance amount", "balance_cents": "balance",
+               "balance_terms": "balance terms", "conditions": "conditions", "valid_until": "validity date",
+               "partner_name": "firm name"}
+
+
+def term_reasons(tb, ta):
+    """Plain reasons why exact terms differ, including fields not shown in the summary."""
+    if not tb or not ta:
+        return []
+    out = []
+    bs, as_ = {s["site_id"]: s for s in tb["sites"]}, {s["site_id"]: s for s in ta["sites"]}
+    for sid in sorted(bs.keys() | as_.keys()):
+        b, a = bs.get(sid), as_.get(sid)
+        nm = (a or b).get("name") or sid
+        if not b:
+            out.append(f"{nm} added")
+        elif not a:
+            out.append(f"{nm} removed")
+        elif b.get("week") != a.get("week"):
+            out.append(f"{nm} moves from week {b.get('week')} to week {a.get('week')}")
+        elif (b.get("week_start"), b.get("week_end")) != (a.get("week_start"), a.get("week_end")):
+            out.append(f"{nm} dates change ({b.get('week_start')} → {a.get('week_start')})")
+        elif b != a:
+            out.append(f"{nm} site details change")
+    for k, label in TERM_LABELS.items():
+        if tb.get(k) != ta.get(k):
+            out.append(f"{label} changes")
+    return out
 
 
 def diff(old, new):
@@ -554,7 +589,7 @@ def diff(old, new):
         sb, sa = _terms_summary(tb), _terms_summary(ta)
         changes = [k for k in (sa or sb or {}) if (sb or {}).get(k) != (sa or {}).get(k)]
         partners.append({"partner_id": pid, "name": owner_name(new if ta else old, pid), "state": state,
-                         "before": sb, "after": sa, "changes": changes})
+                         "before": sb, "after": sa, "changes": changes, "reasons": term_reasons(tb, ta)})
     return {"sites": sites, "partners": partners,
             "total_before_cents": plan_total(old)[0], "total_after_cents": plan_total(new)[0],
             "weekly_before": weekly_load(old), "weekly_after": weekly_load(new)}

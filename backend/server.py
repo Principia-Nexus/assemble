@@ -32,8 +32,9 @@ async def origin_guard(request: Request, call_next):
     PROJECT_CTX.set((request.headers.get("x-project-id") or "").strip()[:40] or None)
     if request.method in ("POST", "PUT", "PATCH", "DELETE") and request.url.path.startswith("/api"):
         origin = request.headers.get("origin")
-        host = request.headers.get("x-forwarded-host") or request.headers.get("host")
-        if origin and host and urlparse(origin).netloc != host:
+        hosts = {h.strip() for k in ("x-forwarded-host", "host") for h in (request.headers.get(k) or "").split(",") if h.strip()}
+        hosts |= {urlparse(o.strip()).netloc for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip() not in ("", "*")}
+        if origin and hosts and urlparse(origin).netloc not in hosts:
             return JSONResponse(status_code=403, content={"detail": "Request origin not allowed."})
     return await call_next(request)
 

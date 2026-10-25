@@ -17,13 +17,11 @@ import DemoTour from "@/components/sheet/DemoTour";
 import PlanStrip from "@/components/sheet/PlanStrip";
 import { clearDemoContent } from "@/lib/demoContent";
 import { RouteDenied } from "@/components/RouteDenied";
-import ProjectBar from "@/components/sheet/ProjectBar";
+import { Navigate } from "react-router-dom";
 import { confirmLeave } from "@/lib/dirty";
-import { Navigate, useParams } from "react-router-dom";
 
 export default function ProjectSheet() {
   const { user } = useAuth();
-  const { projectId } = useParams();
   const [sheet, setSheet] = useState(undefined);
   const [loadError, setLoadError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -72,7 +70,9 @@ export default function ProjectSheet() {
   }, [load]);
 
   const info = useMemo(() => (sheet ? stepInfo(sheet) : null), [sheet]);
-  useEffect(() => { if (info && !selected) setSelected(info.current); }, [info, selected]);
+  const stepKey = sheet ? `assemble_step_${sheet.project.project_id}` : null;
+  useEffect(() => { if (info && !selected) setSelected(sessionStorage.getItem(stepKey) || info.current); }, [info, selected, stepKey]);
+  useEffect(() => { if (selected && stepKey) sessionStorage.setItem(stepKey, selected); }, [selected, stepKey]);
 
   if (loadError) return <RouteDenied message={loadError} />;
   if (sheet === undefined) return <Loading label="Loading your job sheet" />;
@@ -82,12 +82,20 @@ export default function ProjectSheet() {
   const isCanon = sheet.project.synthetic && !!sheet.project.fixture_id;
   const reset = async () => { clearDemoContent(); await act("post", "/project/demo-reset", {}, "Example reset"); };
 
-  const props = { sheet, act, busy, goTo: setSelected, user };
+  const props = { sheet, act, busy, goTo: select, user };
 
   return (
     <div className="min-h-screen bg-slate-50">
       <AppHeader onHistory={sheet ? () => setHistoryOpen(true) : null} />
-      <ProjectBar projectId={projectId} rev={sheet.project.rev}>
+      <main className={`mx-auto max-w-6xl px-4 pt-8 sm:px-6 ${tourOpen && isCanon ? "pb-80 sm:pb-64" : "pb-24"}`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 data-testid="project-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              {sheet.intake.job_name || sheet.project.name}
+            </h1>
+            {sheet.intake.customer_name && <p data-testid="project-customer" className="mt-1 text-sm text-slate-500">{sheet.intake.customer_name}</p>}
+          </div>
+          <div className="no-print flex items-center gap-1">
         {isCanon && (
           <Button size="sm" variant="ghost" className="h-7" onClick={() => setTourOpen(true)} data-testid="demo-tour-open">
             <Sparkles className="h-3.5 w-3.5" /> Guided tour
@@ -112,12 +120,8 @@ export default function ProjectSheet() {
             </AlertDialogContent>
           </AlertDialog>
         )}
-      </ProjectBar>
-      <main className={`mx-auto max-w-6xl px-4 pt-8 sm:px-6 ${tourOpen && isCanon ? "pb-80 sm:pb-64" : "pb-24"}`}>
-        <h1 data-testid="project-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          {sheet.intake.job_name || sheet.project.name}
-        </h1>
-        {sheet.intake.customer_name && <p data-testid="project-customer" className="mt-1 text-sm text-slate-500">{sheet.intake.customer_name}</p>}
+          </div>
+        </div>
         <PlanStrip sheet={sheet} goTo={select} />
         <Stepper info={info} selected={selected} onSelect={select} />
         <div key={selected} className="rise mt-6">

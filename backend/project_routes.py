@@ -2,12 +2,13 @@ import copy
 import secrets
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
 import logic as L
+import mailer
 from core import db, now_iso, new_id, current_user, log_event, STALE_MSG, PROJECT_CTX
 from demo import reset_project
 from state import partner_statuses, link_public
@@ -454,6 +455,42 @@ async def mark_shared(token: str, user=Depends(current_user)):
         await db.links.update_one({"token": token}, {"$set": {"shared_at": now_iso()}})
         await log_event(p["project_id"], org(user), "link", f"Marked as shared with {link['partner_name']} by the organizer.",
                         partner_id=link["partner_id"])
+    return {"sheet": await sheet(p["project_id"])}
+
+
+async def _invite(token, user, request):
+    p = await get_project(user)
+    link = await db.links.find_one({"token": token, "project_id": p["project_id"], "revoked": False}, {"_id": 0})
+    if not link:
+        raise HTTPException(404, "Link not found.")
+    cur = await get_version(p.get("current_version_id"))
+    firm = await db.firms.find_one({"firm_id": p["firm_id"]}, {"_id": 0, "name": 1})
+    origin = (request.headers.get("origin") or "").rstrip("/")
+    subject, text, html = mailer.invitation((firm or {}).get("name") or user.get("firm_name"), p["intake"].get("job_name") or p["name"],
+                                            link["partner_name"], (cur or {}).get("number"), f"{origin}/review/{token}")
+    return p, link, subject, text, html
+
+
+@router.post("/links/{token}/email-preview")
+async def email_preview(token: str, request: Request, user=Depends(current_user)):
+    _, link, subject, text, _ = await _invite(token, user, request)
+    ok = mailer.sendable(link["invite_email"])
+    return {"to": link["invite_email"], "subject": subject, "text": text, "sendable": ok, "emailed_at": link.get("emailed_at"),
+            "reason": None if ok else "This is a synthetic example address, so no email is sent. Copy the link instead."}
+
+
+@router.post("/links/{token}/email-send")
+async def email_send(token: str, request: Request, user=Depends(current_user)):
+    p, link, subject, _, html = await _invite(token, user, request)
+    if not mailer.sendable(link["invite_email"]):
+        raise HTTPException(400, "This is a synthetic example address, so no email is sent. Copy the link instead.")
+    if not request.headers.get("origin"):
+        raise HTTPException(400, "Send the invitation from the app.")
+    email_id = await mailer.send_email(to=link["invite_email"], subject=subject, html=html)
+    await db.links.update_one({"token": token}, {"$set": {"emailed_at": now_iso(), "email_id": email_id,
+                                                          "shared_at": link.get("shared_at") or now_iso()}})
+    await log_event(p["project_id"], org(user), "link", f"Review invitation emailed to {link['invite_email']} for {link['partner_name']}.",
+                    partner_id=link["partner_id"])
     return {"sheet": await sheet(p["project_id"])}
 
 

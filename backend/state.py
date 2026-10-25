@@ -6,7 +6,7 @@ def link_public(link):
     if not link:
         return None
     return {"token": link["token"], "path": f"/review/{link['token']}", "invite_email": link["invite_email"],
-            "created_at": link["created_at"], "shared_at": link.get("shared_at"), "claimed": bool(link.get("claimed_by"))}
+            "created_at": link["created_at"], "shared_at": link.get("shared_at"), "emailed_at": link.get("emailed_at"), "claimed": bool(link.get("claimed_by"))}
 
 
 async def latest_response(project_id, version_id, pid):

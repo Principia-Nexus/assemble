@@ -27,18 +27,18 @@ function Contributions({ cur }) {
       {cur.partners.map((p) => (
         <li key={p.partner_id} className="border-t border-slate-200 pt-2">
           <p className="font-semibold">{p.name} · <span className="font-mono">{money(p.terms.price_total_cents)}</span></p>
-          <p className="font-mono text-xs">{p.terms.sites.map((s) => `${s.site_id} (${s.week})`).join(", ")}</p>
+          <p className="font-mono text-xs">{p.terms.sites.map((s) => `${s.name || s.site_id} (${s.week_start ? `week of ${fmtDate(s.week_start)}` : `wk ${s.week}`})`).join(", ")}</p>
           <p className="text-xs text-slate-600">Advance {money(p.terms.advance_cents)} / balance {money(p.terms.balance_cents)} · {STATUS[p.status].label}</p>
         </li>
       ))}
     </ul>
     <table className="hidden w-full text-sm sm:table print:table">
-      <thead><tr className="text-left font-mono text-[11px] text-slate-500"><th className="py-1">Crew</th><th>Sites (week)</th><th>Total</th><th>Advance / balance</th><th>Status</th></tr></thead>
+      <thead><tr className="text-left font-mono text-[11px] text-slate-500"><th className="py-1">Crew</th><th>Sites (scheduled)</th><th>Total</th><th>Advance / balance</th><th>Status</th></tr></thead>
       <tbody>
         {cur.partners.map((p) => (
           <tr key={p.partner_id} className="border-t border-slate-200 align-top">
             <td className="py-1.5 pr-2 font-semibold">{p.name}</td>
-            <td className="pr-2 font-mono text-xs">{p.terms.sites.map((s) => `${s.site_id} (${s.week})`).join(", ")}</td>
+            <td className="pr-2 font-mono text-xs">{p.terms.sites.map((s) => `${s.name || s.site_id} (${s.week_start ? `week of ${fmtDate(s.week_start)}` : `wk ${s.week}`})`).join(", ")}</td>
             <td className="pr-2 font-mono">{money(p.terms.price_total_cents)}</td>
             <td className="pr-2 font-mono text-xs">{money(p.terms.advance_cents)} / {money(p.terms.balance_cents)}</td>
             <td className="text-xs">{STATUS[p.status].label}</td>
@@ -90,7 +90,7 @@ export default function Summary() {
     <div className="min-h-screen bg-slate-100 print:bg-white">
       <div className="no-print mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
         <Button variant="ghost" size="sm" asChild data-testid="summary-back-link"><Link to=".." relative="path"><ArrowLeft className="h-4 w-4" /> Back to sheet</Link></Button>
-        <Button size="sm" onClick={() => window.print()} data-testid="summary-print-button"><Printer className="h-4 w-4" /> Print</Button>
+        <Button size="sm" onClick={() => window.print()} data-testid="summary-print-button"><Printer className="h-4 w-4" /> Print / save PDF</Button>
       </div>
       <article data-testid="summary-document" className="mx-auto max-w-4xl space-y-6 bg-white p-8 shadow-sm print:max-w-none print:p-0 print:shadow-none sm:p-12">
         <header className="space-y-1">

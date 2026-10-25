@@ -14,7 +14,8 @@ export default function GapPanel({ gap, dirty }) {
         <div><dt className="text-xs text-slate-500">Partners</dt><dd className="font-mono font-semibold">{gap.partner_count}</dd></div>
         <div><dt className="text-xs text-slate-500">With known price</dt><dd className="font-mono font-semibold">{gap.priced_partner_count}</dd></div>
       </dl>
-      {gap.weekly.length > 0 && (
+      {gap.site_count === 0 && <p data-testid="gap-no-sites-note" className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">No sites yet, so demand and shortages can't be checked.</p>}
+      {gap.weekly.length > 0 && gap.site_count > 0 && (
         <table className="w-full text-xs">
           <thead><tr className="text-left font-mono text-[10px] text-slate-500"><th>Week</th><th>Due</th><th>Known capacity</th><th>Short</th></tr></thead>
           <tbody>

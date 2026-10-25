@@ -68,9 +68,6 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
       <TaskHeader step={1} title={sheet.intake.sites.length ? "Check" : "Add the job details"}>
         {dirty && <span data-testid="intake-unsaved-badge" className="self-center rounded-sm bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Unsaved edits</span>}
         <Button onClick={save} disabled={busy} data-testid="intake-save-button">{busy ? "Saving…" : "Save and check gaps"}</Button>
-        {sheet.gap.site_count > 0 && sheet.intake.weeks && (
-          <Button variant="outline" onClick={() => goTo("draft")} data-testid="intake-next-button">Go to draft</Button>
-        )}
       </TaskHeader>
       <ErrorList errors={errors} testId="intake-errors" />
       <Tabs value={tab} onValueChange={(v) => { setTab(v); sessionStorage.setItem(`assemble_intake_tab_${sheet.project.project_id}`, v); }}>

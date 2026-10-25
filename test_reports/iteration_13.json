@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 13 (frontend only, Playwright on the preview URL, demo organizer). Verified the follow-ups from iteration 12 and the login/header changes. Results: (1) Intake tab choice persists: on a new project with 0 sites, after choosing 'Enter details manually' the form tab stayed selected after save and after reload, and sessionStorage assemble_intake_tab_<pid>='form'. PASS. (2) The ProjectBar switcher label updates right after renaming (rename 1, then reload, then rename 2: label = 'TEST_Second name'). PASS. (3) Dirty guard: the confirm dialog appeared and dismissing it kept the edits for brand-home-link, header-my-reviews-link, header-logout-button, header-projects-link, project-bar-back, task-step-draft and plan-strip-next-button (12-branch, where Next points to Draft). beforeunload fires on reload while dirty. PASS, with 1 gap: the 'Go to draft' button inside IntakeTask (intake-next-button) has NO guard and silently drops unsaved edits. (4) At 390px there is no horizontal overflow on Check (doc 390/390, TabsList 358/358) on either tab. PASS. (5) /projects/prj_doesnotexist shows 'Project not found for your business.' with route-denied-projects-button, which returns to /projects. PASS. (6) Warehouse opens on Check with no checkmark on Check; Six-store and 12-branch open on Draft with Check ticked. PASS. (7) Login: the gaps Partner->email, email->Continue and Continue->Google are each exactly 16px. The header shows 'Brightline Electrical' right next to the Assemble logo (12px gap, divider). PASS. (8) Regression: /projects shows the 3 examples in order; New project create works; on 12-branch, ticking 5 partners and generating gives v1 'Schedule and budget fit'; Go to partners -> Invite, and Create link works. PASS.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "IntakeTask 'Go to draft' button", "issue": "intake-next-button calls goTo('draft'), which is setSelected directly and has no confirmLeave. With unsaved intake edits, clicking it switches to Draft with no dialog and the edits are lost (reproduced on 12-branch). Fix: pass the guarded select as goTo to IntakeTask/DraftTask/PartnersTask/DemoTour, or call confirmLeave() in the button.", "selector": "[data-testid='intake-next-button']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AppHeader (mobile)", "issues": ["The firm name (header-user-name) is hidden below md (hidden md:inline), so at 390px it does not show next to the logo. This is fine if intended."]},
+      {"screen": "Intake TabsList at 390px", "issues": ["No overflow now, but the two tabs wrap onto 2 centered lines inside a gray pill, which looks a little uneven. Consider full-width grid-cols-2 tabs with shorter labels."]},
+      {"screen": "Warehouse (Needs information)", "issues": ["The page opens on Check, but the plan-strip still says 'No candidate plan yet' with a 'Draft' button. Consider pointing Next at the missing Harbor information."]},
+      {"screen": "Plan strip", "issues": ["When next.href is set (Link variant, e.g. summary), plan-strip-next-button is a plain Link with no confirmLeave. This is low risk, because intake is rarely dirty at that stage."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Guard intake-next-button (and other in-task goTo calls) with confirmLeave so unsaved intake edits are not dropped silently.",
+    "Optional: add confirmLeave to the plan-strip Link variant (next.href)."
+  ],
+  "critical_code_review_comments": [
+    "ProjectSheet passes goTo: setSelected (unguarded) in props, while Stepper/PlanStrip get the guarded select. Pass select instead to make the guard consistent.",
+    "The 'assemble:intake-tab' custom event sets the tab without writing to sessionStorage, so a tab switch triggered by the event does not survive the next save remount (minor).",
+    "The dirty.js module-level flag together with a beforeunload listener works; IntakeTask cleanup calls setDirty(false) on unmount, which is correct because every leave path now confirms first (except the one above)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped as requested)", "frontend": "~95% (all 8 requested items pass; 1 remaining unguarded leave path)"},
+  "test_credentials": "Demo Organizer button on /login (synthetic-demo).",
+  "seed_data_creation": "TEST_Tabs proj (renamed TEST_Second name) created in a throwaway demo sandbox.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Each Playwright run gets a new demo sandbox. Dirty guard testing: fill intake-job-name-input, then click a target with a dialog handler that dismisses. Check the intake-next-button guard after the fix."
+}

@@ -5,9 +5,10 @@ import { Copy, Link2, Send, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/StatusPill";
 import { api, errText, visitorId } from "@/lib/api";
-import { STATUS, money, fmtTime, slug } from "@/lib/format";
+import { STATUS, money, fmtDate, fmtTime, slug } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { TaskHeader } from "./Stepper";
+import EmailInvite from "./EmailInvite";
 
 function PartnerCard({ p, act, busy, demoPassword, blocked }) {
   const { setUser } = useAuth();
@@ -27,46 +28,43 @@ function PartnerCard({ p, act, busy, demoPassword, blocked }) {
   };
   const s = STATUS[p.status];
   return (
-    <article data-testid={`partner-card-${id}`} className="lift flex flex-col rounded-md border border-slate-200 bg-white">
-      <div className="space-y-2 border-b border-slate-100 p-4">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-base font-semibold text-slate-900">{p.name}</h3>
-          <span className="font-mono text-sm font-semibold">{money(p.terms.price_total_cents)}</span>
+    <article data-testid={`partner-card-${id}`} className="lift rounded-md border border-slate-200 bg-white">
+      <div className="flex flex-wrap items-start justify-between gap-3 p-4">
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-semibold text-slate-900">{p.name}</h3>
+            {p.status !== "no_link" && <StatusPill testId={`partner-card-status-${id}`} tone={s.tone} label={s.label} />}
+          </div>
+          <p className="text-xs text-slate-600">{p.terms.sites.map((x) => `${x.name || x.site_id} (${x.week_start ? `week of ${fmtDate(x.week_start)}` : `wk ${x.week}`})`).join(" · ")}</p>
+          <p className="text-xs text-slate-500">Advance {money(p.terms.advance_cents)} · balance {money(p.terms.balance_cents)} · to <span data-testid={`partner-card-recipient-${id}`} className="break-all font-mono text-slate-700">{p.link?.invite_email || p.terms.email || "no email yet"}</span></p>
         </div>
-        {p.status !== "no_link" && <StatusPill testId={`partner-card-status-${id}`} tone={s.tone} label={s.label} />}
+        <span className="font-mono text-base font-semibold">{money(p.terms.price_total_cents)}</span>
       </div>
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 p-4 text-xs">
-        <dt className="text-slate-500">Sites</dt><dd className="font-mono">{p.terms.sites.map((x) => `${x.site_id}·w${x.week}`).join(", ")}</dd>
-        <dt className="text-slate-500">Advance / balance</dt><dd className="font-mono">{money(p.terms.advance_cents)} / {money(p.terms.balance_cents)}</dd>
-        <dt className="text-slate-500">Invite email</dt><dd className="truncate font-mono">{p.link?.invite_email || "set when link is created"}</dd>
-      </dl>
-      <div className="mt-auto space-y-2 border-t border-slate-100 p-4">
+      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-4 py-3">
         {!p.link ? (
-          <Button className="w-full" disabled={busy || blocked} onClick={() => act("post", "/project/links", { partner_id: p.partner_id }, "Private link created. It is not sent until you share it.")} data-testid={`partner-card-create-link-${id}`}>
-            <Link2 className="h-4 w-4" /> Create private review link
+          <Button size="sm" disabled={busy || blocked} onClick={() => act("post", "/project/links", { partner_id: p.partner_id }, "Private link created. It is not sent until you share it.")} data-testid={`partner-card-create-link-${id}`}>
+            <Link2 className="h-4 w-4" /> Request review
           </Button>
         ) : (
           <>
-            <div className="flex gap-2">
-              <input readOnly value={url} className="h-9 min-w-0 flex-1 rounded border border-slate-200 bg-slate-50 px-2 font-mono text-[11px]" data-testid={`partner-card-link-${id}`} onFocus={(e) => e.target.select()} />
-              <Button size="sm" variant="outline" className="h-9" onClick={copy} aria-label={`Copy review link for ${p.name}`} data-testid={`partner-card-copy-link-${id}`}><Copy className="h-4 w-4" /></Button>
-            </div>
-            {p.status === "needs_rereview" ? (
-              <p data-testid={`partner-card-history-${id}`} className="text-[11px] text-amber-800">Answered previous terms; revised terms await review.</p>
-            ) : p.response ? (
-              <p data-testid={`partner-card-history-${id}`} className="text-[11px] text-slate-500">Answered these terms {fmtTime(p.response.created_at)}.</p>
-            ) : p.link.shared_at ? (
-              <p className="text-[11px] text-slate-500">You marked this as shared {fmtTime(p.link.shared_at)}. No answer yet.</p>
-            ) : (
-              <Button size="sm" variant="outline" className="w-full" disabled={busy} onClick={() => act("post", `/project/links/${p.link.token}/shared`, {}, "Marked as shared")} data-testid={`partner-card-mark-shared-${id}`}>
-                <Send className="h-4 w-4" /> I've shared it with them
+            <EmailInvite p={p} act={act} busy={busy} id={id} />
+            <Button size="sm" variant="outline" onClick={copy} aria-label={`Copy review link for ${p.name}`} data-testid={`partner-card-copy-link-${id}`}><Copy className="h-4 w-4" /> Copy link</Button>
+            {!p.link.shared_at && !p.response && (
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => act("post", `/project/links/${p.link.token}/shared`, {}, "Marked as shared")} data-testid={`partner-card-mark-shared-${id}`}>
+                <Send className="h-4 w-4" /> I've shared it myself
               </Button>
             )}
             {demoPassword && (
-              <Button size="sm" variant="ghost" className="w-full text-slate-600" onClick={reviewAsDemo} data-testid={`partner-card-demo-review-${id}`}>
-                <UserCheck className="h-4 w-4" /> Sign in as this partner (demo) to review
+              <Button size="sm" variant="ghost" className="text-slate-600" onClick={reviewAsDemo} data-testid={`partner-card-demo-review-${id}`}>
+                <UserCheck className="h-4 w-4" /> Review as this partner (demo)
               </Button>
             )}
+            <p className="ml-auto text-[11px] text-slate-500" data-testid={`partner-card-history-${id}`}>
+              {p.status === "needs_rereview" ? "Answered previous terms; revised terms await review."
+                : p.response ? `Answered these terms ${fmtTime(p.response.created_at)}.`
+                : p.link.emailed_at ? `Emailed ${fmtTime(p.link.emailed_at)}. No answer yet.`
+                : p.link.shared_at ? `Shared ${fmtTime(p.link.shared_at)}. No answer yet.` : "Not sent yet."}
+            </p>
           </>
         )}
       </div>
@@ -83,9 +81,7 @@ export default function PartnersTask({ sheet, act, busy, goTo }) {
   const blocked = sheet.current?.checker.overall === "fail";
   return (
     <section data-testid="task-ask" className="space-y-6">
-      <TaskHeader step={3} title="Invite" lead="Create a private link for each partner and share it yourself.">
-        <Button variant="outline" onClick={() => goTo("decide")} data-testid="ask-next-button">Go to decide</Button>
-      </TaskHeader>
+      <TaskHeader step={3} title="Invite" lead="Ask each partner to review their own terms. Email the invitation or copy the private link." />
       {blocked && (
         <div data-testid="ask-blocked-notice" role="status" className="flex flex-col gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
           <p><span className="font-semibold">Plan v{sheet.current.version.number} fails a check.</span></p>
@@ -95,7 +91,7 @@ export default function PartnersTask({ sheet, act, busy, goTo }) {
       {!sheet.current ? (
         <p data-testid="ask-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Make a draft first.</p>
       ) : (
-        <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger space-y-3">
           {partners.map((p) => <PartnerCard key={p.partner_id} p={p} act={act} busy={busy} demoPassword={demoPassword} blocked={blocked} />)}
         </div>
       )}

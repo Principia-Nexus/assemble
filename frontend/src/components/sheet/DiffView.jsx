@@ -1,5 +1,5 @@
 import { StatusPill } from "@/components/StatusPill";
-import { money, slug } from "@/lib/format";
+import { fmtDate, money, slug } from "@/lib/format";
 
 const STATE = {
   unchanged: { label: "Unchanged", tone: "confirmed" },
@@ -39,9 +39,9 @@ export default function DiffView({ diff }) {
             <tbody>
               {diff.sites.map((s) => (
                 <tr key={s.site_id} className="border-t border-slate-100" data-testid={`amend-diff-site-${s.site_id}`}>
-                  <td className="p-2 font-mono font-semibold">{s.site_id}</td>
-                  <td className="p-2 text-red-700 line-through decoration-red-300">{s.before ? `${s.before.owner_name} · wk ${s.before.week} · due ${s.before.deadline_week ?? "?"}` : "—"}</td>
-                  <td className="p-2 text-emerald-800">{s.after ? `${s.after.owner_name} · wk ${s.after.week} · due ${s.after.deadline_week ?? "?"}` : "—"}</td>
+                  <td className="p-2"><span className="font-semibold">{s.after?.name || s.before?.name || s.site_id}</span> <span className="font-mono text-[10px] text-slate-500">{s.site_id}</span></td>
+                  <td className="p-2 text-red-700 line-through decoration-red-300">{s.before ? `${s.before.owner_name} · ${s.before.week_start ? `week of ${fmtDate(s.before.week_start)}` : `wk ${s.before.week}`} · due ${s.before.deadline_end ? fmtDate(s.before.deadline_end) : s.before.deadline_week ?? "?"}` : "—"}</td>
+                  <td className="p-2 text-emerald-800">{s.after ? `${s.after.owner_name} · ${s.after.week_start ? `week of ${fmtDate(s.after.week_start)}` : `wk ${s.after.week}`} · due ${s.after.deadline_end ? fmtDate(s.after.deadline_end) : s.after.deadline_week ?? "?"}` : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -77,7 +77,7 @@ function PartnerDiffs({ list }) {
               {p.state === "unchanged" && (
                 <p className="mt-2 text-[11px] text-slate-500">{carries ? "Their current response carries over if still valid." : "Already awaiting a response; not caused by this change."}</p>
               )}
-              {p.changes.length > 0 && p.state === "changed" && <p className="mt-2 text-[11px] text-amber-800">Changed: {p.changes.join(", ").replaceAll("_cents", "").replaceAll("_", " ")}</p>}
+              {(p.reasons?.length ? p.reasons : p.changes).length > 0 && p.state === "changed" && <p data-testid={`amend-diff-reasons-${slug(p.partner_id)}`} className="mt-2 text-[11px] text-amber-800">Why: {p.reasons?.length ? p.reasons.join("; ") : p.changes.join(", ").replaceAll("_cents", "").replaceAll("_", " ")}</p>}
             </div>
           );
         })}

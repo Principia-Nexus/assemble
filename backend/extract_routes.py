@@ -3,6 +3,7 @@ import json
 import os
 import re
 from typing import List, Optional
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel
@@ -55,9 +56,10 @@ Rules:
 - Money: plain US dollar digits without symbols or commas (e.g. "12800"). Percent: integer. Weeks: integer counted from week 1 of the job. Dates: YYYY-MM-DD only when the full date is stated; otherwise list it in unknowns.
 - If the document contradicts itself, report each statement as its own fact and describe it in "conflicts".
 - A prerequisite or condition that applies to the whole job (site access, permits, customer approvals) is a "conditions" fact with "partner": null.
+- Sites: give each named site its own "site_name" fact and refer to the site the same way (id if given, else its exact name) in every site fact. A site deadline stated as a date becomes "site_deadline_week": the week number containing that date, counting week 1 from job_start_date or the stated start; if no start is known, give the date as written.
 Output ONLY one JSON object, no prose, no code fences."""
 
-SCHEMA = """{"facts":[{"field":"<one of: %s>","partner":"<firm name or null>","site":"<site id like S09 or null>","week":<int or null>,"value":"<string>","excerpt":"<verbatim>","note":"<short or empty>"}],"unknowns":["..."],"conflicts":["..."],"ignored_instructions":["..."]}"""
+SCHEMA = """{"facts":[{"field":"<one of: %s>","partner":"<firm name or null>","site":"<the site id like S09 if one is given, otherwise the site name exactly as written, or null>","week":<int or null>,"value":"<string>","excerpt":"<verbatim>","note":"<short or empty>"}],"unknowns":["..."],"conflicts":["..."],"ignored_instructions":["..."]}"""
 
 
 class SourceIn(BaseModel):
@@ -152,6 +154,46 @@ def parse_value(kind, value, label):
     return parsed, e
 
 
+def site_key(name):
+    return re.sub(r"[^A-Z0-9]+", "-", name.upper().replace("(SYNTHETIC)", "")).strip("-")[:20]
+
+
+def resolve_site(raw, field, value, it):
+    """Matches a site by id or name; new names get a stable internal id derived from the name."""
+    ref = (raw or (value if field == "site_name" else "")).strip()
+    if not ref:
+        return None, None, "No site named for this fact."
+    sites = it.get("sites") or []
+    by_id = [x for x in sites if (x.get("site_id") or "").upper() == ref.upper()]
+    if by_id:
+        return by_id[0]["site_id"], by_id[0].get("name"), None
+    n = norm(ref)
+    by_name = [x for x in sites if norm(x.get("name") or "") == n]
+    if not by_name:
+        by_name = [x for x in sites if n and (n in norm(x.get("name") or "") or norm(x.get("name") or "") in n) and x.get("name")]
+    if len(by_name) == 1:
+        return by_name[0]["site_id"], by_name[0]["name"], None
+    if len(by_name) > 1:
+        return None, ref, f'Several sites match "{ref}" ({", ".join(x["site_id"] for x in by_name)}). Correct this reading with the right site.'
+    if re.fullmatch(r"[A-Za-z]{0,3}\d{1,4}", ref):
+        return ref.upper(), None, None
+    return site_key(ref) or None, ref, None
+
+
+def week_of(value, start):
+    if not start:
+        return None
+    for fmt in ("%B %d, %Y", "%B %d %Y", "%b %d, %Y", "%Y-%m-%d", "%B %d", "%b %d"):
+        try:
+            d = datetime.strptime(value.strip().replace("  ", " "), fmt)
+        except ValueError:
+            continue
+        s0 = date.fromisoformat(start)
+        d = d.replace(year=s0.year if "%Y" not in fmt else d.year).date()
+        return (d - s0).days // 7 + 1 if d >= s0 else None
+    return None
+
+
 def make_fact(src, raw, it):
     field = raw.get("field")
     if field not in FIELDS:
@@ -160,7 +202,7 @@ def make_fact(src, raw, it):
     s = lambda k: "" if raw.get(k) is None else str(raw.get(k)).strip()  # noqa: E731
     wk = s("week")
     week = int(wk) if wk.isdigit() else None
-    site = s("site").upper() or None
+    site, site_name, site_issue = resolve_site(s("site"), field, s("value"), it)
     pid, pname = (None, None)
     if scope == "partner":
         pid, pname = match_partner(s("partner"), it) or (None, None)
@@ -172,8 +214,8 @@ def make_fact(src, raw, it):
         scope, label_out = "job_condition", "Job condition"
     elif scope == "partner" and not pname:
         issues.append("No partner named for this fact.")
-    if scope == "site" and not site:
-        issues.append("No site id given for this fact.")
+    if scope == "site" and site_issue:
+        issues.append(site_issue)
     if field in WEEKLY and not week:
         issues.append("No week given for this capacity.")
     weeks = it.get("weeks")
@@ -181,6 +223,10 @@ def make_fact(src, raw, it):
         issues.append(f"Week {week} is outside the job's {weeks} weeks.")
     if field == "site_deadline_week" and weeks and value.isdigit() and not 1 <= int(value) <= weeks:
         issues.append(f"Deadline week {value} is outside the job's {weeks} weeks.")
+    if field == "site_deadline_week" and not value.isdigit():
+        wk_from_date = week_of(value, it.get("start_date"))
+        if wk_from_date:
+            value = str(wk_from_date)
     parsed, errs = parse_value(kind, value, label)
     issues += errs
     m = CREW_SIZE_RE.search(excerpt)
@@ -197,7 +243,7 @@ def make_fact(src, raw, it):
     return {
         "fact_id": new_id("fact"), "project_id": src["project_id"], "source_id": src["source_id"],
         "source_label": src["label"], "source_kind": src["kind"], "source_order": src["order"],
-        "field": field, "label": label_out, "scope": scope, "partner_id": pid, "partner_name": pname, "site_id": site,
+        "field": field, "label": label_out, "scope": scope, "partner_id": pid, "partner_name": pname, "site_id": site, "site_name": site_name,
         "week": week, "target": target, "original_value": value, "value": value, "parsed": parsed,
         "excerpt": excerpt, "location": loc, "note": s("note")[:300],
         "status": "invalid" if issues else "proposed", "issues": issues, "corrections": [], "created_at": now_iso(),
@@ -491,7 +537,7 @@ def apply_fact(it, f):
     if scope == "site":
         s = next((x for x in it["sites"] if (x["site_id"] or "").upper() == f["site_id"]), None)
         if not s:
-            s = {"site_id": f["site_id"], "name": None, "deadline_week": None, "scope": None}
+            s = {"site_id": f["site_id"], "name": f.get("site_name"), "deadline_week": None, "scope": None}
             it["sites"].append(s)
         s[key] = val
         return

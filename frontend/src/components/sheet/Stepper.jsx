@@ -43,13 +43,13 @@ export default function Stepper({ info, selected, onSelect }) {
   );
 }
 
-export function TaskHeader({ step, title, lead, children }) {
+export function TaskHeader({ title, lead, children }) {
+  if (!lead && !children) return <h2 className="sr-only">{title}</h2>;
   return (
-    <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="max-w-2xl">
-        <p className="eyebrow">Task {step} of 4</p>
-        <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">{title}</h2>
-        {lead && <p className="mt-1 text-sm leading-relaxed text-slate-600">{lead}</p>}
+        <h2 className="sr-only">{title}</h2>
+        {lead && <p className="text-sm leading-relaxed text-slate-600">{lead}</p>}
       </div>
       {children && <div className="flex shrink-0 flex-wrap gap-2">{children}</div>}
     </div>

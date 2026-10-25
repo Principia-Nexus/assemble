@@ -14,7 +14,7 @@ import { Loading } from "@/App";
 
 const ACTION = { confirm: "Confirmed", request_change: "Requested a change", decline: "Declined" };
 
-function Terms({ t }) {
+function Terms({ t, shared = [] }) {
   const row = (label, value, id) => (
     <div className="grid grid-cols-[140px_1fr] gap-3 border-t border-slate-100 py-2 text-sm" data-testid={id}>
       <dt className="text-slate-500">{label}</dt><dd className="text-slate-900">{value || "Unknown"}</dd>
@@ -46,6 +46,16 @@ function Terms({ t }) {
         {row("Your scope", t.scope)}
         {row("Exclusions", t.exclusions)}
         {row("Conditions", t.conditions || "None stated")}
+        {shared.length > 0 && row("Job-wide conditions", (
+          <ul className="space-y-1">
+            {shared.map((c) => (
+              <li key={c.text} data-testid="review-shared-condition">
+                {c.text} <span className={`text-xs font-semibold ${c.resolved ? "text-emerald-700" : "text-amber-800"}`}>{c.resolved ? "resolved" : "unresolved"}</span>
+                {c.source && <span className="block text-xs text-slate-500">Source: {c.source}</span>}
+              </li>
+            ))}
+          </ul>
+        ), "review-shared-conditions")}
         {row("Valid until", t.valid_until ? `${fmtDate(t.valid_until)} (recheck after this date)` : null)}
       </dl>
     </div>
@@ -99,22 +109,28 @@ function RespondBox({ data, token, onDone }) {
       </div>
       {mode === "confirm" && (
         <div className="space-y-2">
-          <p className="text-xs text-slate-600">This confirms proposal-stage terms only. It does not hold crews, award the job, form a contract or start mobilization.</p>
-          <Textarea rows={2} placeholder="Optional: any conditions (your answer stays conditional until resolved)" value={conditions} onChange={(e) => setConditions(e.target.value)} data-testid="partner-review-conditions-input" />
+          <p className="text-xs text-slate-600">This confirms proposal-stage terms only. It does not hold crews, award the job, form a contract, resolve job-wide conditions, pay an advance or start mobilization.</p>
+          <label htmlFor="rv-cond" className="block text-xs font-semibold text-slate-700">Your conditions (optional)</label>
+          <Textarea id="rv-cond" rows={2} placeholder="Your answer stays conditional until these are resolved" value={conditions} onChange={(e) => setConditions(e.target.value)} data-testid="partner-review-conditions-input" />
         </div>
       )}
       {mode === "request_change" && (
         <div className="space-y-2">
-          <Textarea rows={3} placeholder="What needs to change?" value={note} onChange={(e) => setNote(e.target.value)} data-testid="partner-review-note-input" />
-          <Input inputMode="decimal" placeholder="Optional: your proposed total in USD" value={proposed} onChange={(e) => setProposed(e.target.value)} data-testid="partner-review-proposed-input" />
+          <label htmlFor="rv-note" className="block text-xs font-semibold text-slate-700">What needs to change?</label>
+          <Textarea id="rv-note" rows={3} value={note} onChange={(e) => setNote(e.target.value)} data-testid="partner-review-note-input" />
+          <label htmlFor="rv-total" className="block text-xs font-semibold text-slate-700">Your proposed total in USD (optional)</label>
+          <Input id="rv-total" inputMode="decimal" value={proposed} onChange={(e) => setProposed(e.target.value)} data-testid="partner-review-proposed-input" />
         </div>
       )}
       {mode === "decline" && (
-        <Textarea rows={2} placeholder="Optional: reason" value={note} onChange={(e) => setNote(e.target.value)} data-testid="partner-review-decline-note-input" />
+        <div className="space-y-2">
+          <label htmlFor="rv-reason" className="block text-xs font-semibold text-slate-700">Reason (optional)</label>
+          <Textarea id="rv-reason" rows={2} value={note} onChange={(e) => setNote(e.target.value)} data-testid="partner-review-decline-note-input" />
+        </div>
       )}
       <ErrorList errors={errors} testId="partner-review-errors"
         title={stale ? "Your answer was not saved. The terms below are the current ones; review them and answer again." : undefined} />
-      {mode && <Button onClick={submit} disabled={busy} data-testid="partner-review-submit-button">{busy ? "Saving…" : "Send answer to organizer"}</Button>}
+      {mode && <Button onClick={submit} disabled={busy} data-testid="partner-review-submit-button">{busy ? "Saving…" : { confirm: "Send confirmation", request_change: "Send change request", decline: "Send decline" }[mode]}</Button>}
     </div>
   );
 }
@@ -167,7 +183,7 @@ export default function Review() {
             </div>
             {data.terms ? (
               <>
-                <Terms t={data.terms} />
+                <Terms t={data.terms} shared={data.shared_conditions} />
                 {data.expired ? (
                   <p data-testid="review-expired" className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">These terms passed their validity date. Ask the organizer to recheck before answering.</p>
                 ) : (
