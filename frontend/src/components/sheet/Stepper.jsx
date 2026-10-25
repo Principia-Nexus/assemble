@@ -81,7 +81,7 @@ export function TaskHeader({ title, lead, children }) {
   );
 }
 
-export function ErrorList({ errors, testId, title = "Nothing was saved. Fix these first:" }) {
+export function ErrorList({ errors, testId, title = "Nothing was saved." }) {
   if (!errors?.length) return null;
   return (
     <div data-testid={testId} role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">

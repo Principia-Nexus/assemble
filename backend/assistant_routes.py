@@ -5,20 +5,18 @@ import os
 import re
 import time
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 from core import db, now_iso, new_id, current_user, log_event
-from project_routes import (get_project, sheet, org, start_preview, edit_preview, PreviewIn, PreviewEditIn, SiteEdit)
+import logic as L
+from project_routes import (get_project, sheet, org, start_preview, edit_preview, discard_preview, PreviewIn, PreviewEditIn,
+                            SiteEdit, RevIn)
 
 router = APIRouter(prefix="/api/project")
 MODEL = ("anthropic", "claude-sonnet-5-5")
 RUNBOOK_VERSION = "assistant-runbooks-1"
-TOPICS = {"schedule": "dates, weeks, deadlines or moving work earlier/later", "capacity": "crews, crew-weeks or availability",
-          "scope": "what work is included or excluded at which sites", "price": "prices, totals, budget or discounts",
-          "payment": "deposits, advances, balances or payment timing"}
 
 SYSTEM = """You are the planning assistant inside Assemble, used by an organizing contractor. You receive an authorized JSON
 snapshot of ONE project and the user's message. Choose exactly one mode:
@@ -69,24 +67,6 @@ def snapshot(s):
     return snap
 
 
-async def jev_topics(text):
-    """Optional topic hints; any failure returns None and the full-text path proceeds unchanged."""
-    proxy = (os.environ.get("INTEGRATION_PROXY_URL") or "https://integrations.emergentagent.com").rstrip("/")
-    q = {k: {"type": "noul", "instructions": f"Does this message mention {d}? Negations still count."} for k, d in TOPICS.items()}
-    t0 = time.monotonic()
-    try:
-        async with httpx.AsyncClient(timeout=4) as c:
-            r = await c.post(f"{proxy}/llm/typesafe/v1/systemone", headers={"Authorization": f"Bearer {os.environ['EMERGENT_LLM_KEY']}"},
-                             json={"model": "jev-latest", "state": text[:4000], "questions": q})
-        r.raise_for_status()
-        ans = r.json()["answers"]
-        return {"tags": [k for k in TOPICS if ans.get(k, {}).get("noul", 0) >= 0.5],
-                "probs": {k: round(ans[k]["noul"], 3) for k in TOPICS if k in ans}, "ms": int((time.monotonic() - t0) * 1000),
-                "model": r.json().get("model")}
-    except (httpx.HTTPError, KeyError, ValueError):
-        return {"tags": None, "ms": int((time.monotonic() - t0) * 1000), "error": "unavailable"}
-
-
 def parse(raw):
     m = re.search(r"\{.*\}", raw or "", re.S)
     if not m:
@@ -115,12 +95,17 @@ async def apply_revision(p, user, result, s, rev):
     if not edits and not adj:
         return None, ["The request didn't name any change I can make to the draft."]
     base = s["preview"]["version"] if s.get("preview") else s["current"]["version"]
-    if not s.get("preview"):
-        await start_preview(PreviewIn(rev=rev), user)
-        rev += 1
     unknown = [k for k in edits if k not in base["assignments"]]
     if unknown:
         return None, [f"Unknown site {', '.join(unknown)}."]
+    owners = {x["partner_id"] for x in base["partners"]} | {x["partner_id"] for x in s["intake"]["partners"]} | {L.OWN}
+    bad_owner = [e.get("owner") for e in edits.values() if e.get("owner") and e.get("owner") not in owners]
+    if bad_owner:
+        return None, [f"Unknown firm {', '.join(bad_owner)}."]
+    opened = not s.get("preview")
+    if opened:
+        await start_preview(PreviewIn(rev=rev), user)
+        rev += 1
     sites = []
     for sv in base["sites"]:
         sid, a, e = sv["site_id"], base["assignments"].get(sv["site_id"], {}), edits.get(sv["site_id"], {})
@@ -131,6 +116,8 @@ async def apply_revision(p, user, result, s, rev):
     try:
         await edit_preview(PreviewEditIn(rev=rev, sites=sites, adjustments=adjustments), user)
     except HTTPException as ex:
+        if opened:
+            await discard_preview(RevIn(rev=rev), user)
         return None, ex.detail if isinstance(ex.detail, list) else [str(ex.detail)]
     after = await sheet(p["project_id"])
     if after.get("preview") and after["preview"]["diff"] and not after["preview"]["diff"]["sites"] and not adj:
@@ -157,17 +144,22 @@ async def ask(body: AskIn, user=Depends(current_user)):
     s = await sheet(p["project_id"])
     await save_msg(p, user, "user", msg)
     t0 = time.monotonic()
-    jev_task = asyncio.create_task(jev_topics(msg))
     chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=new_id("ast"), system_message=SYSTEM).with_model(*MODEL)
     prompt = f"PROJECT SNAPSHOT (authorized, JSON):\n{json.dumps(snapshot(s), default=str)}\n\nUSER MESSAGE:\n<<<\n{msg}\n>>>"
     try:
         raw = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=90)
     except Exception:
         raw = None
-    jev = await jev_task
-    meta = {"model": MODEL[1], "runbook": RUNBOOK_VERSION, "base_rev": body.rev, "elapsed_ms": int((time.monotonic() - t0) * 1000),
-            "jev": jev}
+    meta = {"model": MODEL[1], "runbook": RUNBOOK_VERSION, "base_rev": body.rev, "elapsed_ms": int((time.monotonic() - t0) * 1000)}
     result = parse(raw if isinstance(raw, str) else None)
+    if not result and isinstance(raw, str):
+        try:
+            raw2 = await asyncio.wait_for(chat.send_message(UserMessage(text="Reply again with ONLY the JSON object described in your instructions.")), timeout=60)
+            result = parse(raw2 if isinstance(raw2, str) else None)
+        except Exception:
+            result = None
+        if not result and raw.strip():
+            result = {"mode": "explain", "answer": re.sub(r"```.*?```", "", raw, flags=re.S).strip()[:1200]}
     if not result:
         reply = await save_msg(p, user, "assistant", "I couldn't produce a usable answer, so nothing was changed. Try again or edit the fields directly.",
                                mode="error", meta=meta)

@@ -64,7 +64,7 @@ export default function ProjectSheet() {
     } catch (e) {
       const errs = errList(e);
       if (e.response?.status === 409) {
-        toast.error(errs.join(" "));
+        if (url !== "/project/intake") toast.error(errs.join(" "));
         await load();
       } else if (e.response?.status !== 422) toast.error(errs.join(" "));
       return { ok: false, errors: errs };
@@ -103,7 +103,7 @@ export default function ProjectSheet() {
             </h1>
             {sheet.intake.customer_name && <p data-testid="project-customer" className="mt-1 text-sm text-slate-500">{sheet.intake.customer_name}</p>}
           </div>
-          <div className="no-print flex items-center gap-1">
+          <div className="no-print flex flex-wrap items-center gap-1">
         <Button size="sm" variant="outline" className="h-9 min-[1100px]:hidden" onClick={() => setAssistantOpen(true)} data-testid="assistant-open">
           <MessageSquare className="h-4 w-4" /> Assistant
         </Button>
@@ -149,7 +149,7 @@ export default function ProjectSheet() {
         </div>
         </div>
         <aside className="no-print hidden min-[1100px]:block">
-          <div className="sticky top-20 flex max-h-[calc(100vh-6rem)] flex-col gap-4">
+          <div className="sticky top-20 flex max-h-[calc(100vh-6rem)] flex-col gap-4 overflow-y-auto">
             <PlanStrip sheet={sheet} goTo={select} stacked />
             <AssistantPanel sheet={sheet} onSheet={setSheet} reload={load} className="min-h-[280px] flex-1" />
           </div>

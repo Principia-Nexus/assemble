@@ -87,7 +87,18 @@
 - Invite rows full width, recipient visible, no raw URL; Email invitation (Emergent managed Resend, preview + deliberate Send; .test/.example blocked; copy-link fallback). Verified to delivered@resend.dev only; real team-inbox test pending.
 - Summary: site names + week-of dates, "Print / save PDF".
 
+## Stage 1-3 round (2026-10-25)
+- Stage 1: exact CORS (no reflection), origin guard; logout revokes access/refresh tokens (tokens_valid_after); invite claim needs verified email (6-digit code via email); response save atomic vs selection (409, nothing saved); Stripe test-mode enforced (livemode rejected); PostHog session replay off + review-token URL scrub; tour no longer marks links shared; Synthetic badge on title/review/print; "Passes recorded checks"; intake 409 keeps typed edits.
+- Stage 2 (shell only): ≥1100px left rail (Check/Draft/Invite/Decide with counts) + center + right column (facts labelled Current review / Private draft + Assistant); <1100 stepper + Assistant drawer.
+- Stage 3: bounded assistant (POST/GET /api/project/assistant, claude-sonnet-5-5): explain (no writes), revise (private draft only via existing preview commands, stale-rev 409, failed revise discards opened draft), intake (user clicks "Read it as a source"), question. Retry once for JSON; prose → explain. Jev measured (~1.6s, correct tags) then REMOVED per user.
+- Real email to chosenvictor12@gmail.com accepted by provider (202); inbox receipt unconfirmed.
+- UI removals per user: assistant subtitle/placeholder, "Fix these first:", "total against ceiling", "responses to these terms".
+
 ## Backlog
+- Confirm the test invitation arrived at chosenvictor12@gmail.com, then do the second-device partner response (register, verify code, respond)
+- Stage 2 full graph (bands + connectors, source→change→firm trace); current build ships the 3-column shell
+- Delivery-event tracking (delivered/bounced) — managed email gives "accepted" only
+- Publish + live acceptance run (needs user approval); 502 diagnosis needs deploy logs
 - Real email delivery test to a team inbox (user to supply)
 - Side AI editor (deferred)
 - Publish + live acceptance run (needs user approval)
