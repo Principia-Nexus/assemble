@@ -1,0 +1,25 @@
+{
+  "summary": "Frontend-only visual/regression test of the animation + login relabel round, at 1920 and 390. /login: blue button reads 'Organizer' + 'Synthetic example' and lands on /project; 'Partner' toggle animates height 0 -> ~288px (55,177,241,275,287,288 sampled every 60ms) with opacity 0->1; alder/birch 'Use' lands on /reviews. Sign in/Create account pill slides (mid-transition translateX 111px, ends exactly over the active tab at both widths); panels end at opacity 1; register (TEST_anim_*@example.com) -> /project, sign-in form wrong pw shows error, right pw -> /project. Project: step switches leave no opacity:0 elements; schedule rows animate (opacity 0 -> 1 staggered) after generating with alder/birch/cedar; decide strip children opacity 1; reset dialog cancel/confirm and History drawer open/Esc close work; sticky readings bar sticks at top 64px after scroll and Select all/Use selected readings work. No page overflow at 390 (doc/body scrollWidth 390; grid scrolls inside its container 420/356). No page errors. Found and FIXED 2 bugs (see rca).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "index.css .stagger/.lift", "issue": "FIXED: hover lift never moved cards. `.stagger > *` used animation-fill-mode `both`, so the finished animation kept transform: translateY(0) and overrode `.lift:hover` transform (computed transform stayed identity on hover; only the shadow changed). Changed fill-mode to `backwards` on .rise, .stagger, .rows-in, tabpanel and alert/status animations. After the fix the hover transform is translateY(-1px).", "selector": "[data-testid^=partner-card-], label.lift", "priority": "MEDIUM"},
+      {"component": "Login.jsx partner collapse", "issue": "FIXED: `inert={showPartners ? undefined : \"\"}`. React 19 treats inert as a boolean, so the empty string set nothing. The hidden 'Use' buttons in the collapsed list stayed keyboard-focusable: Tab from the toggle went to signin-demo-alder-button. Changed to `inert={!showPartners}`. Now Tab goes to signin-tab when the list is collapsed, and the list is not inert when open.", "selector": "[data-testid=signin-partner-list]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/login", "issues": ["Switching to Create account unmounts the Organizer/Partner block, and the page is vertically centered (min-h-screen items-center), so the whole card jumps about 300px instead of animating. Consider keeping height stable or animating the block out. Low priority."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": ["Review the 2 small fixes applied by the testing agent (index.css fill-mode backwards; Login.jsx inert boolean)", "Optional: soften the vertical jump on /login when switching tabs"],
+  "critical_code_review_comments": ["Avoid animation-fill-mode `both`/`forwards` on elements that also get transform/opacity from hover or state classes; the held end keyframe overrides them.", "React 19: pass booleans to `inert`, not empty strings."],
+  "updated_files": ["/app/frontend/src/index.css", "/app/frontend/src/pages/Login.jsx"],
+  "success_rate": {"backend": "N/A", "frontend": "100% after the 2 fixes (5/5 requested items)"},
+  "seed_data_creation": "Fresh visitor sandboxes test-ui8*; registered TEST_anim_5ec6e7@example.com (organizer of TEST Anim Firm).",
+  "flaky_tests": ["Once, the organizer demo click did not navigate within 30s. It was likely the HMR reload from my Login.jsx edit; it did not recur in the next 4 runs."],
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Set localStorage assemble_visitor to a fresh id plus assemble_tour_closed=1 before login. The readings bar needs a read: intake-tab-read, then the first read-sample-* (non-pdf), then read-submit-button. That returns 19 readings in about 10s.",
+  "test_credentials": "From /app/memory/test_credentials.md: demo password synthetic-demo."
+}

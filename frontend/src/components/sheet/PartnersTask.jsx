@@ -81,12 +81,12 @@ export default function PartnersTask({ sheet, act, busy, goTo }) {
   const blocked = sheet.current?.checker.overall === "fail";
   return (
     <section data-testid="task-ask" className="space-y-6">
-      <TaskHeader step={3} title="Ask each partner" lead="Create a private link for each partner and share it yourself. The link opens only for the invited email, and each partner sees only their own sites, dates, scope and price.">
+      <TaskHeader step={3} title="Ask each partner" lead="Create a private link for each partner and share it yourself.">
         <Button variant="outline" onClick={() => goTo("decide")} data-testid="ask-next-button">Go to decide</Button>
       </TaskHeader>
       {blocked && (
         <div data-testid="ask-blocked-notice" role="status" className="flex flex-col gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
-          <p><span className="font-semibold">Plan v{sheet.current.version.number} fails a check.</span> Partners can't be asked to confirm terms that don't work. Repair the draft first.</p>
+          <p><span className="font-semibold">Plan v{sheet.current.version.number} fails a check.</span></p>
           <Button size="sm" onClick={() => goTo("draft")} data-testid="ask-go-repair-button">Repair the draft</Button>
         </div>
       )}
@@ -97,7 +97,6 @@ export default function PartnersTask({ sheet, act, busy, goTo }) {
           {partners.map((p) => <PartnerCard key={p.partner_id} p={p} act={act} busy={busy} demoPassword={demoPassword} blocked={blocked} />)}
         </div>
       )}
-      <p className="text-xs text-slate-500">A confirmation covers proposal-stage terms only. It does not hold crews, award the job, form a contract or start mobilization.</p>
     </section>
   );
 }

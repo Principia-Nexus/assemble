@@ -107,7 +107,7 @@ export default function DecideTask(props) {
   const conds = openConditions(cur);
   return (
     <section data-testid="task-decide" className="space-y-6">
-      <TaskHeader step={4} title="Decide next action" lead="Each partner's status against the exact terms they saw, open conditions, and any gap. Changes go through an amendment preview first.">
+      <TaskHeader step={4} title="Decide next action" lead="Each partner's status against the exact terms they saw, open conditions, and any gap.">
         {!sheet.preview && <Button onClick={() => act("post", "/project/preview", { rev: sheet.project.rev }, "Amendment preview opened")} disabled={busy} data-testid="decide-start-amendment-button">Start amendment preview</Button>}
         {!sheet.preview && <Button variant="outline" onClick={() => setShowForm(!showForm)} data-testid="decide-log-change-button">Log customer change</Button>}
         <Button variant="ghost" asChild data-testid="decide-summary-link"><Link to="/summary"><FileText className="h-4 w-4" /> Printable summary</Link></Button>
@@ -116,7 +116,7 @@ export default function DecideTask(props) {
       <SummaryStrip cur={cur} />
       {conds.length > 0 && (
         <div data-testid="decide-open-conditions" className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-semibold">Unresolved conditions · a stated prerequisite is not proof it's met</p>
+          <p className="font-semibold">Unresolved conditions</p>
           <ul className="mt-1 space-y-1 text-xs">
             {conds.map((c, i) => <li key={i} data-testid={`decide-condition-${i}`}><span className="font-semibold">{c.scope}:</span> {c.text}{c.source && <span className="text-amber-700"> · {c.source}</span>}</li>)}
           </ul>

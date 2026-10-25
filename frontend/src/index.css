@@ -64,7 +64,7 @@
 }
 
 .rise {
-    animation: rise 0.35s ease-out both;
+    animation: rise 0.35s ease-out backwards;
 }
 
 .tour-focus {
@@ -122,16 +122,16 @@ h1, h2, h3 { font-weight: 500; letter-spacing: -0.01em; }
         transition: background-color .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .12s ease, opacity .18s ease;
     }
     button:not(:disabled):active, a:active { transform: scale(0.98); }
-    [role="tabpanel"][data-state="active"] { animation: panel-in .28s cubic-bezier(.2,.7,.2,1) both; }
-    [role="alert"], [role="status"] { animation: panel-in .3s ease-out both; }
-    .stagger > * { animation: rise .4s cubic-bezier(.2,.7,.2,1) both; }
+    [role="tabpanel"][data-state="active"] { animation: panel-in .28s cubic-bezier(.2,.7,.2,1) backwards; }
+    [role="alert"], [role="status"] { animation: panel-in .3s ease-out backwards; }
+    .stagger > * { animation: rise .4s cubic-bezier(.2,.7,.2,1) backwards; }
     .stagger > *:nth-child(2) { animation-delay: .04s; }
     .stagger > *:nth-child(3) { animation-delay: .08s; }
     .stagger > *:nth-child(4) { animation-delay: .12s; }
     .stagger > *:nth-child(5) { animation-delay: .16s; }
     .stagger > *:nth-child(6) { animation-delay: .2s; }
     .stagger > *:nth-child(n+7) { animation-delay: .24s; }
-    .rows-in > tr { animation: row-in .35s ease-out both; }
+    .rows-in > tr { animation: row-in .35s ease-out backwards; }
     .rows-in > tr { animation-delay: calc(var(--i, 0) * 25ms); }
     td { transition: background-color .3s ease, color .3s ease; }
     details[open] > *:not(summary) { animation: fade-in .25s ease-out both; }
