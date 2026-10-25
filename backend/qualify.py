@@ -34,10 +34,31 @@ def suggestions(it, source_labels=()):
     return out
 
 
+CODE_RE = re.compile(r"\b(C-\d{1,2}|B)\b(?=[^.]{0,60}\b(licen[cs]e|licensed|class|contractor|performer)\b)|\b(licen[cs]e|licensed)\b[^.]{0,40}\b(C-\d{1,2})\b", re.I)
+
+
+def sourced(it):
+    """Explicit licence requirements stated in saved job conditions (from documents/chat) - never dismissable."""
+    out = {}
+    for c in it.get("job_conditions") or []:
+        for m in CODE_RE.finditer(c.get("text") or ""):
+            code = (m.group(1) or m.group(4)).upper()
+            src = c.get("source") or {}
+            out.setdefault(code, {"req_id": f"doc-{code}", "code": code, "label": next((x["label"] for x in RULES["classes"] if x["code"] == code), code),
+                                  "sites": "all", "origin": "document", "status": "required", "reason": c["text"][:200],
+                                  "source": {"label": src.get("label") if isinstance(src, dict) else str(src) or "Job condition", "page": (src or {}).get("page") if isinstance(src, dict) else None}})
+    return list(out.values())
+
+
 def requirements(p, source_labels=()):
+    """Stored decisions + sourced requirements + rule suggestions, reconciled so one code appears once (explicit wins)."""
     stored = p.get("requirements") or []
     decided = {r["req_id"] for r in stored}
-    return stored + [s for s in suggestions(p["intake"], source_labels) if s["req_id"] not in decided]
+    explicit = {r["code"].upper() for r in stored if r["status"] in ACTIVE}
+    docs = [r for r in sourced(p["intake"]) if r["req_id"] not in decided]
+    explicit |= {r["code"] for r in docs}
+    sug = [s for s in suggestions(p["intake"], source_labels) if s["req_id"] not in decided and s["code"].upper() not in explicit]
+    return stored + docs + sug
 
 
 def _applies(r, sid):
@@ -65,10 +86,18 @@ def _site_result(owner, sid, reqs, evidence, today):
             continue
         match = [e for e in mine if e["license_class"].upper() == r["code"].upper()]
         valid = [e for e in match if not e.get("expires") or date.fromisoformat(e["expires"]) >= today]
-        if valid:
-            e = valid[0]
-            reasons.append(f"{r['label']}: evidence reviewed by {e['reviewed_by']}, {e['reviewed_at'][:10]}"
-                           + (f" (expires {e['expires']})" if e.get("expires") else "") + ".")
+        observed = [e for e in valid if e.get("observed_status") == "active" and e.get("observed_on")]
+        lapsed = [e for e in valid if e.get("observed_status") in ("expired", "suspended", "inactive", "revoked")]
+        if observed:
+            e = observed[0]
+            reasons.append(f"{r['label']}: fits. Status active as observed on {e['observed_on']} in {e.get('source_record') or 'the attached record'}"
+                           f" (evidence reviewed by {e['reviewed_by']}, {e['reviewed_at'][:10]}).")
+            if e.get("entity_match") is False:
+                bump("review_needed", f"{r['label']}: the licence holder named on the record does not clearly match this firm.")
+        elif lapsed:
+            bump("does_not_fit", f"{r['label']}: the record shows status {lapsed[0]['observed_status']} (observed {lapsed[0].get('observed_on')}).")
+        elif valid:
+            bump("evidence_needed", f"{r['label']}: an expiry date alone is not current status. Record the observed status and date from the source record.")
         elif match:
             bump("does_not_fit", f"{r['label']}: the only evidence expired on {match[0]['expires']}.")
         elif mine and not relevant:

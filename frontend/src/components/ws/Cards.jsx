@@ -47,6 +47,7 @@ export function PackageCard({ pkg, sheet, selected, onSelect, cardRef }) {
         <span className={`ml-auto h-2.5 w-2.5 rounded-full ${tone.dot}`} aria-hidden="true" />
       </div>
       <p className="mt-1 text-[13px] font-semibold leading-snug text-[#1A2838]">{pkg.title}</p>
+      {pkg.firm && <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] font-medium text-[#2F4A66]" data-testid={`card-firm-${pkg.id}`}>{pkg.firm}</p>}
       <p className="mt-1 text-[11.5px] text-[#2F4A66]">{pkg.sites.length ? `${pkg.sites.length} site${pkg.sites.length === 1 ? "" : "s"}${weeks.length ? ` · week ${weeks.join(", ")}` : ""}` : "Not in plan"}{pkg.quote?.price_per_site_cents != null ? ` · $${(pkg.quote.price_per_site_cents / 100).toLocaleString()}/site` : ""}</p>
       {pkg.sites.length > 0 && <div className="mt-1.5 flex flex-wrap gap-1">{pkg.sites.map((s) => <span key={s.site_id} title={s.name} className={`rounded px-1 font-mono text-[10px] ${tone.chip}`}>{s.site_id}</span>)}</div>}
       {pkg.qual && pkg.qual !== "fits" && <p className={`mt-1 text-[11px] font-medium ${pkg.qual === "does_not_fit" ? "text-[#A93A3A]" : "text-[#B4690E]"}`} data-testid={`card-qual-${pkg.id}`}>{QUAL[pkg.qual]}</p>}

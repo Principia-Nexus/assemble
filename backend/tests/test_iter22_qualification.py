@@ -38,7 +38,7 @@ def req(sh, code):
 
 
 def ev(s, pid, cls, exp):
-    r = s.post(f"{P}/evidence", json={"partner_id": pid, "license_class": cls, "license_number": "123456", "expires": exp})
+    r = s.post(f"{P}/evidence", json={"partner_id": pid, "license_class": cls, "license_number": "123456", "expires": exp, "observed_status": "active", "observed_on": "2026-10-25", "source_record": "Synthetic test record"})
     assert r.status_code == 200, r.text
     return r.json()["sheet"]
 
@@ -128,7 +128,7 @@ class TestRequirements:
     def test_evidence_validation(self):
         s = branch()
         assert s.post(f"{P}/evidence", json={"partner_id": "nobody", "license_class": "C-10"}).status_code in (400, 422)
-        assert s.post(f"{P}/evidence", json={"partner_id": "alder", "license_class": "  "}).status_code in (400, 422)
+        assert s.post(f"{P}/evidence", json={"partner_id": "alder", "license_class": "  ", "observed_status": "active", "observed_on": "2026-10-25", "source_record": "Synthetic test record"}).status_code in (400, 422)
         assert s.post(f"{P}/evidence", json={"partner_id": "alder", "license_class": "C-10", "expires": "notadate"}).status_code in (400, 422)
 
 

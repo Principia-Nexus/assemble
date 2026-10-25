@@ -139,6 +139,8 @@ async def sheet(project_id):
         if out[k]:
             out[k]["qualification"] = Q.assess(out[k]["version"], p, reqs)
     out["project"]["plan_selected"] = bool(cur) and p.get("plan_selected", True)
+    acc = await db.quotes.find_one({"project_id": project_id, "state": "accepted"}, {"_id": 0, "number": 1}, sort=[("created_at", -1)])
+    out["quotes"] = {"accepted": acc["number"] if acc else None}
     out["links_count"] = await db.links.count_documents({"project_id": project_id})
     out["change_requests"] = await db.change_requests.find({"project_id": project_id}, {"_id": 0}).sort(
         "created_at", -1).to_list(100)

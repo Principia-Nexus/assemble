@@ -39,7 +39,7 @@ function primaryAction(sheet) {
   if (ps.some((x) => ["no_link", "link_not_shared", "needs_rereview"].includes(x.status))) return { label: "Send for review", tool: "review" };
   const wait = ps.filter((x) => WAITING.includes(x.status));
   if (wait.length) return { label: `Awaiting ${wait[0].name.replace(/ ?\(Synthetic\)/, "").split(" ")[0]}${wait.length > 1 ? ` +${wait.length - 1}` : ""}`, tool: "responses" };
-  return { label: "Prepare quote", tool: "quote" };
+  return { label: sheet.quotes?.accepted ? "View accepted quote" : "Prepare quote", tool: "quote" };
 }
 const typing = (el) => !!el?.closest?.("input,textarea,select,[contenteditable=true]");
 

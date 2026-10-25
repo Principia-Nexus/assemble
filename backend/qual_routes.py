@@ -1,4 +1,5 @@
 """Requirements, firm licence evidence, exclusions and the explicit Select plan step."""
+import re
 from typing import List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -31,6 +32,10 @@ class EvidenceIn(BaseModel):
     expires: Optional[str] = None
     source_id: Optional[str] = None
     note: Optional[str] = None
+    entity_name: Optional[str] = None
+    source_record: Optional[str] = None
+    observed_status: Optional[str] = None
+    observed_on: Optional[str] = None
 
 
 class ExclusionIn(BaseModel):
@@ -115,14 +120,26 @@ async def add_evidence(body: EvidenceIn, user=Depends(current_user)):
         bad("Choose a firm in this project.")
     e = []
     exp = L.iso_date(body.expires, "Expiry date", e) if body.expires else None
+    seen = L.iso_date(body.observed_on, "Observed on", e) if body.observed_on else None
+    if body.observed_status and body.observed_status not in ("active", "expired", "suspended", "inactive", "revoked"):
+        e.append("Observed status must be active, expired, suspended, inactive or revoked.")
+    if body.observed_status and not seen:
+        e.append("Record the date you observed that status.")
+    if body.observed_status and not (body.source_record or "").strip():
+        e.append("Name the source record you reviewed, e.g. 'CSLB licence detail page, screenshot'.")
     if e:
         bad(e)
+    fname = "Your firm" if body.partner_id == L.OWN else next(x["name"] for x in p["intake"]["partners"] if x["partner_id"] == body.partner_id)
+    ent = (body.entity_name or "").strip()[:120] or None
+    norm = lambda s: re.sub(r"[^a-z0-9]", "", re.sub(r"\(synthetic\)|\b(inc|llc|co|corp|company)\b", "", s.lower()))  # noqa: E731
+    match = None if not ent or body.partner_id == L.OWN else (norm(ent) in norm(fname) or norm(fname) in norm(ent))
     cls = body.license_class.strip().upper()[:20]
     if not cls:
         bad("Enter the licence class shown on the evidence, for example C-10.")
     ev = {"ev_id": new_id("ev"), "partner_id": body.partner_id, "license_class": cls, "license_number": (body.license_number or "").strip()[:40] or None,
           "expires": exp, "source_id": body.source_id, "note": (body.note or "").strip()[:300] or None,
-          "reviewed_by": user["name"], "reviewed_at": now_iso(), "kind": "organizer_reviewed"}
+          "reviewed_by": user["name"], "reviewed_at": now_iso(), "kind": "organizer_reviewed", "entity_name": ent, "entity_match": match,
+          "source_record": (body.source_record or "").strip()[:200] or None, "observed_status": body.observed_status, "observed_on": seen, "revision": 1}
     await db.projects.update_one({"project_id": p["project_id"]}, {"$push": {"evidence": ev}, "$inc": {"rev": 1}})
     await log_event(p["project_id"], org(user), "evidence", f"Licence evidence {cls} reviewed by {user['name']} for {L.owner_name({'partners': p['intake']['partners']}, body.partner_id)}.")
     return {"sheet": await sheet(p["project_id"])}

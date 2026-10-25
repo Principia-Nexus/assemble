@@ -145,7 +145,7 @@ export default function Inspector({ target, sheet, items, edges, run, onSheet, o
     <aside className="ws-panel-in flex h-full w-full flex-col border-l border-[#E2E8F0] bg-[#FFFFFF] min-[720px]:w-[360px]" data-testid="inspector-panel" aria-label="Inspector">
       <div className="flex items-center gap-2 border-b border-[#E2E8F0] px-4 py-3">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{head}</p>
-        {target.firm_id && <p className="truncate text-xs text-[#2F4A66]">{firmName(sheet, target.firm_id)}</p>}
+        {(target.firm_id || target.firm) && <p className="truncate text-xs text-[#2F4A66]">{target.firm || firmName(sheet, target.firm_id)}</p>}
         <Button size="sm" variant="ghost" className="ml-auto h-8 px-2" onClick={onClose} aria-label="Close inspector" data-testid="inspector-close"><X className="h-4 w-4" /><span className="min-[720px]:hidden">Back</span></Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">

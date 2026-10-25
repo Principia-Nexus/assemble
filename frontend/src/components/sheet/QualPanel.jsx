@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { firmName } from "@/components/ws/derive";
 
-const ST = { suggested: ["Review needed", "text-[#B4690E]"], required: ["Required", "text-[#1A2838]"], confirmed: ["Confirmed by organizer", "text-[#1E7B5C]"], dismissed: ["Dismissed", "text-[#94A3B8]"] };
+const ST = { suggested: ["Review needed", "text-[#B4690E]"], required: ["Required", "text-[#1A2838]"], document: ["Required by source", "text-[#1A2838]"], confirmed: ["Confirmed by organizer", "text-[#1E7B5C]"], dismissed: ["Dismissed", "text-[#94A3B8]"] };
 const row = "flex flex-wrap items-start gap-2 border-b border-slate-100 py-2.5 last:border-0";
 
 function Requirement({ r, act, busy }) {
   const [why, setWhy] = useState(null);
-  const [st, cls] = ST[r.status];
+  const [st, cls] = ST[r.origin === "document" && r.status === "required" ? "document" : r.status];
   return (
     <li className={row} data-testid={`req-${r.req_id}`}>
       <div className="min-w-0 flex-1">
@@ -25,6 +25,7 @@ function Requirement({ r, act, busy }) {
         <form className="flex w-full gap-2" onSubmit={async (e) => { e.preventDefault(); const x = await act("post", `/project/requirements/${r.req_id}/dismiss`, { reason: why }, "Dismissed"); if (x.ok) setWhy(null); }}>
           <Input autoFocus value={why} onChange={(e) => setWhy(e.target.value)} placeholder="Why it doesn't apply" data-testid={`req-dismiss-reason-${r.req_id}`} />
           <Button size="sm" type="submit" disabled={busy || why.trim().length < 5} data-testid={`req-dismiss-save-${r.req_id}`}>Dismiss</Button>
+          <Button size="sm" type="button" variant="ghost" onClick={() => setWhy(null)} data-testid={`req-dismiss-cancel-${r.req_id}`}>Cancel</Button>
         </form>
       )}
     </li>
@@ -32,22 +33,30 @@ function Requirement({ r, act, busy }) {
 }
 
 function AddEvidence({ sheet, act, busy, firm }) {
-  const [f, setF] = useState({ partner_id: firm || "", license_class: "", license_number: "", expires: "" });
+  const blank = { license_class: "", license_number: "", expires: "", entity_name: "", source_record: "", observed_status: "active", observed_on: "" };
+  const [f, setF] = useState({ partner_id: firm || "", ...blank });
   const firms = [...(sheet.intake.partners || []).map((p) => [p.partner_id, p.name]), ["own", "Your firm"]];
   const save = async (e) => {
     e.preventDefault();
-    const r = await act("post", "/project/evidence", { ...f, expires: f.expires || null }, "Evidence recorded as reviewed by you");
-    if (r.ok) setF({ ...f, license_class: "", license_number: "", expires: "" });
+    const r = await act("post", "/project/evidence", { ...f, expires: f.expires || null, observed_on: f.observed_on || null, entity_name: f.entity_name || null }, "Evidence recorded as reviewed by you");
+    if (r.ok) setF({ partner_id: f.partner_id, ...blank });
   };
   return (
-    <form onSubmit={save} className="grid gap-2 sm:grid-cols-[1.3fr_0.8fr_1fr_1fr_auto]" data-testid="evidence-form">
+    <form onSubmit={save} className="grid gap-2 sm:grid-cols-5" data-testid="evidence-form">
       <select className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm" value={f.partner_id} onChange={(e) => setF({ ...f, partner_id: e.target.value })} aria-label="Firm" data-testid="evidence-firm">
         <option value="">Firm…</option>{firms.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
       </select>
       <Input placeholder="Class, e.g. C-10" value={f.license_class} onChange={(e) => setF({ ...f, license_class: e.target.value })} aria-label="Licence class" data-testid="evidence-class" />
       <Input placeholder="Licence no." value={f.license_number} onChange={(e) => setF({ ...f, license_number: e.target.value })} aria-label="Licence number" data-testid="evidence-number" />
-      <Input type="date" value={f.expires} onChange={(e) => setF({ ...f, expires: e.target.value })} aria-label="Expires" data-testid="evidence-expires" />
-      <Button size="sm" type="submit" className="h-9" disabled={busy || !f.partner_id || !f.license_class.trim()} data-testid="evidence-save">Add</Button>
+      <Input type="date" value={f.expires} onChange={(e) => setF({ ...f, expires: e.target.value })} aria-label="Expires" title="Expires" data-testid="evidence-expires" />
+      <span />
+      <Input className="sm:col-span-2" placeholder="Licence holder on the record" value={f.entity_name} onChange={(e) => setF({ ...f, entity_name: e.target.value })} aria-label="Licence holder" data-testid="evidence-entity" />
+      <Input className="sm:col-span-3" placeholder="Source record, e.g. CSLB detail page screenshot" value={f.source_record} onChange={(e) => setF({ ...f, source_record: e.target.value })} aria-label="Source record" data-testid="evidence-source" />
+      <select className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm sm:col-span-2" value={f.observed_status} onChange={(e) => setF({ ...f, observed_status: e.target.value })} aria-label="Observed status" data-testid="evidence-status">
+        {["active", "expired", "suspended", "inactive", "revoked"].map((x) => <option key={x} value={x}>Status shown: {x}</option>)}
+      </select>
+      <Input type="date" value={f.observed_on} onChange={(e) => setF({ ...f, observed_on: e.target.value })} aria-label="Observed on" title="Observed on" data-testid="evidence-observed-on" />
+      <Button size="sm" type="submit" className="h-9 sm:col-span-2" disabled={busy || !f.partner_id || !f.license_class.trim() || !f.source_record.trim() || !f.observed_on} data-testid="evidence-save">Record reviewed evidence</Button>
     </form>
   );
 }
@@ -73,7 +82,8 @@ export default function QualPanel({ sheet, act, busy, firm }) {
           {q.evidence.map((e) => (
             <li key={e.ev_id} className={row} data-testid={`evidence-${e.ev_id}`}>
               <p className="min-w-0 flex-1 text-sm text-slate-800"><span className="font-semibold">{e.partner_id === "own" ? "Your firm" : firmName(sheet, e.partner_id)}</span> · {e.license_class}{e.license_number ? ` #${e.license_number}` : ""}{e.expires ? ` · expires ${e.expires}` : ""}
-                <span className="block text-xs text-slate-500">Evidence reviewed by {e.reviewed_by}, {e.reviewed_at.slice(0, 10)}</span></p>
+                <span className="block text-xs text-slate-500">{e.observed_status ? `Status ${e.observed_status} observed ${e.observed_on} · ${e.source_record}${e.entity_name ? ` · holder: ${e.entity_name}${e.entity_match === false ? " (name differs)" : ""}` : ""}` : "Current status not recorded"}</span>
+                <span className="block text-xs text-slate-400">Evidence reviewed by {e.reviewed_by}, {e.reviewed_at.slice(0, 10)}</span></p>
               <Button size="sm" variant="ghost" disabled={busy} onClick={() => act("delete", `/project/evidence/${e.ev_id}`, undefined, "Removed")} data-testid={`evidence-remove-${e.ev_id}`}>Remove</Button>
             </li>
           ))}

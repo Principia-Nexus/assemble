@@ -12,6 +12,12 @@ export function firmName(sheet, id) {
   return p?.name || id;
 }
 
+// Work first: "Lighting retrofit" from "12-branch lighting retrofit".
+export function workLabel(sheet) {
+  const w = (sheet.intake.job_name || "Scope").replace(/^\s*\d+[-\s]?\w*\s+/, "").trim() || "Scope";
+  return w.charAt(0).toUpperCase() + w.slice(1);
+}
+
 export function packages(sheet) {
   const v = planVersion(sheet);
   const firms = sheet.intake.partners || [];
@@ -36,8 +42,9 @@ export function packages(sheet) {
     const qual = st.length ? st.reduce((a, b) => (RANK[b] > RANK[a] ? b : a)) : null;
     return {
       id: `plan-${owner}`, derived: true, kind: "package", owner,
-      title: owner === "unassigned" ? "Open scopes" : firmName(sheet, owner),
-      sites, response: status[owner] || null, quote: firms.find((p) => p.partner_id === owner), qual,
+      title: owner === "unassigned" ? "Open scopes" : sites.length ? `${workLabel(sheet)}: ${sites.length} site${sites.length === 1 ? "" : "s"}` : firmName(sheet, owner),
+      firm: owner === "unassigned" || !sites.length ? null : firmName(sheet, owner),
+      sites, response: sheet.project.plan_selected ? status[owner] || null : null, quote: firms.find((p) => p.partner_id === owner), qual,
       reasons: sites.flatMap((s) => (qa[s.site_id]?.reasons || []).map((r) => `${s.site_id}: ${r}`)),
     };
   });
@@ -45,8 +52,14 @@ export function packages(sheet) {
 
 export function conditions(sheet) {
   const out = [];
-  (sheet.gap?.unknowns || []).forEach((u, i) => out.push({ id: `unk-${i}`, derived: true, kind: "unknown", title: typeof u === "string" ? u : u.text || u.label || JSON.stringify(u) }));
-  (sheet.gap?.open_conditions || []).forEach((c, i) => out.push({ id: `cond-${i}`, derived: true, kind: "condition", title: c.text, scope: c.scope, source: c.source }));
+  // Omissions of firms that are not in the plan stay on their records, not in the active list.
+  const pv = planVersion(sheet), inPlan = new Set(Object.values(pv?.assignments || {}).map((a) => a.owner));
+  const unused = pv ? (sheet.intake.partners || []).filter((p) => !inPlan.has(p.partner_id)).map((p) => p.name) : [];
+  (sheet.gap?.unknowns || []).forEach((u, i) => {
+    const t = typeof u === "string" ? u : u.text || u.label || JSON.stringify(u);
+    if (!unused.some((n) => t.includes(n))) out.push({ id: `unk-${i}`, derived: true, kind: "unknown", title: t });
+  });
+  (sheet.gap?.open_conditions || []).forEach((c, i) => { if (!unused.includes(c.scope)) out.push({ id: `cond-${i}`, derived: true, kind: "condition", title: c.text, scope: c.scope, source: c.source }); });
   (sheet.qual?.requirements || []).filter((r) => r.status === "suggested").forEach((r) => out.push({ id: `req-${r.req_id}`, derived: true, kind: "requirement", title: `${r.label}: review needed`, scope: r.reason }));
   const v = planVersion(sheet);
   (((sheet.preview || sheet.current)?.qualification?.coverage?.open) || []).forEach((sid) => {
@@ -67,7 +80,7 @@ export function statusSentence(sheet) {
   if (sheet.current) parts.push(sheet.project.plan_selected ? `plan v${sheet.current.version.number} selected` : `plan v${sheet.current.version.number} private draft`);
   if (sheet.preview) parts.push(`private draft v${sheet.preview.version.number}`);
   if (!v) parts.push("no plan yet");
-  const open = (sheet.gap?.unknowns || []).length + (sheet.gap?.open_conditions || []).length;
+  const open = conditions(sheet).length;
   if (open) parts.push(`${open} open condition${open === 1 ? "" : "s"}`);
   const ps = sheet.current?.partners || [];
   if (ps.length) parts.push(`${ps.filter((p) => RESPONDED.includes(p.status)).length} of ${ps.length} firms responded`);
