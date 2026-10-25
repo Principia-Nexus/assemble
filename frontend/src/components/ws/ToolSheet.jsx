@@ -6,7 +6,7 @@ import PartnersTask from "@/components/sheet/PartnersTask";
 import DecideTask from "@/components/sheet/DecideTask";
 import QuotePanel from "./QuotePanel";
 
-export const TOOL_TITLES = { details: "Job details", source: "Add source", check: "Plan and checks", review: "Prepare review", decide: "Decide on changes", quote: "Customer quote" };
+export const TOOL_TITLES = { details: "Job details", source: "Add source", check: "Draft plan", review: "Send for review", responses: "Responses", decide: "Review draft", quote: "Customer quote" };
 const STEP_TO_TOOL = { intake: "details", draft: "check", ask: "review", decide: "decide" };
 
 // Precise editors for every capability the old step pages held; reachable from Add, the inspector and the overflow menu.
@@ -22,7 +22,7 @@ export default function ToolSheet({ tool, onClose, onTool, sheet, act, busy, use
           {tool === "details" && <IntakeTask key={sheet.project.rev} {...props} />}
           {tool === "source" && <ExtractPanel sheet={sheet} act={act} busy={busy} />}
           {tool === "check" && <DraftTask {...props} />}
-          {tool === "review" && <PartnersTask {...props} />}
+          {(tool === "review" || tool === "responses") && <PartnersTask {...props} />}
           {tool === "decide" && <DecideTask {...props} />}
           {tool === "quote" && <QuotePanel />}
         </div>

@@ -81,7 +81,7 @@ export default function DecideTask(props) {
   const { sheet, act, busy } = props;
   const [showForm, setShowForm] = useState(false);
   const cur = sheet.current;
-  if (!cur) return <p data-testid="decide-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Make a draft first.</p>;
+  if (!cur) return <p data-testid="decide-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">No plan yet. Use Draft plan.</p>;
   const declined = cur.partners.filter((p) => p.status === "declined");
   const conds = openConditions(cur);
   return (

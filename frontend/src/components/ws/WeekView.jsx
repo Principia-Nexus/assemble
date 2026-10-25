@@ -36,7 +36,12 @@ function useEvents(sheet, items, filter) {
       if (!d || !filter(it)) continue;
       ev.push({ key: it.item_id, from: d, to: it.due_date || d, kind: "item", label: it.title, provisional: it.date_kind === "provisional", select: it.item_id });
     }
-    return ev;
+    const dues = {};
+    for (const e of ev.filter((x) => x.kind === "due")) (dues[e.from] ||= []).push(e);
+    return [...ev.filter((x) => x.kind !== "due"), ...Object.entries(dues).map(([d, es]) => ({
+      key: `due-${d}`, from: d, kind: "due", select: es[0].select,
+      label: es.length === 1 ? es[0].label : `${es.length} sites due · ${es.map((x) => x.label.split(" ")[0]).join(", ")}`,
+    }))];
   }, [sheet, items, filter]);
 }
 
@@ -57,7 +62,6 @@ export default function WeekView({ sheet, items, onSelect, selectedId, filter })
   const [mode, setMode] = useState("month");
   const [cursor, setCursor] = useState(anchor);
   const on = (d) => events.filter((e) => e.from <= d && d <= (e.to || e.from)).sort((a, b) => ({ plan: 0, item: 1, due: 2 }[a.kind] - { plan: 0, item: 1, due: 2 }[b.kind]));
-  const undated = items.filter((i) => i.kind !== "group" && !i.due_date && !i.start_date && filter(i));
   const ms = monthStart(cursor), gridStart = monday(ms);
   const days = mode === "month" ? Array.from({ length: 42 }, (_, i) => addDays(gridStart, i)) : DAYS.map((_, i) => addDays(monday(cursor), i));
   const weeks = mode === "month" ? (days[35].slice(0, 7) === ms.slice(0, 7) ? 6 : 5) : 1;
@@ -81,27 +85,51 @@ export default function WeekView({ sheet, items, onSelect, selectedId, filter })
             ))}
           </div>
         </div>
-        <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-[#E2E8F0]" data-testid={`calendar-${mode}`}>
-          <div className="grid grid-cols-7 gap-px">
-            {DAYS.map((d) => <p key={d} className="bg-[#F8FAFC] px-2 py-1.5 font-mono text-[10.5px] font-semibold uppercase text-[#64748B]">{d}</p>)}
-            {shown.map((d) => {
-              const evs = on(d), out = mode === "month" && d.slice(0, 7) !== ms.slice(0, 7), max = mode === "month" ? 3 : 20;
-              return (
-                <div key={d} className={`flex flex-col gap-0.5 p-1 ${mode === "month" ? "min-h-[96px]" : "min-h-[300px]"} ${out ? "bg-[#FAFBFC]" : "bg-white"}`} data-testid={`week-day-${d}`}>
-                  <span className={`mb-0.5 self-start rounded-full px-1.5 font-mono text-[11px] ${d === TODAY ? "bg-[#1A2838] text-white" : out ? "text-[#CBD5E1]" : "text-[#64748B]"}`}>{Number(d.slice(8))}</span>
-                  {evs.slice(0, max).map((e) => <Chip key={e.key} e={e} day={d} selectedId={selectedId} onSelect={onSelect} compact={mode === "month"} />)}
-                  {evs.length > max && <button type="button" onClick={() => { setMode("week"); setCursor(d); }} className="text-left text-[10.5px] font-medium text-[#215273] hover:underline" data-testid={`calendar-more-${d}`}>+{evs.length - max} more</button>}
+        <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white" data-testid={`calendar-${mode}`}>
+          <div className="grid grid-cols-7 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+            {DAYS.map((d) => <p key={d} className="px-2 py-1.5 font-mono text-[10.5px] font-semibold uppercase text-[#64748B]">{d}</p>)}
+          </div>
+          {Array.from({ length: weeks }, (_, w) => shown.slice(w * 7, w * 7 + 7)).map((wk) => {
+            const bars = events.filter((e) => e.kind === "plan" && e.from <= wk[6] && (e.to || e.from) >= wk[0]);
+            return (
+              <div key={wk[0]} className="relative border-b border-[#E2E8F0] last:border-b-0" data-testid={`calendar-week-${wk[0]}`}>
+                <div className="absolute inset-0 grid grid-cols-7 divide-x divide-[#EEF2F6]" aria-hidden="true">
+                  {wk.map((d) => <div key={d} className={mode === "month" && d.slice(0, 7) !== ms.slice(0, 7) ? "bg-[#FAFBFC]" : ""} />)}
                 </div>
-              );
-            })}
-          </div>
+                <div className="relative grid grid-cols-7">
+                  {wk.map((d) => {
+                    const out = mode === "month" && d.slice(0, 7) !== ms.slice(0, 7);
+                    return <span key={d} className={`m-1 self-start justify-self-start rounded-full px-1.5 font-mono text-[11px] ${d === TODAY ? "bg-[#1A2838] text-white" : out ? "text-[#CBD5E1]" : "text-[#64748B]"}`}>{Number(d.slice(8))}</span>;
+                  })}
+                </div>
+                {bars.length > 0 && (
+                  <div className="relative grid grid-cols-7 gap-y-0.5 px-1 pb-0.5">
+                    {bars.map((e) => {
+                      const a = Math.max(0, wk.indexOf(e.from)), b = wk.indexOf(e.to) < 0 ? 6 : wk.indexOf(e.to);
+                      return (
+                        <button key={e.key} type="button" onClick={() => onSelect(e.select)} title={e.label} style={{ gridColumn: `${a + 1} / ${b + 2}` }} data-testid={`calendar-bar-${e.key}`}
+                          className={`truncate rounded-md border px-2 py-0.5 text-left text-[11.5px] font-medium transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-sm ${e.tone} ${selectedId === e.select ? "ring-2 ring-[#215273]" : ""}`}>
+                          {e.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className={`relative grid grid-cols-7 ${mode === "month" ? "min-h-[56px]" : "min-h-[260px]"}`}>
+                  {wk.map((d) => {
+                    const evs = on(d).filter((e) => e.kind !== "plan"), max = mode === "month" ? 3 : 20;
+                    return (
+                      <div key={d} className="flex min-w-0 flex-col gap-0.5 p-1" data-testid={`week-day-${d}`}>
+                        {evs.slice(0, max).map((e) => <Chip key={e.key} e={e} day={d} selectedId={selectedId} onSelect={onSelect} compact={false} />)}
+                        {evs.length > max && <button type="button" onClick={() => { setMode("week"); setCursor(d); }} className="text-left text-[10.5px] font-medium text-[#215273] hover:underline" data-testid={`calendar-more-${d}`}>+{evs.length - max} more</button>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
-        {undated.length > 0 && <section className="mt-4 rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] p-3" data-testid="week-unscheduled">
-          <p className="mb-2 text-[13px] font-semibold text-[#1A2838]">Unscheduled <span className="font-mono text-[10.5px] font-normal text-[#64748B]">{undated.length}</span></p>
-          <div className="flex flex-wrap gap-2">
-            {undated.map((it) => <button key={it.item_id} type="button" onClick={() => onSelect(it.item_id)} className="rounded-full border border-[#E2E8F0] bg-white px-3 py-1 text-[12px] text-[#1A2838] transition-colors hover:border-[#215273]" data-testid={`week-undated-${it.item_id}`}>{it.title}</button>)}
-          </div>
-        </section>}
       </div>
     </div>
   );

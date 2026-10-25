@@ -14,6 +14,7 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 from core import db, now_iso, new_id, current_user, log_event
 import logic as L
 import rule_packs as RP
+import extract_routes as X
 from items_routes import apply_ops, load_items
 from project_routes import (get_project, sheet, org, bad, make_draft, create_link, DraftIn, LinkIn, start_preview, edit_preview, discard_preview, PreviewIn, PreviewEditIn,
                             SiteEdit, RevIn)
@@ -29,7 +30,9 @@ snapshot of ONE project and the user's message. Choose exactly one mode:
 - "revise": the user explicitly asks to change the PRIVATE DRAFT schedule: who owns a site and in which week, or a site's
   deadline week, or a firm's price adjustment in USD. Only use site ids, firm ids and weeks that exist in the snapshot.
   If the request is ambiguous (which sites? which week?) use "question" instead.
-- "intake": the user pastes new job information (a brief, quote, email) to be read as a source document.
+- "intake": the user gives job information in chat (a brief, quote, email, a correction like "it's 3 weeks, not 2", or firm
+  terms). The app saves the message as an attributed source, reads it with the document reader and saves the readable facts
+  to the job details. Use this whenever the message states job facts, sites, dates, firm prices or capacity.
 - "compose": the user asks to create, rename, group, split, merge, reorder, date, complete or delete WORK ITEMS
   (groups/scope packages, tasks, milestones, conditions), relate them, or to run a bounded analysis such as comparing
   quotes or listing missing coverage (record it as one ai_task item whose "result" holds your findings, status draft_ready).
@@ -47,6 +50,7 @@ select terms, send messages, mark links shared, record anyone's agreement, or ed
 "Fine with that" or "ok" is not a confirmation of anything. Never invent prices, capacity, dates or firms.
 Reply with ONLY a JSON object:
 {"mode":"explain|revise|intake|question|compose|advance","answer":"<=80 words plain text",
+ (adjustments are plain signed numbers in USD, e.g. "100" or "-250"; never a plus sign or currency symbol)
  "partner_ids":["<firm id>"], "include_own": true,
  "edits":[{"site_id":"S09","owner":"<firm id or own>","week":1,"deadline_week":null}],
  "adjustments":{"<firm id>":"<signed USD amount>"},
@@ -66,6 +70,25 @@ class AskIn(BaseModel):
     rev: int
     utterance_id: Optional[str] = None
     async_run: bool = False
+
+
+async def evidence(project_id):
+    """Permitted saved sources (excerpts + page coverage), accepted readings and firm response conditions for the AI."""
+    srcs = await db.sources.find({"project_id": project_id}, {"_id": 0, "source_id": 1, "kind": 1, "label": 1, "source_date": 1,
+                                                              "created_at": 1, "text": 1, "coverage": 1, "status": 1}).sort("order", 1).to_list(40)
+    budget, out = 60000, []
+    for x in srcs:
+        t = (x.get("text") or "")[:max(0, min(15000, budget))]
+        budget -= len(t)
+        out.append({"id": x["source_id"], "kind": x["kind"], "label": x["label"], "stated_date": x.get("source_date") or "undated",
+                    "imported": x["created_at"][:10], "read_status": x.get("status"), "page_coverage": x.get("coverage"),
+                    "text": t, "text_truncated": len(t) < len(x.get("text") or "")})
+    facts = await db.facts.find({"project_id": project_id, "status": {"$in": ["applied", "corrected", "proposed"]}},
+                                {"_id": 0, "label": 1, "value": 1, "status": 1, "source_label": 1, "partner_name": 1, "site_id": 1,
+                                 "location": 1}).to_list(400)
+    resp = await db.responses.find({"project_id": project_id}, {"_id": 0, "partner_id": 1, "status": 1, "conditions": 1, "note": 1,
+                                                               "version_number": 1, "created_at": 1}).sort("created_at", -1).to_list(40)
+    return {"sources": out, "readings": facts, "firm_responses": resp}
 
 
 def snapshot(s, items=(), edges=()):
@@ -113,12 +136,21 @@ async def save_msg(p, user, role, text, **extra):
     return doc
 
 
+def money_arg(v):
+    """Normalizes '+100', '$1,200.50', 100 → '100' / '1200.50'; None when not a plain amount."""
+    t = re.sub(r"[\s$,]|USD", "", str(v)).lstrip("+")
+    return t if re.fullmatch(r"-?\d+(\.\d{1,2})?", t) else None
+
+
 async def apply_revision(p, user, result, s, rev):
     """Writes only to the private draft through the existing preview commands and their validation."""
     if not s.get("current"):
-        return None, ["There is no checked plan yet. Use Draft > Check draft first, then ask for schedule changes."]
+        return None, ["There is no plan yet. Ask me to draft the plan, or use Draft plan at the top right."]
     edits = {e.get("site_id"): e for e in result.get("edits") or [] if isinstance(e, dict)}
-    adj = {k: str(v) for k, v in (result.get("adjustments") or {}).items()}
+    adj = {k: money_arg(v) for k, v in (result.get("adjustments") or {}).items()}
+    bad_money = [k for k, v in adj.items() if v is None]
+    if bad_money:
+        return None, [f"The price adjustment for {', '.join(bad_money)} is not a number, so nothing was changed."]
     if not edits and not adj:
         return None, ["The request didn't name any change I can make to the draft."]
     base = s["preview"]["version"] if s.get("preview") else s["current"]["version"]
@@ -179,7 +211,11 @@ async def think(r, p, user):
     await db.assistant_runs.update_one({"run_id": r["run_id"]}, {"$set": {"packs": [RP.tag(x) for x in packs]}})
     t0 = time.monotonic()
     chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=new_id("ast"), system_message=SYSTEM + "\n\n" + RP.prompt_block(packs)).with_model(*MODEL)
-    prompt = f"PROJECT SNAPSHOT (authorized, JSON):\n{json.dumps(snapshot(s, items, edges), default=str)}\n\nUSER MESSAGE:\n<<<\n{msg}\n>>>"
+    snap = {**snapshot(s, items, edges), "evidence": await evidence(p["project_id"])}
+    prompt = (f"PROJECT SNAPSHOT (authorized, JSON):\n{json.dumps(snap, default=str)}\n\n"
+              "The evidence section holds the saved source text and readings; use it and cite source labels/pages. If something is not "
+              "in it, say it is not in the saved sources (do not ask the user to repaste a saved readable document).\n\n"
+              f"USER MESSAGE:\n<<<\n{msg}\n>>>")
     prompt = prompt[:RP.RUN_LIMITS["input_chars"]]
     try:
         raw = await chat.send_message(UserMessage(text=prompt))
@@ -197,6 +233,33 @@ async def think(r, p, user):
     meta = {"model": MODEL[1], "runbook": RUNBOOK_VERSION, "packs": [RP.tag(x) for x in packs], "checker": L.CHECKER_VERSION,
             "base_rev": p["rev"], "run_id": r["run_id"], "elapsed_ms": int((time.monotonic() - t0) * 1000)}
     return result, s, meta
+
+
+async def chat_intake(p, user, result, msg):
+    """Same reader + validated apply path as Add source; the chat message is the attributed source."""
+    src = result.get("source") or {}
+    kind = src.get("kind") if src.get("kind") in X.KINDS else "other"
+    label = (str(src.get("label") or "").strip() or "Typed in chat")[:120] + f" · {user['name']}"
+    try:
+        await X.create_source(p, user, kind, label, msg, None, None, {"origin": "chat"})
+    except HTTPException as ex:
+        return None, ex.detail if isinstance(ex.detail, list) else [str(ex.detail)], []
+    new = await db.sources.find_one({"project_id": p["project_id"]}, {"_id": 0}, sort=[("created_at", -1)])
+    if new.get("status") != "read":
+        return await sheet(p["project_id"]), [new.get("error") or "I saved your message as a source but could not read it."], []
+    facts = await db.facts.find({"project_id": p["project_id"]}, {"_id": 0}).to_list(2000)
+    cur = {r["reading"]["fact_id"] for r in X.readings_from(facts) if r["reading"]}
+    ids = [f["fact_id"] for f in facts if f["source_id"] == new["source_id"] and f["status"] in ("proposed", "corrected") and f["fact_id"] in cur]
+    if not ids:
+        return await sheet(p["project_id"]), [], ["I saved your message as a source, but it held no new job facts."]
+    fresh = await db.projects.find_one({"project_id": p["project_id"]}, {"_id": 0})
+    try:
+        await X.apply_readings(X.ApplyIn(rev=fresh["rev"], fact_ids=ids), user)
+    except HTTPException as ex:
+        return await sheet(p["project_id"]), ex.detail if isinstance(ex.detail, list) else [str(ex.detail)], []
+    used = [f"{f['label']}{' (' + (f['partner_name'] or f['site_id']) + ')' if f['partner_name'] or f['site_id'] else ''} = {f['value']}"
+            for f in facts if f["fact_id"] in ids]
+    return await sheet(p["project_id"]), [], ["Saved to job details: " + "; ".join(used[:14]) + ("…" if len(used) > 14 else "") + "."]
 
 
 async def advance(p, user, result, rev):
@@ -244,7 +307,7 @@ async def work(r, user):
                                mode="error", meta=meta)
         return await finish_run(r, "failed", reply)
     mode, answer, errors, new_sheet, batch = result["mode"], str(result.get("answer") or "")[:1200], [], None, None
-    if mode in ("compose", "revise", "advance") and not await set_run(r["run_id"], ("working",), status="committing"):
+    if mode in ("compose", "revise", "advance", "intake") and not await set_run(r["run_id"], ("working",), status="committing"):
         reply = await save_msg(p, user, "assistant", "Stopped before saving. Nothing was changed.", mode="stopped", meta=meta)
         return await finish_run(r, "stopped", reply)
     fresh = await db.projects.find_one({"project_id": p["project_id"]}, {"_id": 0})
@@ -257,6 +320,9 @@ async def work(r, user):
             errors = ex.detail if isinstance(ex.detail, list) else [str(ex.detail)]
             if ex.status_code == 409:
                 errors = ["The project changed while I was working, so nothing was applied. Send your request again."]
+    if mode == "intake":
+        new_sheet, errors, notes = await chat_intake(fresh, user, result, r["message"])
+        answer = " ".join([answer, *notes]).strip()
     if mode == "advance":
         if fresh["rev"] != p["rev"]:
             errors = ["The job changed while I was working, so I didn't apply anything. Send your request again."]
@@ -274,7 +340,7 @@ async def work(r, user):
             ch = new_sheet["preview"]["checker"]
             answer += f" Saved to private draft v{new_sheet['preview']['version']['number']} (not selected). Checker: {ch['overall']}."
             await log_event(p["project_id"], org(user), "assistant", f"Assistant edited private draft v{new_sheet['preview']['version']['number']}: {r['message'][:160]}")
-    wrote = bool(new_sheet and (not errors or mode == "advance"))
+    wrote = bool(new_sheet and (not errors or mode in ("advance", "intake")))
     reply = await save_msg(p, user, "assistant", answer, mode=mode, errors=errors, cites=result.get("cites") or [],
                            source=result.get("source") if mode == "intake" else None, meta=meta, wrote=wrote, batch=batch)
     status = "failed" if errors and not wrote else "needs_input" if mode == "question" else "draft_ready"

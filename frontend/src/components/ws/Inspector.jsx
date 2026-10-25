@@ -119,8 +119,7 @@ function PackageDetail({ pkg, openTool }) {
         {pkg.sites.map((s) => <tr key={s.site_id} className="border-b border-[#F1F5F9]"><td className="py-1 font-mono text-[11px]">{s.site_id}</td><td className="py-1">{s.name}</td><td className="py-1 text-right text-[#64748B]">{s.week ? `wk ${s.week}` : ""}{s.deadline_week ? ` · due wk ${s.deadline_week}` : ""}</td></tr>)}
       </tbody></table>
       <div className="flex flex-col gap-2">
-        <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("check")} data-testid="inspector-open-plan">Edit plan and run checks</Button>
-        {pkg.owner !== "own" && pkg.owner !== "unassigned" && <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("review")} data-testid="inspector-open-review">Prepare review</Button>}
+        <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("check")} data-testid="inspector-open-plan">Edit allocation</Button>
       </div>
     </div>
   );

@@ -17,6 +17,14 @@ if not BASE_URL:
 load_dotenv("/app/backend/.env")
 
 
+def solo_org():
+    """Organizer-only project (no partner firms), so partner support is not required to issue."""
+    s = demo_org()
+    pid = s.post(f"{BASE_URL}/api/projects", json={"name": "Solo quote test"}).json()["project_id"]
+    s.headers["X-Project-Id"] = pid
+    return s
+
+
 def demo_org():
     s = requests.Session()
     s.headers["Origin"] = BASE_URL
@@ -102,7 +110,7 @@ def make_issued(s, price=90000, amend_of=None):
     assert r.status_code == 200, r.text
     assert r.json()["missing"] == []
     pv = s.get(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/preview").json()
-    r = s.post(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/issue", json={"digest": pv["digest"], "override_reason": "Test: issuing before partner confirmation"})
+    r = s.post(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/issue", json={"digest": pv["digest"]})
     assert r.status_code == 200, r.text
     return r.json()["quote"], r.json()["path"].split("/quote/")[1]
 
@@ -117,19 +125,19 @@ def verify(token):
 
 class TestQuote:
     def test_issue_guards(self):
-        s = demo_org()
+        s = solo_org()
         q = s.post(f"{BASE_URL}/api/project/quotes", json={}).json()["quote"]
         s.put(f"{BASE_URL}/api/project/quotes/{q['quote_id']}", json={"fields": {**FIELDS, "valid_until": future(), "price_cents": None}})
         pv = s.get(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/preview").json()
         assert any("price" in m for m in pv["missing"])
-        r = s.post(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/issue", json={"digest": pv["digest"], "override_reason": "Test: issuing before partner confirmation"})
+        r = s.post(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/issue", json={"digest": pv["digest"]})
         assert r.status_code == 422
         s.put(f"{BASE_URL}/api/project/quotes/{q['quote_id']}", json={"fields": {"price_cents": 500}})
         r = s.post(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/issue", json={"digest": "wrongdigest"})
         assert r.status_code == 409
 
     def test_lifecycle(self):
-        s = demo_org()
+        s = solo_org()
         q, token = make_issued(s)
         assert q["number"] == "Q1" and q["state"] == "issued"
         bad = requests.post(f"{BASE_URL}/api/quote/{token}/verify", json={"code": "000000x"})

@@ -89,7 +89,7 @@ export default function PartnersTask({ sheet, act, busy, goTo }) {
         </div>
       )}
       {!sheet.current ? (
-        <p data-testid="ask-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Make a draft first.</p>
+        <p data-testid="ask-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">No plan yet. Use Draft plan.</p>
       ) : (
         <div className="stagger space-y-3">
           {partners.map((p) => <PartnerCard key={p.partner_id} p={p} email={sheet.current.version.partners.find((x) => x.partner_id === p.partner_id)?.email} act={act} busy={busy} demoPassword={demoPassword} blocked={blocked} />)}

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
-import { Eye, MoreHorizontal, Search } from "lucide-react";
-import { SynthBadge } from "@/components/StatusPill";
+import { MoreHorizontal, Pencil, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { api, errList } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -30,6 +29,17 @@ const useWidth = () => {
   useEffect(() => { const f = () => setW(window.innerWidth); window.addEventListener("resize", f); return () => window.removeEventListener("resize", f); }, []);
   return w;
 };
+const WAITING = ["awaiting", "link_not_shared", "no_link", "needs_rereview", "expired", "change_requested", "declined"];
+// One state-driven action: Draft plan -> Review draft -> Send for review -> Awaiting <firm> -> Customer quote.
+function primaryAction(sheet) {
+  if (!sheet.current && !sheet.preview) return { label: "Draft plan", tool: "check" };
+  if (sheet.preview) return { label: "Review draft", tool: "decide" };
+  const ps = sheet.current.partners || [];
+  if (ps.some((x) => ["no_link", "link_not_shared", "needs_rereview"].includes(x.status))) return { label: "Send for review", tool: "review" };
+  const wait = ps.filter((x) => WAITING.includes(x.status));
+  if (wait.length) return { label: `Awaiting ${wait[0].name.replace(/ ?\(Synthetic\)/, "").split(" ")[0]}${wait.length > 1 ? ` +${wait.length - 1}` : ""}`, tool: "responses" };
+  return { label: "Customer quote", tool: "quote" };
+}
 const typing = (el) => !!el?.closest?.("input,textarea,select,[contenteditable=true]");
 
 export default function ProjectSheet() {
@@ -42,7 +52,6 @@ export default function ProjectSheet() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-  const [showChanges, setShowChanges] = useState(false);
   const [q, setQ] = useState("");
   const [view, setViewState] = useState(null);
   const search = useRef(null), composer = useRef(null);
@@ -75,14 +84,14 @@ export default function ProjectSheet() {
   }, [load]);
 
   const rev = sheet?.project.rev;
-  const { items, edges, save, lastBatch, run, undo, adopt } = useItems(rev, load);
+  const { items, edges, save, run, undo, adopt } = useItems(rev, load);
   const pid = sheet?.project.project_id;
   useEffect(() => { if (pid && !view) setViewState("graph"); }, [pid, view]);
   const setView = setViewState;
 
   const pkgs = useMemo(() => (sheet ? packages(sheet) : []), [sheet]);
   const conds = useMemo(() => (sheet ? conditions(sheet) : []), [sheet]);
-  const hot = useMemo(() => new Set(showChanges && lastBatch ? lastBatch.touched : []), [showChanges, lastBatch]);
+  const hot = useMemo(() => new Set(), []);
   const filter = useCallback((x) => matches(q, x.title, x.notes, x.result, x.scope, sheet && firmName(sheet, x.firm_id || x.owner),
     ...(x.site_ids || []), ...(x.sites || []).flatMap((s) => [s.site_id, s.name])), [q, sheet]);
 
@@ -113,9 +122,9 @@ export default function ProjectSheet() {
   };
   const runOps = async (ops, summary) => { const r = await run(ops, summary); if (!r.ok) toast.error(r.errors.join(" ")); return r; };
   const doUndo = async (batchId) => { const r = await undo(batchId); if (r.ok) toast.success("Undone"); else toast.error(r.errors.join(" ")); return r; };
-  const showBatch = (b) => { adopt(b); setShowChanges(true); if (b.touched[0]) setSelectedId(null); };
+  const stale = async () => { const { data } = await api.get("/project"); setSheet(data.sheet); return data.sheet.project.rev; };
+  const primary = primaryAction(sheet);
   const suggestions = items.length ? ["What's still open?", "Summarize the plan"] : ["Organize this job into scope groups", conds.length ? "What's still open?" : "Summarize the plan"];
-  const state = sheet.preview ? "Private draft" : sheet.current ? "Selected for review" : null;
   const saveText = { saving: "Saving…", saved: "Saved", failed: "Not saved" }[save] || (busy ? "Saving…" : "");
   const reset = async () => { clearDemoContent(); await act("post", "/project/demo-reset", {}, "Example reset"); };
   const viewProps = { sheet, items, pkgs, conds, onSelect: setSelectedId, selectedId, hot, filter };
@@ -128,9 +137,10 @@ export default function ProjectSheet() {
           <div className="mx-auto flex max-w-[1440px] flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 data-testid="project-title" className="break-words text-[22px] font-bold sm:text-[26px] leading-tight tracking-tight text-slate-900">{sheet.intake.job_name || sheet.project.name}</h1>
-                {sheet.project.synthetic && <SynthBadge />}
-                {state && <span data-testid="state-chip" className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${sheet.preview ? "border border-dashed border-amber-400 bg-amber-50 text-amber-900" : "bg-[#E4EFF6] text-[#215273]"}`}>{state}</span>}
+                <button type="button" onClick={() => setTool("details")} className="group flex items-center gap-2 text-left" aria-label="Edit job details" data-testid="project-title-edit">
+                  <h1 data-testid="project-title" className="break-words text-[22px] font-bold sm:text-[26px] leading-tight tracking-tight text-slate-900">{sheet.intake.job_name || sheet.project.name}</h1>
+                  <Pencil className="h-3.5 w-3.5 text-slate-400 transition-colors group-hover:text-slate-700" />
+                </button>
                 {saveText && <span data-testid="save-state" aria-live="polite" className={`text-xs ${save === "failed" ? "text-red-700" : "text-slate-500"}`}>{saveText}</span>}
               </div>
               <p data-testid="status-sentence" className="mt-0.5 text-sm text-slate-500">{[sheet.intake.customer_name, statusSentence(sheet)].filter(Boolean).join(" · ")}</p>
@@ -147,24 +157,17 @@ export default function ProjectSheet() {
                 <input ref={search} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setQ("")} placeholder="Filter" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none" data-testid="toolbar-search" />
                 {q && <button type="button" onClick={() => setQ("")} className="text-[11px] text-[#215273]" data-testid="toolbar-search-clear">Clear</button>}
               </label>
-              {lastBatch && (
-                <Button size="sm" variant={showChanges ? "default" : "outline"} className="h-8" aria-pressed={showChanges} onClick={() => setShowChanges(!showChanges)} data-testid="toolbar-show-changes">
-                  <Eye className="h-3.5 w-3.5" /> Highlight changes
-                </Button>
+              <Button size="sm" className="h-8 bg-[#1A2838] transition-[background-color,transform] hover:bg-[#2F4A66] active:scale-[.97]" onClick={() => setTool(primary.tool)} data-testid="primary-action">{primary.label}</Button>
+              {sheet.project.synthetic && user?.demo_key === "organizer" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="icon" variant="outline" className="h-8 w-8" aria-label="More" data-testid="header-overflow"><MoreHorizontal className="h-4 w-4" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onSelect={() => setResetOpen(true)} data-testid="demo-reset-button">Reset this example</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="icon" variant="outline" className="h-8 w-8" aria-label="More" data-testid="header-overflow"><MoreHorizontal className="h-4 w-4" /></Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuItem onSelect={() => setTool("details")} data-testid="overflow-details">Job details</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setTool("check")} data-testid="overflow-check">Plan and checks</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setTool("review")} data-testid="overflow-review">Prepare review</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setTool("decide")} data-testid="overflow-decide">Decide on changes</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setTool("quote")} data-testid="overflow-quote">Customer quote</DropdownMenuItem>
-                  {sheet.project.synthetic && user?.demo_key === "organizer" && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setResetOpen(true)} data-testid="demo-reset-button">Reset this example</DropdownMenuItem></>}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
           {q && conds.length > 0 && <p className="mx-auto max-w-[1440px] px-4 pb-2 sm:px-6 text-xs text-amber-800" data-testid="filter-conditions-note">{conds.length} open condition{conds.length === 1 ? "" : "s"} in this project</p>}
@@ -182,7 +185,7 @@ export default function ProjectSheet() {
             </div>
           )}
           <div className="no-print pointer-events-none absolute bottom-0 left-0 z-20" style={{ right: target && !narrow ? 360 : 0 }}>
-            <Composer ref={composer} sheet={sheet} onSheet={setSheet} onAdopt={(b) => adopt(b)} onUndo={doUndo} onShow={showBatch} onAdd={onAdd} suggestions={suggestions} />
+            <Composer ref={composer} sheet={sheet} onSheet={setSheet} onAdopt={(b) => adopt(b)} onUndo={doUndo} onAdd={onAdd} suggestions={suggestions} onStale={stale} />
           </div>
         </div>
       </div>

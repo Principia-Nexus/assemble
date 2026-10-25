@@ -33,7 +33,6 @@ class NewIn(BaseModel):
 
 class IssueIn(BaseModel):
     digest: str
-    override_reason: Optional[str] = None
 
 
 class AskIn(BaseModel):
@@ -211,7 +210,7 @@ async def new_quote(body: NewIn, user=Depends(current_user)):
             bad("Only an issued quote can be revised.")
     accepted = await db.quotes.find_one({"project_id": p["project_id"], "state": "accepted"}, sort=[("created_at", -1)])
     n = await db.quotes.count_documents({"project_id": p["project_id"]}) + 1
-    seed = (base or {}).get("snapshot") or {}
+    seed = (accepted or base or {}).get("snapshot") or {}
     if not seed:
         it = p["intake"]
         seed = {"customer_name": it.get("customer_name"), "scope": it.get("scope_summary"), "currency": "USD"}
@@ -272,12 +271,10 @@ async def issue_quote(qid: str, body: IssueIn, user=Depends(current_user)):
     if d != body.digest:
         raise HTTPException(409, "The quote changed since you previewed it. Review the preview again before issuing.")
     sup = await partner_support(p)
-    reason = (body.override_reason or "").strip()[:1000]
-    if not sup["ok"] and len(reason) < 10:
-        bad(["Not every firm has confirmed: " + "; ".join(f"{f['name']} ({f['text']})" for f in sup["missing"])
-             + ". Wait for their confirmation, or write why you are issuing anyway (at least 10 characters)."])
-    support = {**sup, "checked_at": now_iso(), "override_reason": reason if not sup["ok"] else None,
-               "overridden_by": user["name"] if not sup["ok"] else None}
+    if not sup["ok"]:
+        bad(["Every firm doing this work must confirm the selected plan first. Waiting on: "
+             + "; ".join(f"{f['name']} ({f['text']})" for f in sup["missing"]) + "."])
+    support = {**sup, "checked_at": now_iso()}
     if q.get("replaces"):
         prev = await db.quotes.find_one_and_update({"quote_id": q["replaces"], "state": {"$in": list(OPEN)}},
                                                    {"$set": {"state": "superseded", "superseded_by": qid, "superseded_at": now_iso()}})
@@ -291,7 +288,7 @@ async def issue_quote(qid: str, body: IssueIn, user=Depends(current_user)):
     if not q:
         raise HTTPException(409, "This quote was issued in another tab.")
     await log_event(p["project_id"], org(user), "quote", f"Quote {q['number']} issued to {q['recipient']} (not yet sent)."
-                    + (f" Issued without full partner support: {reason}" if support["override_reason"] else ""))
+                    )
     return {"quote": view(q), "path": f"/quote/{token}"}
 
 

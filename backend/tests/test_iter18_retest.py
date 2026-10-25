@@ -13,7 +13,7 @@ import pytest
 import requests
 
 sys.path.insert(0, os.path.dirname(__file__))
-from test_iter17_workspace_quote_media import BASE_URL, FIELDS, demo_org, items, ops, verify  # noqa: E402
+from test_iter17_workspace_quote_media import BASE_URL, FIELDS, demo_org, items, ops, solo_org, verify  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -116,14 +116,14 @@ class TestQuoteValidity:
         assert r.status_code == 200 and r.json()["quote"]["customer_email"] == "buyer@demo.assemble.test"
 
     def test_expiry_guard(self):
-        s = demo_org()
+        s = solo_org()
         qid = s.post(f"{BASE_URL}/api/project/quotes", json={}).json()["quote"]["quote_id"]
         vu = (datetime.now(timezone.utc) + timedelta(seconds=45)).isoformat()
         r = s.put(f"{BASE_URL}/api/project/quotes/{qid}", json={"fields": {**FIELDS, "valid_until": vu, "price_cents": 5000}})
         assert r.status_code == 200 and r.json()["missing"] == [], r.text
         assert r.json()["quote"]["valid_until"].endswith("Z")
         pv = s.get(f"{BASE_URL}/api/project/quotes/{qid}/preview").json()
-        r = s.post(f"{BASE_URL}/api/project/quotes/{qid}/issue", json={"digest": pv["digest"], "override_reason": "Test: issuing before partner confirmation"})
+        r = s.post(f"{BASE_URL}/api/project/quotes/{qid}/issue", json={"digest": pv["digest"]})
         assert r.status_code == 200, r.text
         q, token = r.json()["quote"], r.json()["path"].split("/quote/")[1]
         sid = verify(token)

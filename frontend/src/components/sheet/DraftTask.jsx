@@ -44,7 +44,7 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
       <div className="rounded-md border border-slate-200 bg-white p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <p className="eyebrow">Firms</p>
-          <Button size="sm" onClick={generate} disabled={busy || !!sheet.preview} data-testid="draft-generate-button">{busy ? "Checking…" : failing ? "Recheck" : "Check draft"}</Button>
+          <Button size="sm" onClick={generate} disabled={busy || !!sheet.preview} data-testid="draft-generate-button">{busy ? "Checking…" : failing ? "Check plan" : sheet.current ? "Redraft and check" : "Draft and check"}</Button>
         </div>
         {partners.length === 0 && <p className="text-sm text-slate-500">No partners yet. Add them in Check.</p>}
         <div className="stagger flex flex-wrap gap-2" role="group" aria-label="Firms to include">
@@ -53,14 +53,15 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
             return (
               <button key={p.partner_id} type="button" aria-pressed={on} onClick={() => toggle(p.partner_id)} className={chip(on)} data-testid={`draft-include-${slug(p.partner_id)}`}>
                 <span className="text-sm font-semibold">{p.name}</span>
-                <span className={`font-mono text-[11px] ${on ? "text-white/70" : "text-slate-500"}`}>{money(p.price_per_site_cents)}/site · cap {(p.capacity || []).map((c) => c ?? "?").join("/")} · max {p.max_sites ?? "?"}</span>
+                <span className={`text-[11px] ${on ? "text-white/70" : "text-slate-500"}`}>{money(p.price_per_site_cents)} per site</span>
               </button>
             );
           })}
-          <button type="button" aria-pressed={includeOwn && ownCap > 0} disabled={ownCap === 0} onClick={() => setIncludeOwn(!includeOwn)} className={chip(includeOwn && ownCap > 0, ownCap === 0)} data-testid="draft-include-own">
-            <span className="text-sm font-semibold">Your own crew</span>
-            <span className={`font-mono text-[11px] ${includeOwn && ownCap > 0 ? "text-white/70" : ""}`}>cap {(sheet.intake.own_capacity || []).map((c) => c ?? "?").join("/") || "unknown"}</span>
-          </button>
+          {ownCap > 0 && (
+            <button type="button" aria-pressed={includeOwn} onClick={() => setIncludeOwn(!includeOwn)} className={chip(includeOwn)} data-testid="draft-include-own">
+              <span className="text-sm font-semibold">Your own crew</span>
+            </button>
+          )}
         </div>
       </div>
       {sheet.current ? (
@@ -68,9 +69,7 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
           <ScheduleGrid version={sheet.current.version} checker={sheet.current.checker} testPrefix="current" openCount={openConditions(sheet.current).length} />
           <CheckerPanel checker={sheet.current.checker} notes={sheet.current.version.generator_notes} title="Checker" testPrefix="current" />
         </div>
-      ) : (
-        <p data-testid="draft-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">No candidate yet.</p>
-      )}
+      ) : null}
     </section>
   );
 }

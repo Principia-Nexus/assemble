@@ -29,7 +29,7 @@ export default function PlanStrip({ sheet, goTo, stacked = false }) {
     <section data-testid={t} className={`no-print shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white ${stacked ? "" : "mt-5"}`}>
       <div className={`stagger grid divide-slate-100 ${stacked ? "grid-cols-1 divide-y" : "grid-cols-2 divide-x divide-y md:grid-cols-4 md:divide-y-0"}`}>
         <Cell label={cur ? "Current review" : "Plan"} testId={`${t}-result`}>
-          {r ? <StatusPill testId={stacked ? "facts-overall-status" : "project-overall-status"} tone={r.tone} label={r.label} className="whitespace-normal" /> : <span className="text-slate-500">No candidate yet</span>}
+          {r ? <StatusPill testId={stacked ? "facts-overall-status" : "project-overall-status"} tone={r.tone} label={r.label} className="whitespace-normal" /> : <span className="text-slate-500">No plan</span>}
         </Cell>
         <Cell label={cur ? "" : "Ceiling"} testId={`${t}-total`}>
           {cur ? `${money(cur.checker.total_cents)} of ${money(cur.checker.ceiling_cents)}` : money(sheet.intake.budget_ceiling_cents)}

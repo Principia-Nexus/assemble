@@ -28,7 +28,7 @@ function Verify({ token, intro, onSession }) {
   };
   return (
     <div className="space-y-4" data-testid="quote-verify">
-      <p className="text-sm text-slate-700">{intro.seller} sent quote {intro.number} to {intro.recipient_masked}. Confirm a code sent to that address to open it.</p>
+      <p className="text-sm text-slate-700">{intro.seller} issued quote {intro.number} for {intro.recipient_masked}. To open it, we email a one-time code to that address.</p>
       {!sent ? <Button onClick={send} data-testid="quote-send-code">Email me a code</Button> : (
         <form onSubmit={verify} className="space-y-3">
           {sent.synthetic_code && <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-900" data-testid="quote-synthetic-code">{sent.note} Code: <b className="font-mono">{sent.synthetic_code}</b></p>}

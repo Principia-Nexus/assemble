@@ -40,7 +40,7 @@
         "One mutation run per project at a time; later requests wait in the queue.",
         "Output produced against an old revision is rejected and the user's text is kept."
       ],
-      "limits": {"model_calls": 4, "seconds": 120, "input_chars": 192000, "output_tokens_hint": 6000},
+      "limits": {"model_calls": 4, "seconds": 240, "input_chars": 192000, "output_tokens_hint": 6000},
       "checks": ["status transitions are server-side", "a stopped run never commits"],
       "fallback": "Mark the run failed, keep the user's message, change nothing.",
       "eval_cases": []

@@ -18,7 +18,6 @@ function Draft({ q, onSaved }) {
   const [f, setF] = useState({ ...q, valid_until: local(q.valid_until), price: q.price_cents != null ? q.price_cents / 100 : "", inc: lines(q.inclusions), exc: lines(q.exclusions), cond: lines(q.conditions) });
   const [preview, setPreview] = useState(null);
   const [errors, setErrors] = useState([]);
-  const [reason, setReason] = useState("");
   const save = async () => {
     const fields = { ...Object.fromEntries(F.map(([k]) => [k, f[k] || null])), scope: f.scope || null, terms: f.terms || null, valid_until: f.valid_until ? new Date(f.valid_until).toISOString() : null,
       price_cents: f.price === "" ? null : Math.round(Number(f.price) * 100), inclusions: f.inc.split("\n"), exclusions: f.exc.split("\n"), conditions: f.cond.split("\n") };
@@ -32,7 +31,7 @@ function Draft({ q, onSaved }) {
   };
   const issue = async () => {
     try {
-      await api.post(`/project/quotes/${q.quote_id}/issue`, { digest: preview.digest, override_reason: reason.trim() || null });
+      await api.post(`/project/quotes/${q.quote_id}/issue`, { digest: preview.digest });
       toast.success(`Quote ${q.number} issued. It is not sent until you send or copy the link.`);
       onSaved(null, true);
     } catch (e) { setErrors(errList(e)); }
@@ -68,8 +67,8 @@ function Draft({ q, onSaved }) {
           )}
           {preview.missing.length ? <p className="mt-1 text-xs text-amber-800" data-testid="quote-missing">Before issuing, add {preview.missing.join(", ")}.</p> : (
             <>
-              {preview.support && !preview.support.ok && <Textarea rows={2} className="mt-2" placeholder="Why issue before every firm confirms?" value={reason} onChange={(e) => setReason(e.target.value)} data-testid="quote-override-reason" />}
-              <Button className="mt-3" disabled={preview.support && !preview.support.ok && reason.trim().length < 10} onClick={issue} data-testid="quote-issue">Issue {preview.snapshot.number} to {preview.snapshot.customer_email}</Button>
+              {preview.support && !preview.support.ok ? <p className="mt-2 text-xs font-medium text-amber-800" data-testid="quote-support-blocked">Every firm doing this work must confirm before you can issue.</p>
+                : <Button className="mt-3" onClick={issue} data-testid="quote-issue">Issue {preview.snapshot.number} to {preview.snapshot.customer_email}</Button>}
             </>
           )}
         </div>
@@ -91,7 +90,6 @@ function Issued({ q, onChange }) {
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold" data-testid={`quote-state-${q.number}`}>{STATE[q.state]}</span>
       </div>
       <p className="mt-1 text-xs text-slate-500">To {q.recipient} · issued {new Date(q.issued_at).toLocaleString()} · valid until {s.valid_until ? new Date(s.valid_until).toLocaleString() : ""}{q.sends?.length ? ` · emailed ${q.sends.length}×` : " · not sent"}</p>
-      {q.support?.override_reason && <p className="mt-1 text-xs text-amber-800" data-testid={`quote-override-${q.number}`}>Issued before every firm confirmed ({q.support.missing.map((x) => x.name).join(", ")}): “{q.support.override_reason}”</p>}
       {(q.responses || []).map((r) => (
         <p key={r.receipt_id} className="mt-2 rounded bg-slate-50 px-2 py-1 text-xs" data-testid={`quote-response-${r.receipt_id}`}>
           {r.signer_name}{r.authority ? ` (${r.authority})` : ""} · {r.email} · {r.action.replace("_", " ")} {r.version} · {new Date(r.at).toLocaleString()}{r.note ? ` — “${r.note}”` : ""}

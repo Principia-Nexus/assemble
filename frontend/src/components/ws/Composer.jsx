@@ -3,17 +3,16 @@ import { ArrowUp, Camera, ChevronDown, ChevronUp, Loader2, Mic, Paperclip, Plus,
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { api, errText } from "@/lib/api";
 
-function Receipt({ batch, onUndo, onShow, undone }) {
+function Receipt({ batch, onUndo, undone }) {
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-2 rounded-lg border border-[#E2E8F0] bg-white px-2.5 py-1.5 text-xs text-[#1A2838]" data-testid={`receipt-${batch.batch_id}`}>
       <span className="min-w-0 flex-1">Saved privately · {batch.touched.length} item{batch.touched.length === 1 ? "" : "s"}</span>
-      <button type="button" className="font-medium text-[#215273] hover:underline" onClick={() => onShow(batch)} data-testid="receipt-show-changes">Highlight changes</button>
       <button type="button" className="font-medium text-[#A93A3A] hover:underline disabled:opacity-50" disabled={undone} onClick={() => onUndo(batch)} data-testid="receipt-undo">{undone ? "Undone" : "Undo"}</button>
     </div>
   );
 }
 
-const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo, onShow, onAdd, suggestions, onTrayChange }, ref) {
+const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo, onAdd, suggestions, onTrayChange, onStale }, ref) {
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState("");
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -96,7 +95,10 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
     setOpen(true);
     setMsgs((m) => [...m, { msg_id: `local-${Date.now()}`, role: "user", text: message }]);
     try {
-      const { data } = await api.post("/project/assistant", { message, rev: sheet.project.rev, utterance_id: raw ? null : utterance, async_run: true });
+      const body = { message, rev: sheet.project.rev, utterance_id: raw ? null : utterance, async_run: true };
+      const post = () => api.post("/project/assistant", body);
+      // A stale revision rebases once against the latest saved project instead of looping on "send it again".
+      const { data } = await post().catch(async (e) => { if (e.response?.status !== 409) throw e; body.rev = await onStale(); return post(); });
       setUtterance(null);
       setRuns((rs) => [...rs, data.run]);
     } catch (e) {
@@ -125,7 +127,7 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
                   <div className={`max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-[13px] leading-relaxed ${m.role === "user" ? "bg-[#1A2838] text-white" : m.mode === "error" ? "bg-[#FBEFEF] text-[#A93A3A]" : "bg-white text-[#1A2838]"}`}>
                     {m.text}
                     {m.errors?.length > 0 && <ul className="mt-1 list-disc pl-4 text-xs text-[#A93A3A]">{m.errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-                    {m.batch && m.wrote && <Receipt batch={m.batch} onUndo={undo} onShow={onShow} undone={undone[m.batch.batch_id]} />}
+                    {m.batch && m.wrote && <Receipt batch={m.batch} onUndo={undo} undone={undone[m.batch.batch_id]} />}
                   </div>
                 </div>
               ))}
