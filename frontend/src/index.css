@@ -5,25 +5,25 @@
 
 @layer base {
     :root {
-        --background: 30 25% 98%;
-        --foreground: 22 30% 13%;
+        --background: 0 0% 100%;
+        --foreground: 0 0% 7%;
         --card: 0 0% 100%;
-        --card-foreground: 22 30% 13%;
+        --card-foreground: 0 0% 7%;
         --popover: 0 0% 100%;
-        --popover-foreground: 22 30% 13%;
-        --primary: 21 30% 22%;
+        --popover-foreground: 0 0% 7%;
+        --primary: 202 82% 30%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 28 30% 94%;
-        --secondary-foreground: 22 30% 13%;
-        --muted: 28 25% 93%;
-        --muted-foreground: 22 12% 40%;
-        --accent: 28 35% 91%;
-        --accent-foreground: 21 35% 25%;
+        --secondary: 210 20% 96%;
+        --secondary-foreground: 0 0% 7%;
+        --muted: 210 20% 96%;
+        --muted-foreground: 0 0% 38%;
+        --accent: 202 60% 95%;
+        --accent-foreground: 202 82% 25%;
         --destructive: 0 65% 38%;
         --destructive-foreground: 0 0% 100%;
-        --border: 28 25% 87%;
-        --input: 28 22% 80%;
-        --ring: 21 30% 22%;
+        --border: 220 13% 90%;
+        --input: 220 13% 82%;
+        --ring: 202 82% 30%;
         --radius: 0.375rem;
     }
 }
@@ -40,8 +40,8 @@
         -webkit-font-smoothing: antialiased;
     }
     ::selection {
-        background: #E8D5C4;
-        color: #2B1E17;
+        background: #CDE7F5;
+        color: #111111;
     }
 }
 
@@ -68,7 +68,7 @@
 }
 
 .tour-focus {
-    outline: 3px solid #4A3428;
+    outline: 3px solid #0E5E8C;
     outline-offset: 4px;
     border-radius: 6px;
     transition: outline-color 0.3s ease;
@@ -80,18 +80,18 @@
 
 /* Cream / navy / maroon theme mapped onto existing utility classes */
 .bg-white { background-color: #FFFFFF; }
-.bg-slate-50, .bg-slate-100 { background-color: #F6F1EC; }
-.bg-slate-900 { background-color: #4A3428; }
-.hover\:bg-slate-50:hover { background-color: #F1E9E1; }
-.text-slate-900, .text-slate-800 { color: #2B1E17; }
-.text-slate-700 { color: #4A3A30; }
-.text-slate-600 { color: #6B5A4E; }
-.text-slate-500 { color: #8A7769; }
-.border-slate-200, .border-slate-100 { border-color: #E6DCD3; }
-.divide-slate-100 > * + *, .divide-slate-200 > * + * { border-color: #E6DCD3; }
-.border-slate-300 { border-color: #D4C4B6; }
-.border-slate-900 { border-color: #4A3428; }
+.bg-slate-50, .bg-slate-100 { background-color: #F5F7F9; }
+.bg-slate-900 { background-color: #0E5E8C; }
+.hover\:bg-slate-50:hover { background-color: #EEF4F8; }
+.text-slate-900, .text-slate-800 { color: #111111; }
+.text-slate-700 { color: #333333; }
+.text-slate-600 { color: #555555; }
+.text-slate-500 { color: #6B6B6B; }
+.border-slate-200, .border-slate-100 { border-color: #E5E7EB; }
+.divide-slate-100 > * + *, .divide-slate-200 > * + * { border-color: #E5E7EB; }
+.border-slate-300 { border-color: #D1D5DB; }
+.border-slate-900 { border-color: #0E5E8C; }
 .bg-slate-900.text-white, .bg-slate-900 .text-white { color: #FFFFFF; }
 h1, h2, h3 { font-weight: 500; letter-spacing: -0.01em; }
 .font-bold, .font-extrabold { font-weight: 600; }
-.eyebrow { color: #7A5240; }
+.eyebrow { color: #0E5E8C; }
