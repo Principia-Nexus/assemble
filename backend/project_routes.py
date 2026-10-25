@@ -9,6 +9,7 @@ from pymongo.errors import DuplicateKeyError
 
 import logic as L
 import rule_packs as RP
+import qualify as Q
 import mailer
 from core import db, now_iso, new_id, current_user, log_event, STALE_MSG, PROJECT_CTX
 from demo import reset_project
@@ -38,6 +39,8 @@ class IntakeIn(BaseModel):
 class DraftIn(BaseModel):
     rev: int
     partner_ids: List[str]
+    select: bool = False
+    keep_open: List[str] = []
     include_own: bool = True
 
 
@@ -128,7 +131,14 @@ async def sheet(project_id):
             for x in d["partners"]:
                 x["current_status"] = st.get(x["partner_id"])
         out["preview"] = {"version": pre, "checker": L.check({**pre, "job_conditions": jc}), "diff": d}
-    out["rules"] = {"checker": L.CHECKER_VERSION, "packs": sorted(set(RP.FILES.values()))}
+    out["rules"] = {"checker": L.CHECKER_VERSION, "packs": sorted(set(RP.FILES.values())), "qualification": Q.RULES_VERSION}
+    labels = [s["label"] for s in await db.sources.find({"project_id": project_id}, {"_id": 0, "label": 1}).to_list(50)]
+    reqs = Q.requirements(p, labels)
+    out["qual"] = {"requirements": reqs, "evidence": p.get("evidence") or [], "exclusions": p.get("exclusions") or []}
+    for k in ("current", "preview"):
+        if out[k]:
+            out[k]["qualification"] = Q.assess(out[k]["version"], p, reqs)
+    out["project"]["plan_selected"] = bool(cur) and p.get("plan_selected", True)
     out["links_count"] = await db.links.count_documents({"project_id": project_id})
     out["change_requests"] = await db.change_requests.find({"project_id": project_id}, {"_id": 0}).sort(
         "created_at", -1).to_list(100)
@@ -240,20 +250,27 @@ async def make_draft(body: DraftIn, user=Depends(current_user)):
         errors.append("Choose at least one crew to include in the draft.")
     if errors:
         bad(errors)
-    await generate_candidate(p, user, body.partner_ids, body.include_own, body.rev)
+    doc = await generate_candidate(p, user, body.partner_ids, body.include_own, body.rev, keep_open=set(body.keep_open))
+    if body.select and doc["state"] == "current":
+        from qual_routes import selection_block
+        fresh = await get_project(user)
+        if not await selection_block(fresh, doc):
+            await db.projects.update_one({"project_id": p["project_id"]}, {"$set": {"plan_selected": True}, "$inc": {"rev": 1}})
     return {"sheet": await sheet(p["project_id"])}
 
 
-async def generate_candidate(p, user, partner_ids, include_own, rev, reason=""):
+async def generate_candidate(p, user, partner_ids, include_own, rev, reason="", keep_open=frozenset()):
     it = p["intake"]
+    labels = [s["label"] for s in await db.sources.find({"project_id": p["project_id"]}, {"_id": 0, "label": 1}).to_list(50)]
+    blocked = Q.blocked_pairs(it, p, Q.requirements(p, labels))
     as_preview = await db.links.count_documents({"project_id": p["project_id"]}) > 0
     if as_preview and p.get("preview_version_id"):
         raise HTTPException(409, "Finish or discard the open amendment preview first.")
-    assignments, notes = L.generate(it, partner_ids, include_own)
+    assignments, notes = L.generate(it, partner_ids, include_own, blocked, keep_open)
     vid_field = "preview_version_id" if as_preview else "current_version_id"
     doc = version_doc(p, it, 0, "preview" if as_preview else "current", "draft", user,
                       copy.deepcopy(it["sites"]), copy.deepcopy(it["partners"]), assignments, {}, notes)
-    await claim_rev(p, rev, {vid_field: doc["version_id"]})
+    await claim_rev(p, rev, {vid_field: doc["version_id"], **({} if as_preview else {"plan_selected": False})})
     doc["number"] = await next_number(p["project_id"])
     if not as_preview and p.get("current_version_id"):
         await db.versions.update_one({"version_id": p["current_version_id"]}, {"$set": {"state": "replaced"}})
@@ -327,10 +344,10 @@ async def edit_preview(body: PreviewEditIn, user=Depends(current_user)):
         if se.site_id not in smap:
             e.append(f"{se.site_id}: not a site in this preview.")
             continue
-        if se.owner != L.OWN and se.owner not in P:
+        if se.owner and se.owner != L.OWN and se.owner not in P:
             e.append(f"{se.site_id}: choose a scope owner.")
-        w = L.whole(se.week, f"{se.site_id} week", e, 1, weeks)
-        if w is None and L.blank(se.week):
+        w = L.whole(se.week, f"{se.site_id} week", e, 1, weeks) if se.owner else None
+        if se.owner and w is None and L.blank(se.week):
             e.append(f"{se.site_id}: week is required.")
         if "deadline_week" in se.model_fields_set:
             by_id[se.site_id]["deadline_week"] = L.whole(se.deadline_week, f"{se.site_id} deadline week", e, 1, weeks)
@@ -367,7 +384,7 @@ async def edit_preview(body: PreviewEditIn, user=Depends(current_user)):
 class AssignIn(BaseModel):
     rev: int
     site_id: str
-    owner: str
+    owner: Optional[str] = None
     week: Optional[Any] = None
 
 
@@ -381,7 +398,7 @@ async def assign_site(body: AssignIn, user=Depends(current_user)):
         raise HTTPException(409, "No plan yet. Use Draft plan.")
     if body.site_id not in base["assignments"]:
         bad(f"{body.site_id} is not a site in this plan.")
-    if body.owner != L.OWN and body.owner not in {x["partner_id"] for x in base["partners"]}:
+    if body.owner and body.owner != L.OWN and body.owner not in {x["partner_id"] for x in base["partners"]}:
         bad("Choose a firm that is part of this plan.")
     if not p.get("preview_version_id"):
         await start_preview(PreviewIn(rev=rev), user)
@@ -394,7 +411,8 @@ async def assign_site(body: AssignIn, user=Depends(current_user)):
         a = pre["assignments"].get(s["site_id"]) or {}
         mine = s["site_id"] == body.site_id
         sites.append(SiteEdit(site_id=s["site_id"], owner=body.owner if mine else a.get("owner"),
-                              week=(body.week if mine and body.week is not None else a.get("week")) or 1))
+                              week=None if (body.owner is None if mine else not a.get("owner")) else
+                              ((body.week if mine and body.week is not None else a.get("week")) or 1)))
     adj = {k: f"{v / 100:.2f}" for k, v in (pre.get("adjustments") or {}).items()}
     return await edit_preview(PreviewEditIn(rev=rev, sites=sites, adjustments=adj), user)
 
@@ -427,6 +445,10 @@ async def select_preview(body: RevIn, user=Depends(current_user)):
         raise HTTPException(409, "The preview changed since you checked it. Review it again before selecting.")
     if L.check(pre)["overall"] == "fail":
         raise HTTPException(409, f"Preview v{pre['number']} fails a check. Repair it and recheck before selecting it.")
+    from qual_routes import selection_block
+    why = await selection_block(p, pre)
+    if why:
+        raise HTTPException(409, why)
     await claim_rev(p, body.rev, {"current_version_id": pre["version_id"], "preview_version_id": None})
     await db.versions.update_one({"version_id": cur["version_id"]}, {"$set": {"state": "superseded"}})
     await db.versions.update_one({"version_id": pre["version_id"]}, {"$set": {"state": "current"}})
@@ -461,6 +483,8 @@ async def create_link(body: LinkIn, user=Depends(current_user)):
     cur = await get_version(p.get("current_version_id"))
     if not cur:
         raise HTTPException(409, "Prepare a draft first.")
+    if not p.get("plan_selected", True):
+        raise HTTPException(409, "Select the plan before sending it for review.")
     if body.partner_id not in L.partner_owners(cur):
         raise HTTPException(400, "This partner has no sites in the current plan.")
     if L.check(cur)["overall"] == "fail":

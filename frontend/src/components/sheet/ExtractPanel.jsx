@@ -16,6 +16,12 @@ export default function ExtractPanel({ sheet, act, busy }) {
   useEffect(() => {
     api.get("/project/readings").then((r) => setData(r.data)).catch((e) => setError(errText(e)));
   }, []);
+  const reading = (data?.sources || []).some((s) => s.coverage?.queued > 0);
+  useEffect(() => {
+    if (!reading) return undefined;
+    const t = setInterval(() => api.get("/project/readings").then((r) => setData(r.data)).catch(() => {}), 4000);
+    return () => clearInterval(t);
+  }, [reading]);
 
   const onRead = (d) => {
     setData({ sources: d.sources, readings: d.readings });

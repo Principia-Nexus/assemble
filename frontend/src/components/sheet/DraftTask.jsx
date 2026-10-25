@@ -11,7 +11,7 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
   const initial = sheet.current?.version.partners
     ? Object.keys(sheet.current.version.assignments).length && [...new Set(Object.values(sheet.current.version.assignments).map((a) => a.owner))]
     : [];
-  const [chosen, setChosen] = useState(() => partners.map((p) => p.partner_id).filter((id) => (initial || []).includes(id)));
+  const [chosen, setChosen] = useState(() => (sheet.current ? partners.map((p) => p.partner_id).filter((id) => (initial || []).includes(id)) : partners.map((p) => p.partner_id)));
   const [includeOwn, setIncludeOwn] = useState(true);
   const [errors, setErrors] = useState([]);
   const toggle = (id) => setChosen(chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id]);
@@ -64,6 +64,22 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
           )}
         </div>
       </div>
+      {sheet.current && (() => {
+        const qa = sheet.current.qualification, bad = Object.entries(qa.sites).filter(([, x]) => x.status === "does_not_fit").map(([k]) => k);
+        const pending = Object.values(qa.sites).filter((x) => ["review_needed", "evidence_needed"].includes(x.status)).length;
+        return (
+          <div className="flex flex-wrap items-center gap-3 rounded-md border border-slate-200 bg-white p-4" data-testid="draft-qualification">
+            <p className="min-w-0 flex-1 text-sm text-slate-700">
+              <span className="font-semibold">Coverage:</span> {qa.coverage.open.length ? `${qa.coverage.open.join(", ")} open` : "every scope assigned"}
+              {" · "}<span className="font-semibold">Qualification:</span> <span className={bad.length ? "text-[#A93A3A]" : pending ? "text-[#B4690E]" : "text-[#1E7B5C]"}>{bad.length ? `does not fit for ${bad.join(", ")}` : pending ? `${pending} site${pending === 1 ? "" : "s"} need review or evidence` : "fits"}</span>
+              {" · "}<span className="font-semibold">Budget and schedule:</span> {sheet.current.checker.overall}
+            </p>
+            {!sheet.project.plan_selected && (
+              <Button size="sm" disabled={busy || bad.length > 0 || failing} onClick={() => act("post", "/project/plan/select", { rev: sheet.project.rev }, "Plan selected. Partners still need to review it.")} data-testid="draft-select-plan">Select plan</Button>
+            )}
+          </div>
+        );
+      })()}
       {sheet.current ? (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <ScheduleGrid version={sheet.current.version} checker={sheet.current.checker} testPrefix="current" openCount={openConditions(sheet.current).length} />

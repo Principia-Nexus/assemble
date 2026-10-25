@@ -267,9 +267,10 @@ def make_fact(src, raw, it):
     }
 
 
-async def run_extraction(src, p, user):
+async def run_extraction(src, p, user, batch=None):
     await db.sources.update_one({"source_id": src["source_id"]},
                                 {"$set": {"status": "reading", "error": None, "reading_started_at": now_iso()}})
+    batch = batch or "b0"
     try:
         raw = await asyncio.wait_for(call_llm(build_prompt(src, p["intake"])), timeout=LLM_TIMEOUT)
         data = parse_json(raw)
@@ -283,17 +284,20 @@ async def run_extraction(src, p, user):
         # Organizer decisions (corrections, rejections, applied readings) on this source survive a re-read.
         kept = {f["target"] async for f in db.facts.find(
             {"source_id": src["source_id"], "status": {"$in": ["corrected", "rejected", "applied"]}}, {"target": 1})}
-        facts = [f for f in (make_fact(src, x, p["intake"]) for x in data["facts"] if isinstance(x, dict))
+        facts = [{**f, "batch": batch} for f in (make_fact(src, x, p["intake"]) for x in data["facts"] if isinstance(x, dict))
                  if f and f["target"] not in kept]
         lists = {k: [str(x)[:300] for x in (data.get(k) if isinstance(data.get(k), list) else []) if x][:30]
                  for k in ("unknowns", "conflicts", "ignored_instructions")}
     except Exception as e:
         return await fail(src, p, user, f"The reader returned malformed facts ({str(e)[:120]}). Your text is kept; try again.")
-    await db.facts.delete_many({"source_id": src["source_id"], "status": {"$in": ["proposed", "invalid"]}})
+    # A re-read of one batch replaces only that batch's proposals; other pages' readings survive.
+    await db.facts.delete_many({"source_id": src["source_id"], "status": {"$in": ["proposed", "invalid"]},
+                                **({"batch": {"$in": [batch, None]}} if batch == "b0" else {"batch": batch})})
     if facts:
         await db.facts.insert_many([dict(f) for f in facts])
+    total = await db.facts.count_documents({"source_id": src["source_id"], "status": {"$ne": "invalid"}})
     await db.sources.update_one({"source_id": src["source_id"]}, {"$set": {
-        "status": "read", "error": None, "read_at": now_iso(), "fact_count": len(facts),
+        "status": "read", "error": None, "read_at": now_iso(), "fact_count": total,
         "reader": {"model": MODEL[1], "prompt_version": PROMPT_VERSION, "packs": [RP.tag(x) for x in source_packs(src)]}, **lists}})
     await log_event(p["project_id"], org(user), "extract",
                     f"Read {KINDS.get(src['kind'])} \"{src['label']}\": {len(facts)} proposed fact(s). Nothing applied yet.",
@@ -345,7 +349,7 @@ async def migrate_job_conditions(facts):
 
 
 async def readings_payload(project_id):
-    sources = await db.sources.find({"project_id": project_id}, {"_id": 0}).sort("order", 1).to_list(100)
+    sources = await db.sources.find({"project_id": project_id}, {"_id": 0, "pending_text": 0}).sort("order", 1).to_list(100)
     facts = await db.facts.find({"project_id": project_id}, {"_id": 0}).to_list(2000)
     await migrate_job_conditions(facts)
     return {"sources": sources, "readings": readings_from(facts)}
@@ -354,6 +358,9 @@ async def readings_payload(project_id):
 @router.get("/readings")
 async def get_readings(user=Depends(current_user)):
     p = await get_project(user)
+    async for s in db.sources.find({"project_id": p["project_id"], "coverage.queued": {"$gt": 0}}, {"_id": 0, "source_id": 1}):
+        if s["source_id"] not in READING:
+            asyncio.create_task(continue_reading(s["source_id"], user))
     return await readings_payload(p["project_id"])
 
 
@@ -428,24 +435,91 @@ async def read_pages(data, raw):
             if man[i]["status"] == "pending":
                 man[i].update(method="ocr", status="unreadable", note="no text recognized")
     for i in skipped:
-        man[i].update(status="uninspected", note=f"over the {MAX_OCR_PAGES}-page recognition limit")
-    parts, starts, pos = [], [], 0
+        man[i].update(status="queued", method="ocr", note="queued for text recognition")
+    parts, starts, pos, pending = [], [], 0, {}
     for m in man:
         if m["status"] not in ("readable", "partial"):
             continue
         chunk = f"[Page {m['page']}]\n{texts[m['page'] - 1].strip()}\n\n"
         if pos + len(chunk) > MAX_TEXT:
-            m.update(status="uninspected", note="over the 40,000-character reading limit")
+            m.update(status="queued", note="queued for the next reading batch")
+            pending[str(m["page"])] = texts[m["page"] - 1].strip()
             continue
         starts.append(pos)
         parts.append(chunk)
         pos += len(chunk)
-    return "".join(parts), starts, man
+    return "".join(parts), starts, man, pending
 
 
 def coverage(man):
-    c = {k: sum(m["status"] == k for m in man) for k in ("readable", "partial", "unreadable", "uninspected")}
-    return {**c, "total": len(man)}
+    c = {k: sum(m["status"] == k for m in man) for k in ("readable", "partial", "unreadable", "uninspected", "queued")}
+    return {**c, "total": len(man), "reviewed": c["readable"] + c["partial"] + c["unreadable"]}
+
+
+READING = set()
+
+
+async def continue_reading(source_id, user):
+    """Reads the remaining pages in bounded batches. Each finished batch is saved, so cancel/restart resumes where it stopped."""
+    if source_id in READING:
+        return
+    READING.add(source_id)
+    try:
+        n = 0
+        while True:
+            src = await db.sources.find_one({"source_id": source_id}, {"_id": 0})
+            man = src.get("manifest") or []
+            q = [m for m in man if m["status"] == "queued"]
+            if not q:
+                break
+            n += 1
+            pending, parts, done, size = src.get("pending_text") or {}, [], [], 0
+            ocr_need = [m["page"] for m in q if str(m["page"]) not in pending][:MAX_OCR_PAGES]
+            got = {}
+            if ocr_need:
+                f = await db.files.find_one({"file_id": src.get("file_id")}, {"_id": 0})
+                data, _ = await asyncio.to_thread(get_object, f["storage_path"])
+                try:
+                    got = await ocr_pages(data, [x - 1 for x in ocr_need])
+                except Exception:  # noqa: BLE001
+                    for m in man:
+                        if m["page"] in ocr_need:
+                            m.update(status="unreadable", note="text recognition failed")
+            for m in q:
+                t = pending.get(str(m["page"])) if str(m["page"]) in pending else got.get(m["page"]) if m["page"] in got else None
+                if t is None:
+                    if m["page"] in ocr_need and m["status"] == "queued":
+                        m.update(status="unreadable", note="no text recognized")
+                    continue
+                c = _chars(t)
+                chunk = f"[Page {m['page']}]\n{t}\n\n"
+                if parts and size + len(chunk) > MAX_TEXT:
+                    break
+                parts.append(chunk)
+                size += len(chunk)
+                done.append(m["page"])
+                m.update(chars=c, sheet=_sheet(t), note=None,
+                         status="readable" if c >= 20 and "[unreadable]" not in t else "partial" if c else "unreadable")
+                pending.pop(str(m["page"]), None)
+            if parts:
+                p = await db.projects.find_one({"project_id": src["project_id"]}, {"_id": 0})
+                chunk_text = "".join(parts)
+                await run_extraction({**src, "text": chunk_text}, p, user, batch=f"b{n}-{done[0]}")
+                await db.sources.update_one({"source_id": source_id}, {"$set": {"text": (src.get("text") or "") + chunk_text}})
+            await db.sources.update_one({"source_id": source_id}, {"$set": {"manifest": man, "coverage": coverage(man), "pending_text": pending}})
+            if not parts and not ocr_need:
+                break
+        src = await db.sources.find_one({"source_id": source_id}, {"_id": 0})
+        bad_pages = [m["page"] for m in src.get("manifest") or [] if m["status"] in ("unreadable", "partial")]
+        if bad_pages:
+            await db.assistant_messages.insert_one({
+                "msg_id": new_id("am"), "project_id": src["project_id"], "user_id": user["user_id"], "role": "assistant", "mode": "question",
+                "text": f"I read {src['coverage']['reviewed']} of {src['coverage']['total']} pages of \"{src['label']}\", but couldn't fully read page"
+                        f"{'s' if len(bad_pages) > 1 else ''} {', '.join(map(str, bad_pages[:12]))}. Upload a clearer export of "
+                        f"{'those pages' if len(bad_pages) > 1 else 'that page'}, or tell me the specific fact you need from it.",
+                "created_at": now_iso()})
+    finally:
+        READING.discard(source_id)
 
 
 @router.post("/sources/upload")
@@ -465,7 +539,7 @@ async def upload_pdf(file: UploadFile = File(...), kind: str = Form(...), label:
         raw, _, _ = await asyncio.to_thread(pdf_text, data)
     except Exception as ex:  # noqa: BLE001
         raise HTTPException(422, [f'Could not open "{name}" ({str(ex)[:120]}). Nothing was saved or read.']) from ex
-    text, page_starts, manifest = await read_pages(data, raw)
+    text, page_starts, manifest, pending = await read_pages(data, raw)
     cov = coverage(manifest)
     if not cov["readable"] and not cov["partial"]:
         raise HTTPException(422, [f'No readable text could be recognized in "{name}", so nothing was read. '
@@ -480,8 +554,12 @@ async def upload_pdf(file: UploadFile = File(...), kind: str = Form(...), label:
     await db.files.insert_one({"file_id": file_id, "project_id": p["project_id"], "storage_path": stored["path"],
                                "original_filename": name, "content_type": "application/pdf", "size": len(data),
                                "is_deleted": False, "created_at": now_iso()})
-    return await create_source(p, user, kind, label, text, sdate, name,
-                               {"file_id": file_id, "page_starts": page_starts, "page_count": len(manifest), **extra})
+    out = await create_source(p, user, kind, label, text, sdate, name,
+                              {"file_id": file_id, "page_starts": page_starts, "page_count": len(manifest), "pending_text": pending, **extra})
+    if cov["queued"]:
+        new = await db.sources.find_one({"project_id": p["project_id"], "file_id": file_id}, {"_id": 0, "source_id": 1})
+        asyncio.create_task(continue_reading(new["source_id"], user))
+    return out
 
 
 @router.get("/demo-content")
@@ -645,18 +723,18 @@ async def apply_readings(body: ApplyIn, user=Depends(current_user)):
     await db.facts.update_many({"fact_id": {"$in": [f["fact_id"] for f in chosen]}}, {"$set": {"status": "applied", "applied_at": now_iso()}})
     await log_event(p["project_id"], org(user), "apply", f"{len(chosen)} reading(s) used in the job details.",
                     details=[f"{f['label']} ({f['partner_name'] or f['site_id'] or 'job'}{' wk ' + str(f['week']) if f['week'] else ''}) = {f['value']} · from \"{f['source_label']}\" {('page ' + str(f['location']['page']) + ', ') if (f.get('location') or {}).get('page') else ''}line {(f.get('location') or {}).get('line', '?')}" for f in chosen])
-    recalc = "No candidate yet, so nothing was recalculated."
+    recalc = f"Applied {len(chosen)} reading{'s' if len(chosen) != 1 else ''} to the job details."
     p2 = await db.projects.find_one({"project_id": p["project_id"]}, {"_id": 0})
     cur = await db.versions.find_one({"version_id": p2.get("current_version_id")}, {"_id": 0}) if p2.get("current_version_id") else None
     if cur and all(f["scope"] == "job_condition" for f in chosen):
-        recalc = "Job-wide conditions don't change any partner's terms, so the plan was not recalculated."
+        recalc += " Job-wide conditions don't change any partner's terms, so the plan was not recalculated."
         cur = None
     if cur:
         owners = [x for x in L.partner_owners(cur) if x in {q["partner_id"] for q in it["partners"]}]
         try:
             doc = await generate_candidate(p2, user, owners, True, p2["rev"], reason=" after using new readings")
-            recalc = f"Candidate v{doc['number']} recalculated" + (" as an amendment preview." if doc["state"] == "preview" else ".")
+            recalc += f" Plan v{doc['number']} recalculated" + (" as a private draft." if doc["state"] == "preview" else ".")
         except HTTPException as ex:
-            recalc = f"Candidate not recalculated: {ex.detail}"
+            recalc += f" Plan not recalculated: {ex.detail}"
     from project_routes import sheet
     return {"sheet": await sheet(p["project_id"]), "recalc": recalc, **await readings_payload(p["project_id"])}

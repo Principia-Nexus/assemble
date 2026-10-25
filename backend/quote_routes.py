@@ -76,6 +76,11 @@ def digest(snap):
 
 def clean(raw, errors):
     out = {}
+    if "partial_ack" in raw:
+        out["partial_ack"] = bool(raw["partial_ack"])
+    if "condition_decisions" in raw:
+        d = raw["condition_decisions"] or {}
+        out["condition_decisions"] = {str(k)[:500]: v for k, v in d.items() if v in ("in_offer", "resolved")} if isinstance(d, dict) else {}
     for k in DRAFT_FIELDS:
         if k not in raw:
             continue
@@ -138,9 +143,60 @@ def missing(q):
     return m
 
 
-def snapshot_of(q, p, firm_name):
-    return {"number": q["number"], "kind": q["kind"], "baseline_number": q.get("baseline_number"), "project": p["intake"].get("job_name") or p["name"],
+def snapshot_of(q, p, firm_name, ready=None):
+    snap = {"number": q["number"], "kind": q["kind"], "baseline_number": q.get("baseline_number"), "project": p["intake"].get("job_name") or p["name"],
             "seller": firm_name, "synthetic": bool(p.get("synthetic")), **{k: q.get(k) for k in DRAFT_FIELDS}}
+    if ready:
+        # Authorized exclusions and conditions carry into the offer; firm names, prices and internal notes never do.
+        exc = list(snap.get("exclusions") or [])
+        exc += [x["text"] for x in ready["exclusions"] if x["text"] not in exc]
+        con = list(snap.get("conditions") or [])
+        con += [c["text"] for c in ready["conditions"] if c["decision"] == "in_offer" and c["text"] not in con]
+        snap.update(exclusions=exc, conditions=con, not_covered=ready["not_covered"])
+    return snap
+
+
+async def readiness(p, q):
+    """Issue gate: coverage, qualification, current firm responses and a decision on each material condition."""
+    import qualify as Q
+    s = await sheet(p["project_id"])
+    sup = await partner_support(p)
+    blockers, not_covered, conds = [], [], []
+    cur = s.get("current")
+    if cur:
+        qa = cur["qualification"]
+        names = {x["site_id"]: x.get("name") or x["site_id"] for x in cur["version"]["sites"]}
+        not_covered = [f"{sid} {names[sid]}".strip() for sid in qa["coverage"]["open"]]
+        badq = sorted(k for k, x in qa["sites"].items() if x["status"] not in ("fits", "open"))
+        if badq:
+            blockers.append("Qualification not supported for " + ", ".join(f"{k} ({Q.LABEL[qa['sites'][k]['status']]})" for k in badq) + ".")
+        if qa["coverage"]["open"]:
+            if not q.get("partial_ack"):
+                blockers.append(f"Open scopes ({', '.join(qa['coverage']['open'])}) need a partial-quote review: confirm what the quote does not cover.")
+            items = await db.items.find({"project_id": p["project_id"], "deleted": {"$ne": True}}, {"_id": 0, "item_id": 1, "site_ids": 1}).to_list(2000)
+            site_of = {i["item_id"]: (i.get("site_ids") or [None])[0] for i in items if len(i.get("site_ids") or []) == 1}
+            edges = await db.edges.find({"project_id": p["project_id"], "kind": {"$in": ["prerequisite", "uses_input"]}, "deleted": {"$ne": True}}, {"_id": 0}).to_list(2000)
+            for e in edges:
+                a, b = site_of.get(e["from_id"]), site_of.get(e["to_id"])
+                if a in qa["coverage"]["open"] and b and b not in qa["coverage"]["open"]:
+                    blockers.append(f"{b} depends on open scope {a}, and nobody is responsible for it. Assign {a} or remove the dependency.")
+        if not s["project"].get("plan_selected"):
+            blockers.append("Select the plan first.")
+        decisions = q.get("condition_decisions") or {}
+        for c in cur["checker"]["open_conditions"]:
+            text = c["text"] if isinstance(c, dict) else str(c)
+            conds.append({"text": text, "decision": decisions.get(text)})
+        undecided = [c["text"] for c in conds if not c["decision"]]
+        if undecided:
+            blockers.append(f"Decide each material condition ({len(undecided)} open): put it in the offer or mark it resolved.")
+    elif p["intake"].get("partners"):
+        blockers.append("No plan selected for review.")
+    if not sup["ok"]:
+        blockers.append("Every firm doing this work must confirm the selected plan first. Waiting on: "
+                        + "; ".join(f"{f['name']} ({f['text']})" for f in sup["missing"]) + ".")
+    exclusions = [x for x in (p.get("exclusions") or []) if x["level"] == "job" or x["level"] == "firm"
+                  or (x["level"] == "scope" and x["target"] not in (cur["qualification"]["coverage"]["open"] if cur else []))]
+    return {"support": sup, "blockers": blockers, "not_covered": not_covered, "conditions": conds, "exclusions": exclusions}
 
 
 def view(q, include_private=True):
@@ -243,9 +299,10 @@ async def edit_quote(qid: str, body: DraftIn, user=Depends(current_user)):
 async def preview_quote(qid: str, user=Depends(current_user)):
     p = await get_project(user)
     q = await own_quote(p, qid)
-    snap = q.get("snapshot") or snapshot_of(q, p, await firm_name(p))
+    ready = await readiness(p, q) if q["state"] == "draft" else None
+    snap = q.get("snapshot") or snapshot_of(q, p, await firm_name(p), ready)
     return {"snapshot": snap, "digest": digest(snap), "missing": missing(q) if q["state"] == "draft" else [],
-            "support": await partner_support(p) if q["state"] == "draft" else q.get("support")}
+            "support": ready["support"] if ready else q.get("support"), "readiness": ready}
 
 
 @router.delete("/quotes/{qid}")
@@ -266,15 +323,14 @@ async def issue_quote(qid: str, body: IssueIn, user=Depends(current_user)):
     gaps = missing(q)
     if gaps:
         bad([f"Before issuing, add {', '.join(gaps)}."])
-    snap = snapshot_of(q, p, await firm_name(p))
+    ready = await readiness(p, q)
+    snap = snapshot_of(q, p, await firm_name(p), ready)
     d = digest(snap)
     if d != body.digest:
         raise HTTPException(409, "The quote changed since you previewed it. Review the preview again before issuing.")
-    sup = await partner_support(p)
-    if not sup["ok"]:
-        bad(["Every firm doing this work must confirm the selected plan first. Waiting on: "
-             + "; ".join(f"{f['name']} ({f['text']})" for f in sup["missing"]) + "."])
-    support = {**sup, "checked_at": now_iso()}
+    if ready["blockers"]:
+        bad(ready["blockers"])
+    support = {**ready["support"], "checked_at": now_iso(), "not_covered": ready["not_covered"]}
     if q.get("replaces"):
         prev = await db.quotes.find_one_and_update({"quote_id": q["replaces"], "state": {"$in": list(OPEN)}},
                                                    {"$set": {"state": "superseded", "superseded_by": qid, "superseded_at": now_iso()}})

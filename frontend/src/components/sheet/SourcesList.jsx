@@ -54,11 +54,11 @@ function SourceItem({ s, onRead }) {
       {s.error && <p data-testid={`source-error-${s.source_id}`} className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-800">{s.error}</p>}
       {s.coverage && (
         <div data-testid={`source-pages-${s.source_id}`} className="space-y-1">
-          <p className="text-xs text-slate-600">Read {s.coverage.readable} of {s.coverage.total} page{s.coverage.total === 1 ? "" : "s"}{s.coverage.partial ? ` · ${s.coverage.partial} partly` : ""}{s.coverage.unreadable ? ` · ${s.coverage.unreadable} unreadable` : ""}{s.coverage.uninspected ? ` · ${s.coverage.uninspected} not inspected` : ""}</p>
+          <p className="text-xs text-slate-600" data-testid={`source-coverage-${s.source_id}`}>{s.coverage.reviewed ?? s.coverage.readable} of {s.coverage.total} reviewed{s.coverage.queued ? ` · ${s.coverage.queued} remaining` : ""}{s.coverage.partial ? ` · ${s.coverage.partial} partly read` : ""}{s.coverage.unreadable ? ` · ${s.coverage.unreadable} unreadable` : ""}{s.coverage.uninspected ? ` · ${s.coverage.uninspected} not read` : ""}</p>
           <div className="flex flex-wrap gap-0.5">
             {s.manifest.map((m) => (
               <span key={m.page} title={`Page ${m.page}${m.sheet ? ` (sheet ${m.sheet})` : ""}: ${m.status}${m.method ? ` by ${m.method === "ocr" ? "text recognition" : "text layer"}` : ""}${m.note ? `, ${m.note}` : ""}`} data-testid={`source-page-${s.source_id}-${m.page}`}
-                className={`h-3 w-3 rounded-[2px] ${{ readable: "bg-emerald-600", partial: "bg-amber-400", unreadable: "bg-red-500", uninspected: "border border-slate-300 bg-white" }[m.status]}`} />
+                className={`h-3 w-3 rounded-[2px] ${{ readable: "bg-emerald-600", partial: "bg-amber-400", unreadable: "bg-red-500", uninspected: "border border-slate-300 bg-white", queued: "animate-pulse bg-slate-300" }[m.status]}`} />
             ))}
           </div>
         </div>

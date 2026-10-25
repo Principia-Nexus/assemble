@@ -6,6 +6,7 @@ const RESP = { confirmed: "Confirmed", confirmed_conditional: "Confirmed with co
   awaiting: "Awaiting response", link_not_shared: "Link not shared", no_link: "No review link", needs_rereview: "Needs fresh review", expired: "Expired" };
 export const respText = (s) => RESP[s] || null;
 
+export const QUAL = { fits: "Fits", review_needed: "Review needed", evidence_needed: "Evidence needed", does_not_fit: "Does not fit" };
 const ring = (sel, hot) => `${sel ? "ring-2 ring-[#215273]" : ""} ${hot ? "outline outline-2 outline-offset-2 outline-[#215273]" : ""}`;
 
 function DateLine({ it }) {
@@ -48,6 +49,8 @@ export function PackageCard({ pkg, sheet, selected, onSelect, cardRef }) {
       <p className="mt-1 text-[13px] font-semibold leading-snug text-[#1A2838]">{pkg.title}</p>
       <p className="mt-1 text-[11.5px] text-[#2F4A66]">{pkg.sites.length ? `${pkg.sites.length} site${pkg.sites.length === 1 ? "" : "s"}${weeks.length ? ` · week ${weeks.join(", ")}` : ""}` : "Not in plan"}{pkg.quote?.price_per_site_cents != null ? ` · $${(pkg.quote.price_per_site_cents / 100).toLocaleString()}/site` : ""}</p>
       {pkg.sites.length > 0 && <div className="mt-1.5 flex flex-wrap gap-1">{pkg.sites.map((s) => <span key={s.site_id} title={s.name} className={`rounded px-1 font-mono text-[10px] ${tone.chip}`}>{s.site_id}</span>)}</div>}
+      {pkg.qual && pkg.qual !== "fits" && <p className={`mt-1 text-[11px] font-medium ${pkg.qual === "does_not_fit" ? "text-[#A93A3A]" : "text-[#B4690E]"}`} data-testid={`card-qual-${pkg.id}`}>{QUAL[pkg.qual]}</p>}
+      {pkg.qual === "fits" && <p className="mt-1 text-[11px] font-medium text-[#1E7B5C]" data-testid={`card-qual-${pkg.id}`}>Fits</p>}
       {respText(pkg.response) && <p className={`mt-1 text-[11px] font-medium ${RESP_TONE[pkg.response] || "text-[#B4690E]"}`}>{respText(pkg.response)}</p>}
     </button>
   );
@@ -58,7 +61,7 @@ export function ConditionCard({ c, selected, onSelect }) {
     <button type="button" onClick={() => onSelect(c.id)} data-testid={`card-${c.id}`}
       className={`ws-card w-[232px] rounded-xl border border-dashed border-[#B4690E] bg-[#FDF5E6] p-3 text-left transition-shadow hover:shadow-[0_4px_14px_-6px_rgba(180,105,14,.35)] ${ring(selected)}`}>
       <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-[#B4690E]">
-        <AlertTriangle className="h-3.5 w-3.5" /> {c.kind === "unknown" ? "Unknown" : c.kind === "finding" ? "Check failed" : "Open condition"}
+        <AlertTriangle className="h-3.5 w-3.5" /> {{ unknown: "Unknown", finding: "Check failed", requirement: "Requirement", open_scope: "Open scope" }[c.kind] || "Open condition"}
       </div>
       <p className="mt-1 text-[12.5px] leading-snug text-[#1A2838]">{c.title}</p>
       {c.scope && <p className="mt-1 text-[11px] text-[#64748B]">{c.scope}</p>}

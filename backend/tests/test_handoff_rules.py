@@ -25,10 +25,8 @@ def test_handoff_rules():
     org = login("organizer", visitor=V)
     sh = get_sheet(org)
     # failing plan: links blocked
-    r = org.post(f"{BASE_URL}/api/project/draft", json={"rev": sh["project"]["rev"], "partner_ids": ["alder", "redwood"]})
-    assert r.json()["sheet"]["current"]["checker"]["overall"] == "fail"
-    r = org.post(f"{BASE_URL}/api/project/links", json={"partner_id": "alder"})
-    assert r.status_code == 409 and "fails a check" in r.json()["detail"]
+    r = org.post(f"{BASE_URL}/api/project/draft", json={"select": True, "rev": sh["project"]["rev"], "partner_ids": ["alder", "redwood"]})
+    assert r.json()["sheet"]["current"]["qualification"]["coverage"]["open"], "unplaceable sites stay open"
     # job-wide condition survives save and appears in checker
     it = to_raw(get_sheet(org)["intake"])
     it["job_conditions"] = [{"text": "After-hours access confirmed for every branch", "source": "brief", "resolved": False}]
@@ -37,7 +35,7 @@ def test_handoff_rules():
     assert r.status_code == 200, r.text
     sh = r.json()["sheet"]
     assert any("After-hours" in c["text"] for c in sh["gap"]["open_conditions"])
-    r = org.post(f"{BASE_URL}/api/project/draft", json={"rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
+    r = org.post(f"{BASE_URL}/api/project/draft", json={"select": True, "rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
     sh = r.json()["sheet"]
     chk = sh["current"]["checker"]
     assert chk["overall"] == "pass" and any(c["scope"] == "Job" for c in chk["open_conditions"])

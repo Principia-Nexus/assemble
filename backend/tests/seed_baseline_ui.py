@@ -8,7 +8,7 @@ V = sys.argv[1]
 org = login("organizer", visitor=V)
 org.post(f"{BASE_URL}/api/project/demo-reset")
 sh = get_sheet(org)
-sh = org.post(f"{BASE_URL}/api/project/draft", json={"rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]}).json()["sheet"]
+sh = org.post(f"{BASE_URL}/api/project/draft", json={"select": True, "rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]}).json()["sheet"]
 for pid in ("alder", "birch", "cedar"):
     tok = org.post(f"{BASE_URL}/api/project/links", json={"partner_id": pid}).json()["link"]["token"]
     s = login(pid, visitor=V)

@@ -16,7 +16,7 @@ import logic as L
 import rule_packs as RP
 import extract_routes as X
 from items_routes import apply_ops, load_items
-from project_routes import (get_project, sheet, org, bad, make_draft, create_link, DraftIn, LinkIn, start_preview, edit_preview, discard_preview, PreviewIn, PreviewEditIn,
+from project_routes import (get_project, sheet, org, bad, make_draft, DraftIn, start_preview, edit_preview, discard_preview, PreviewIn, PreviewEditIn,
                             SiteEdit, RevIn)
 
 router = APIRouter(prefix="/api/project")
@@ -40,8 +40,8 @@ snapshot of ONE project and the user's message. Choose exactly one mode:
   sources do not state it. Splitting/merging must keep scope, site ids and notes. Never invent firms, prices or dates;
   dates only when stated or the user asks for provisional ones (then date_kind "provisional").
 - "advance": the user asks you to draft the plan, assign sites/firms, or move the job forward. Return "partner_ids" (firm ids to
-  include; all firms with capacity unless the user names some or excludes some) and "include_own" (true unless the user says
-  not to use the organizer's own crew). The app then runs its solver to assign every site, runs the checks, and prepares a
+  include; all firms with capacity unless the user names some or excludes some), "include_own" (true unless the user says
+  not to use the organizer's own crew) and "keep_open" (site ids the user wants left unassigned, e.g. "leave roofing open"). The app then runs its solver to assign every site, runs the checks, and prepares a
   private review link for each assigned firm (never sent; the organizer shares them). Prefer "advance" over "question" when
   the job details already have sites and weeks; say 'you pick' style requests mean include all firms.
 - "question": you need one specific clarification before doing anything.
@@ -269,7 +269,8 @@ async def advance(p, user, result, rev):
     ids = [x for x in result.get("partner_ids") or [] if x in known] or sorted(known)
     notes, errors = [], []
     try:
-        await make_draft(DraftIn(rev=rev, partner_ids=ids, include_own=result.get("include_own", True) is not False), user)
+        await make_draft(DraftIn(rev=rev, partner_ids=ids, include_own=result.get("include_own", True) is not False,
+                                 keep_open=[x for x in result.get("keep_open") or [] if isinstance(x, str)]), user)
     except HTTPException as ex:
         return None, ex.detail if isinstance(ex.detail, list) else [str(ex.detail)], notes
     s = await sheet(p["project_id"])
@@ -282,20 +283,12 @@ async def advance(p, user, result, rev):
     notes.append(f"Drafted v{v['version']['number']}"
                  + ("" if not s["preview"] else " as a private amendment") + ": "
                  + "; ".join(f"{names.get(o, o)} {', '.join(sorted(x))}" for o, x in owners.items() if o) + f". Checker: {ch['overall']}.")
-    if s["preview"]:
-        notes.append("Firms already hold links, so review the amendment and select it yourself before anyone sees it.")
-    elif ch["overall"] == "fail":
-        notes.append("It fails a check, so no review links were prepared. Ask me to repair it, or edit it in Plan and checks.")
-    else:
-        made = []
-        for pid_ in sorted(o for o in owners if o and o != L.OWN):
-            try:
-                await create_link(LinkIn(partner_id=pid_), user)
-                made.append(names.get(pid_, pid_))
-            except HTTPException as ex:
-                errors.append(ex.detail if isinstance(ex.detail, str) else " ".join(ex.detail))
-        if made:
-            notes.append(f"Private review links prepared for {', '.join(made)}. Nothing was sent: share them with Send for review.")
+    qa = (s["preview"] or s["current"])["qualification"]
+    if qa["coverage"]["open"]:
+        notes.append(f"Left open: {', '.join(qa['coverage']['open'])} (no included firm fits and has capacity).")
+    if ch["overall"] == "fail":
+        notes.append("It fails a check. Ask me to repair it, or edit it with Review draft.")
+    notes.append("It is a private draft: nothing was selected or sent. Use Review draft to select it.")
     return await sheet(p["project_id"]), errors, notes
 
 

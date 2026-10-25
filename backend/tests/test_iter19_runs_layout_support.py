@@ -90,7 +90,7 @@ class TestRuns:
         assert rep["mode"] == "advance", rep
         assert rep["wrote"] is True, rep
         assert "Drafted v" in rep["text"], rep["text"]
-        assert "Nothing was sent" in rep["text"] or "no review links" in rep["text"] or "amendment" in rep["text"], rep["text"]
+        assert "nothing was selected or sent" in rep["text"] or "Nothing was sent" in rep["text"] or "no review links" in rep["text"] or "amendment" in rep["text"], rep["text"]
         sh = j["sheet"]
         v = sh.get("preview") or sh.get("current")
         assert v and len(v["version"]["assignments"]) >= 12

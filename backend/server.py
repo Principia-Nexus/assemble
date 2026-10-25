@@ -17,10 +17,12 @@ import media_routes
 import review_routes
 import extract_routes
 import billing_routes
+import qual_routes
 
 app = FastAPI(title="Assemble")
 app.include_router(auth_routes.router)
 app.include_router(project_routes.router)
+app.include_router(qual_routes.router)
 app.include_router(project_routes.projects_router)
 app.include_router(assistant_routes.router)
 app.include_router(graph_routes.router)

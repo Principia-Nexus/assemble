@@ -72,7 +72,7 @@ class TestQuoteGate:
     def test_override_reason_still_422_on_unconfirmed_plan(self):
         s = demo_org("t20")
         sh = sheet(s)
-        d = s.post(f"{BASE_URL}/api/project/draft", json={"rev": sh["project"]["rev"], "partner_ids": [p["partner_id"] for p in sh["intake"]["partners"]], "include_own": True})
+        d = s.post(f"{BASE_URL}/api/project/draft", json={"select": True, "rev": sh["project"]["rev"], "partner_ids": [p["partner_id"] for p in sh["intake"]["partners"]], "include_own": True})
         assert d.status_code == 200, d.text
         if d.json()["sheet"].get("preview"):
             pass

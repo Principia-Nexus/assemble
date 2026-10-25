@@ -34,11 +34,12 @@ const WAITING = ["awaiting", "link_not_shared", "no_link", "needs_rereview", "ex
 function primaryAction(sheet) {
   if (!sheet.current && !sheet.preview) return { label: "Draft plan", tool: "check" };
   if (sheet.preview) return { label: "Review draft", tool: "decide" };
+  if (!sheet.project.plan_selected) return { label: "Review draft", tool: "check" };
   const ps = sheet.current.partners || [];
   if (ps.some((x) => ["no_link", "link_not_shared", "needs_rereview"].includes(x.status))) return { label: "Send for review", tool: "review" };
   const wait = ps.filter((x) => WAITING.includes(x.status));
   if (wait.length) return { label: `Awaiting ${wait[0].name.replace(/ ?\(Synthetic\)/, "").split(" ")[0]}${wait.length > 1 ? ` +${wait.length - 1}` : ""}`, tool: "responses" };
-  return { label: "Customer quote", tool: "quote" };
+  return { label: "Prepare quote", tool: "quote" };
 }
 const typing = (el) => !!el?.closest?.("input,textarea,select,[contenteditable=true]");
 

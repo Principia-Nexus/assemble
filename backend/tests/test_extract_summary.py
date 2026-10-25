@@ -157,7 +157,7 @@ class TestReadFlow:
     def test_07_draft_then_apply_recalculates(self, ctx):
         sh = sheet(ctx["org"])
         assert sh["gap"]["weekly"][0]["capacity"] == 7
-        r = ctx["org"].post(f"{BASE_URL}/api/project/draft", json={"rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
+        r = ctx["org"].post(f"{BASE_URL}/api/project/draft", json={"select": True, "rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
         assert r.status_code == 200
         v_before = r.json()["sheet"]["current"]["version"]["number"]
         sh = r.json()["sheet"]
@@ -204,7 +204,7 @@ class TestPreviewAndReread:
         org = login("organizer", "ext2-" + uuid.uuid4().hex[:12])
         sh = sheet(org)
         start = sh["intake"]["start_date"]
-        r = org.post(f"{BASE_URL}/api/project/draft", json={"rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
+        r = org.post(f"{BASE_URL}/api/project/draft", json={"select": True, "rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
         assert r.status_code == 200
         assert org.post(f"{BASE_URL}/api/project/links", json={"partner_id": "alder"}).status_code == 200
         org.post(f"{BASE_URL}/api/project/sources", json=quote(start), timeout=T)
@@ -217,7 +217,7 @@ class TestPreviewAndReread:
         r = org.post(f"{BASE_URL}/api/project/readings/apply", json={"rev": sh["project"]["rev"], "fact_ids": [fid]})
         assert r.status_code == 200, r.text
         print("recalc:", r.json()["recalc"])
-        assert "amendment preview" in r.json()["recalc"] and r.json()["sheet"]["preview"] is not None
+        assert "private draft" in r.json()["recalc"] and r.json()["sheet"]["preview"] is not None
         # correct week-2 email reading, then Read again: organizer's correction should stay the current reading
         f2 = caps[2]["reading"]["fact_id"]
         assert org.put(f"{BASE_URL}/api/project/facts/{f2}", json={"value": "1"}).status_code == 200

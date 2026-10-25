@@ -1,0 +1,20 @@
+{
+  "version": "ca-cslb-2026.1",
+  "jurisdiction": "California (CSLB)",
+  "note": "Suggestions only. Organizer review is required; evidence reviewed by the organizer is not an official registry check.",
+  "classes": [
+    {"code": "C-10", "label": "C-10 Electrical", "keywords": ["electrical", "electric", "lighting", "fixture", "fixtures", "led", "panel", "wiring", "circuit"]},
+    {"code": "C-39", "label": "C-39 Roofing", "keywords": ["roof", "roofing", "shingle", "shingles", "re-roof", "reroof"]},
+    {"code": "C-33", "label": "C-33 Painting and decorating", "keywords": ["paint", "painting", "repaint", "coating"]},
+    {"code": "C-36", "label": "C-36 Plumbing", "keywords": ["plumbing", "plumber", "pipe", "piping", "water heater", "drain", "fixture rough-in"]},
+    {"code": "C-20", "label": "C-20 HVAC", "keywords": ["hvac", "heating", "air conditioning", "furnace", "heat pump", "ductwork", "ventilation"]},
+    {"code": "C-7", "label": "C-7 Low voltage systems", "keywords": ["low voltage", "data cabling", "structured cabling", "access control", "cctv"]},
+    {"code": "C-16", "label": "C-16 Fire protection", "keywords": ["fire sprinkler", "sprinklers", "fire protection"]},
+    {"code": "C-27", "label": "C-27 Landscaping", "keywords": ["landscaping", "landscape", "irrigation", "planting"]},
+    {"code": "C-15", "label": "C-15 Flooring", "keywords": ["flooring", "carpet", "vinyl plank", "floor covering"]},
+    {"code": "C-54", "label": "C-54 Tile", "keywords": ["tile", "tiling", "ceramic"]},
+    {"code": "C-61/D-49", "label": "C-61/D-49 Tree service", "keywords": ["tree removal", "tree trimming"]}
+  ],
+  "general": {"code": "B", "label": "B General building", "min_specialties": 2,
+              "reason": "Two or more unrelated trades on a structure usually call for a B general building contractor to contract the whole job."}
+}

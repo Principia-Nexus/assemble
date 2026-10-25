@@ -321,7 +321,7 @@ def gap_analysis(it):
 
 
 # ---------- generator ----------
-def generate(it, partner_ids, include_own):
+def generate(it, partner_ids, include_own, blocked=frozenset(), keep_open=frozenset()):
     weeks = it["weeks"]
     owners = []
     if include_own and any((c or 0) > 0 for c in it.get("own_capacity") or []):
@@ -338,8 +338,14 @@ def generate(it, partner_ids, include_own):
     for s in sites:
         dl = min(s.get("deadline_week") or weeks, weeks)
         placed = False
+        if s["site_id"] in keep_open:
+            assignments[s["site_id"]] = {"owner": None, "week": None}
+            notes.append(f"{s['site_id']} left open as asked.")
+            continue
         for w in range(dl, 0, -1):
             for o in owners:
+                if (s["site_id"], o) in blocked:
+                    continue
                 if remaining[o][w - 1] > 0:
                     remaining[o][w - 1] -= 1
                     assignments[s["site_id"]] = {"owner": o, "week": w}
@@ -347,11 +353,9 @@ def generate(it, partner_ids, include_own):
                     break
             if placed:
                 break
-        if not placed and owners:
-            o = owners[0]
-            assignments[s["site_id"]] = {"owner": o, "week": dl}
-            notes.append(f"{s['site_id']} did not fit any included crew's remaining capacity by its deadline. "
-                         f"It was placed with {owner_name(pseudo, o)} in week {dl} so the checker shows the conflict.")
+        if not placed:
+            assignments[s["site_id"]] = {"owner": None, "week": None}
+            notes.append(f"{s['site_id']} left open: no included firm both fits its requirements and has capacity by its deadline.")
         if s.get("deadline_week") is None:
             notes.append(f"{s['site_id']} has no known deadline, so it was placed by the last week.")
     return assignments, notes
@@ -416,8 +420,9 @@ def check(v):
 
     cw = _rule("crew_week", "One indivisible crew-week per site")
     for s in v["sites"]:
-        w = (A.get(s["site_id"]) or {}).get("week")
-        if not isinstance(w, int) or not 1 <= w <= weeks:
+        a = A.get(s["site_id"]) or {}
+        w = a.get("week")
+        if a.get("owner") and (not isinstance(w, int) or not 1 <= w <= weeks):
             _bump(cw, "fail", f"{s['site_id']} is not scheduled in exactly one week of the job.")
     if not cw["details"]:
         cw["details"].append("Each site is one crew-week in exactly one week.")
@@ -438,10 +443,10 @@ def check(v):
     ow = _rule("owner", "Exactly one scope owner per site")
     for s in v["sites"]:
         o = (A.get(s["site_id"]) or {}).get("owner")
-        if not o or (o != OWN and o not in P):
+        if o and o != OWN and o not in P:
             _bump(ow, "fail", f"{s['site_id']} has no valid scope owner.")
     if not ow["details"]:
-        ow["details"].append("Every site has exactly one scope owner.")
+        ow["details"].append("Every assigned site has exactly one scope owner. Open scopes are reported under coverage.")
     rules.append(ow)
 
     ql = _rule("quoted_limits", "Quoted limits")

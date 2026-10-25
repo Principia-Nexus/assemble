@@ -125,12 +125,14 @@ function ItemForm({ it, sheet, items, edges, run, onSheet }) {
 function PackageDetail({ pkg, openTool }) {
   return (
     <div className="space-y-4">
+      {pkg.reasons?.length > 0 && <ul className="space-y-1 text-[12px] text-[#334155]" data-testid="inspector-qual-reasons">{pkg.reasons.map((r) => <li key={r}>{r}</li>)}</ul>}
       {respText(pkg.response) && <p className="rounded-md bg-[#FDF5E6] px-2 py-1.5 text-xs font-medium text-[#B4690E]" data-testid="inspector-package-response">{respText(pkg.response)}</p>}
       <table className="w-full text-[12.5px]"><tbody>
         {pkg.sites.map((s) => <tr key={s.site_id} className="border-b border-[#F1F5F9]"><td className="py-1 font-mono text-[11px]">{s.site_id}</td><td className="py-1">{s.name}</td><td className="py-1 text-right text-[#64748B]">{s.week ? `wk ${s.week}` : ""}{s.deadline_week ? ` · due wk ${s.deadline_week}` : ""}</td></tr>)}
       </tbody></table>
       <div className="flex flex-col gap-2">
         <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("check")} data-testid="inspector-open-plan">Edit allocation</Button>
+        <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("qualify")} data-testid="inspector-open-qualify">Requirements and evidence</Button>
       </div>
     </div>
   );
@@ -154,9 +156,17 @@ export default function Inspector({ target, sheet, items, edges, run, onSheet, o
               <div className="space-y-3 text-sm text-[#1A2838]">
                 {target.scope && <p className="text-[#64748B]">Applies to {target.scope}</p>}
                 {target.source && <p className="text-xs text-[#64748B]">Source: {typeof target.source === "string" ? target.source : target.source.label || target.source.doc_id}</p>}
-                <Button size="sm" variant="outline" className="w-full bg-white" onClick={() => openTool(target.kind === "finding" ? "check" : "details")} data-testid="inspector-resolve">
-                  {target.kind === "finding" ? "Open plan and checks" : "Edit job details"}
-                </Button>
+                {target.kind === "open_scope" ? (
+                  <div className="flex flex-col gap-2">
+                    <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("details")} data-testid="inspector-open-add-firm">Add a known firm</Button>
+                    <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("qualify")} data-testid="inspector-open-evidence">Attach evidence</Button>
+                    <Button size="sm" variant="outline" className="bg-white" onClick={() => openTool("check")} data-testid="inspector-open-assign">Assign in the plan</Button>
+                  </div>
+                ) : (
+                  <Button size="sm" variant="outline" className="w-full bg-white" onClick={() => openTool({ finding: "check", requirement: "qualify" }[target.kind] || "details")} data-testid="inspector-resolve">
+                    {{ finding: "Edit allocation", requirement: "Review requirement" }[target.kind] || "Edit job details"}
+                  </Button>
+                )}
               </div>
             )}
       </div>

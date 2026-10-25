@@ -67,7 +67,7 @@ def W():
     r = a.put(f"{BASE_URL}/api/project/intake", json={"rev": sh["project"]["rev"], "intake": canon})
     assert r.status_code == 200, r.text
     rev = r.json()["sheet"]["project"]["rev"]
-    r = a.post(f"{BASE_URL}/api/project/draft", json={"rev": rev, "partner_ids": ["alder", "birch", "cedar"], "include_own": True})
+    r = a.post(f"{BASE_URL}/api/project/draft", json={"select": True, "rev": rev, "partner_ids": ["alder", "birch", "cedar"], "include_own": True})
     assert r.status_code == 200, r.text
     r = a.post(f"{BASE_URL}/api/project/links", json={"partner_id": "alder"})
     assert r.status_code == 200, r.text
@@ -209,7 +209,7 @@ def D():
     projs = s.get(f"{BASE_URL}/api/projects").json()["projects"]
     s.headers["X-Project-Id"] = projs[0]["project_id"]
     sh = sheet(s)
-    r = s.post(f"{BASE_URL}/api/project/draft", json={"rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
+    r = s.post(f"{BASE_URL}/api/project/draft", json={"select": True, "rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
     assert r.status_code == 200, r.text
     return {"s": s, "pid": projs[0]["project_id"], "other": projs[1]["project_id"]}
 

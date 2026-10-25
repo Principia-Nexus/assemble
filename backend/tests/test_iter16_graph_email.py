@@ -72,7 +72,7 @@ def C():
     projs = s.get(f"{BASE_URL}/api/projects").json()["projects"]
     s.headers["X-Project-Id"] = projs[0]["project_id"]
     sh = sheet(s)
-    r = s.post(f"{BASE_URL}/api/project/draft", json={"rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar", "redwood"]})
+    r = s.post(f"{BASE_URL}/api/project/draft", json={"select": True, "rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar", "redwood"]})
     assert r.status_code == 200, r.text
     return {"s": s, "sheet": r.json()["sheet"]}
 

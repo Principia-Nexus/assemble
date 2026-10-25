@@ -84,7 +84,7 @@ class TestAuth:
         assert r.status_code == 400
 
     def test_origin_guard(self, ctx):
-        r = ctx["org"].post(f"{BASE_URL}/api/project/draft", json={"rev": 0, "partner_ids": []},
+        r = ctx["org"].post(f"{BASE_URL}/api/project/draft", json={"select": True, "rev": 0, "partner_ids": []},
                             headers={"Origin": "https://evil.example.com"})
         assert r.status_code == 403
 
@@ -129,21 +129,17 @@ class TestFlow:
     def test_04_draft_alder_redwood_fails(self, ctx):
         sh = get_sheet(ctx["org"])
         r = ctx["org"].post(f"{BASE_URL}/api/project/draft",
-                            json={"rev": sh["project"]["rev"], "partner_ids": ["alder", "redwood"]})
+                            json={"select": True, "rev": sh["project"]["rev"], "partner_ids": ["alder", "redwood"]})
         assert r.status_code == 200, r.text
         cur = r.json()["sheet"]["current"]
-        chk = cur["checker"]
-        assert chk["overall"] == "fail"
-        cap = next(x for x in chk["rules"] if x["key"] == "capacity")
-        assert cap["status"] == "fail"
-        txt = " ".join(cap["details"])
-        assert "Week 1" in txt and "Week 2" in txt
-        assert "156,000" in str(chk) or chk.get("total_cents") == 15600000
+        # Sites that no included firm can take stay open (never force-filled), so coverage is partial.
+        assert cur["qualification"]["coverage"]["status"] == "partial" and cur["qualification"]["coverage"]["open"]
+        assert any("left open" in n for n in cur["version"]["generator_notes"])
 
     def test_05_draft_abc_passes(self, ctx):
         sh = get_sheet(ctx["org"])
         r = ctx["org"].post(f"{BASE_URL}/api/project/draft",
-                            json={"rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
+                            json={"select": True, "rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
         assert r.status_code == 200
         chk = r.json()["sheet"]["current"]["checker"]
         assert chk["overall"] == "pass"

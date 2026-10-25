@@ -29,17 +29,30 @@ export function packages(sheet) {
     (by[key] ||= []).push({ ...s, week: a.week });
   }
   for (const p of firms) by[p.partner_id] ||= [];
-  return Object.entries(by).map(([owner, sites]) => ({
-    id: `plan-${owner}`, derived: true, kind: "package", owner,
-    title: owner === "unassigned" ? "Unassigned sites" : firmName(sheet, owner),
-    sites, response: status[owner] || null, quote: firms.find((p) => p.partner_id === owner),
-  }));
+  const qa = (sheet.preview || sheet.current)?.qualification?.sites || {};
+  const RANK = { fits: 0, review_needed: 1, evidence_needed: 2, does_not_fit: 3 };
+  return Object.entries(by).map(([owner, sites]) => {
+    const st = sites.map((s) => qa[s.site_id]?.status).filter((x) => x && x !== "open");
+    const qual = st.length ? st.reduce((a, b) => (RANK[b] > RANK[a] ? b : a)) : null;
+    return {
+      id: `plan-${owner}`, derived: true, kind: "package", owner,
+      title: owner === "unassigned" ? "Open scopes" : firmName(sheet, owner),
+      sites, response: status[owner] || null, quote: firms.find((p) => p.partner_id === owner), qual,
+      reasons: sites.flatMap((s) => (qa[s.site_id]?.reasons || []).map((r) => `${s.site_id}: ${r}`)),
+    };
+  });
 }
 
 export function conditions(sheet) {
   const out = [];
   (sheet.gap?.unknowns || []).forEach((u, i) => out.push({ id: `unk-${i}`, derived: true, kind: "unknown", title: typeof u === "string" ? u : u.text || u.label || JSON.stringify(u) }));
   (sheet.gap?.open_conditions || []).forEach((c, i) => out.push({ id: `cond-${i}`, derived: true, kind: "condition", title: c.text, scope: c.scope, source: c.source }));
+  (sheet.qual?.requirements || []).filter((r) => r.status === "suggested").forEach((r) => out.push({ id: `req-${r.req_id}`, derived: true, kind: "requirement", title: `${r.label}: review needed`, scope: r.reason }));
+  const v = planVersion(sheet);
+  (((sheet.preview || sheet.current)?.qualification?.coverage?.open) || []).forEach((sid) => {
+    const s = (v?.sites || []).find((x) => x.site_id === sid);
+    out.push({ id: `open-${sid}`, derived: true, kind: "open_scope", site_id: sid, title: `${sid}${s?.name ? ` ${s.name}` : ""}: qualified firm needed` });
+  });
   const ch = sheet.preview?.checker || sheet.current?.checker;
   (ch?.rules || []).filter((r) => r.status === "fail").forEach((r, i) => out.push({ id: `rule-${i}`, derived: true, kind: "finding", title: `${r.label}: ${(r.details || []).join(" ")}` }));
   return out;
@@ -51,7 +64,7 @@ export function statusSentence(sheet) {
   const it = sheet.intake, parts = [];
   parts.push(`${(it.sites || []).length} site${(it.sites || []).length === 1 ? "" : "s"}`);
   const v = planVersion(sheet);
-  if (sheet.current) parts.push(`plan v${sheet.current.version.number} selected for review`);
+  if (sheet.current) parts.push(sheet.project.plan_selected ? `plan v${sheet.current.version.number} selected` : `plan v${sheet.current.version.number} private draft`);
   if (sheet.preview) parts.push(`private draft v${sheet.preview.version.number}`);
   if (!v) parts.push("no plan yet");
   const open = (sheet.gap?.unknowns || []).length + (sheet.gap?.open_conditions || []).length;

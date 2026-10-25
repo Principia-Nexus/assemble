@@ -164,6 +164,7 @@ export default function QuoteReview() {
             <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Scope</p><p className="mt-1 whitespace-pre-wrap text-sm">{s.scope}</p></div>
             <List title="Included" items={s.inclusions} testId="quote-inclusions-view" />
             <List title="Excluded" items={s.exclusions} testId="quote-exclusions-view" />
+            {s.not_covered?.length > 0 && <List title="Not covered by this quote" items={s.not_covered} testId="quote-not-covered-view" />}
             <List title="Conditions" items={s.conditions} testId="quote-conditions-view" />
             {s.terms && <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Terms</p><p className="mt-1 whitespace-pre-wrap text-sm">{s.terms}</p></div>}
             <p className="font-mono text-[11px] text-slate-400">Version {s.number} · {q.digest}</p>

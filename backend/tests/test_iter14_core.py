@@ -98,7 +98,7 @@ class TestCanonical:
         org = demo("organizer")
         ctx["org"] = org
         sh = org.get(f"{BASE_URL}/api/project").json()["sheet"]
-        r = org.post(f"{BASE_URL}/api/project/draft", json={"rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
+        r = org.post(f"{BASE_URL}/api/project/draft", json={"select": True, "rev": sh["project"]["rev"], "partner_ids": ["alder", "birch", "cedar"]})
         assert r.status_code == 200, r.text
         toks = {}
         for pid in ("alder", "birch", "cedar"):
