@@ -86,31 +86,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#E8DCC4] lg:grid lg:grid-cols-[1.1fr_1fr]">
-      <section className="relative m-6 hidden flex-col justify-between border border-[#3A4A5E] bg-[#1B2838] p-12 text-[#EDE3CF] lg:flex">
-        <Brand light />
-        <div className="max-w-md rise">
-          <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-[#C9BB9E]">One job · a few trusted partners</p>
-          <h1 className="text-5xl font-normal leading-[1.02] tracking-tight text-[#EDE3CF] xl:text-6xl">
-            Does this job work on the terms proposed?
-          </h1>
-          <p className="mt-6 text-lg font-light leading-relaxed text-[#D9CDB4]">
-            Check the job, prepare a draft, ask each partner privately, then decide. An independent checker shows what fits and what does not.
-          </p>
-          <ol className="mt-10 space-y-3 font-mono text-xs uppercase tracking-[0.14em] text-[#C9BB9E]">
-            {["Check this job", "Prepare a draft", "Ask each partner", "Decide next action"].map((t, i) => (
-              <li key={t} className="flex items-center gap-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-sm border border-[#6B7B90] text-[#EDE3CF]">{i + 1}</span>
-                {t}
-              </li>
-            ))}
-          </ol>
-        </div>
-        <p className="text-xs font-light text-[#B5A88E]">A confirmation covers proposal-stage terms only. It is not an award, contract or crew hold.</p>
-      </section>
-
-      <section className="mx-auto flex w-full max-w-md flex-col justify-center gap-8 px-5 py-10 sm:px-8">
-        <div className="lg:hidden"><Brand /></div>
+    <div className="flex min-h-screen items-center justify-center bg-[#E8DCC4]">
+      <section className="flex w-full max-w-md flex-col justify-center gap-8 px-5 py-10 sm:px-8">
+        <div className="flex justify-center"><Brand /></div>
         {next?.startsWith("/review/") && (
           <p data-testid="signin-review-notice" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
             Sign in with the email the organizer invited to open your private review.
@@ -137,7 +115,7 @@ export default function Login() {
               <Field id="remail" label="Email" type="email" value={form.email} onChange={set("email")} required data-testid="register-email-input" />
               <Field id="rpassword" label="Password (8+ characters)" type="password" value={form.password} onChange={set("password")} required data-testid="register-password-input" />
               <Button type="submit" className="h-11 w-full" disabled={busy} data-testid="register-submit-button">
-                {busy ? "Creating…" : "Create account as organizer"}
+                {busy ? "Creating…" : "Create account"}
               </Button>
             </form>
           </TabsContent>
