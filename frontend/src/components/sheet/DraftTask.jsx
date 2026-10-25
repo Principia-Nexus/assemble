@@ -35,7 +35,7 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
       <ErrorList errors={errors} testId="draft-errors" />
       {failing && !linksExist && (
         <p data-testid="draft-repair-notice" role="status" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-          <span className="font-semibold">Repair this draft first.</span> Plan v{sheet.current.version.number} fails the checks listed on the right. Change which crews are included and regenerate. Review links stay locked until the plan passes.
+          <span className="font-semibold">Repair this draft first.</span>
         </p>
       )}
       {linksExist && (

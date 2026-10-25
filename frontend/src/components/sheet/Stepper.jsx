@@ -24,7 +24,6 @@ export default function Stepper({ info, selected, onSelect }) {
     <nav className="no-print mt-5 grid grid-cols-4 overflow-hidden rounded-md border border-slate-200 bg-white" aria-label="Tasks">
       {STEPS.map((s, i) => {
         const active = selected === s.key;
-        const isCurrent = info.current === s.key;
         return (
           <button key={s.key} onClick={() => onSelect(s.key)} data-testid={`task-step-${s.key}`} aria-label={s.title} aria-current={active ? "step" : undefined}
             className={cn("relative flex flex-col items-center gap-1 border-r border-slate-200 px-1 py-2 text-left transition-colors last:border-r-0 sm:flex-row sm:gap-2.5 sm:px-4 sm:py-2.5",
@@ -36,9 +35,6 @@ export default function Stepper({ info, selected, onSelect }) {
             <span className="min-w-0">
               <span className="hidden text-sm font-semibold sm:block">{s.title}</span>
               <span className="block text-xs font-semibold sm:hidden">{s.short}</span>
-              {isCurrent && !active && (
-                <span data-testid={`task-step-${s.key}-next`} className="hidden font-mono text-[10px] uppercase tracking-wider text-slate-500 md:block">Next step</span>
-              )}
             </span>
           </button>
         );
