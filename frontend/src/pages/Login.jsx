@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, errText } from "@/lib/api";
 import { useAuth, homeFor } from "@/context/AuthContext";
-import { Brand } from "@/components/AppHeader";
+import { LogoDots } from "@/components/LogoDots";
 
 function GoogleButton({ next }) {
   const go = () => {
@@ -134,9 +134,9 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#FFFFFF]">
-      <section className="stagger flex w-full max-w-md flex-col justify-center gap-8 px-5 py-10 sm:px-8">
+      <section className="stagger relative z-10 flex w-full max-w-md flex-col justify-center gap-8 px-5 py-10 sm:px-8">
         <div className="flex flex-col items-center gap-3 text-center">
-          <Brand large />
+          <LogoDots />
         </div>
         {next?.startsWith("/review/") && (
           <p data-testid="signin-review-notice" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">

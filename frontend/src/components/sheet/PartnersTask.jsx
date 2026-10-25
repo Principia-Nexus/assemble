@@ -81,7 +81,7 @@ export default function PartnersTask({ sheet, act, busy, goTo }) {
   const blocked = sheet.current?.checker.overall === "fail";
   return (
     <section data-testid="task-ask" className="space-y-6">
-      <TaskHeader step={3} title="Invite" lead="Ask each partner to review their own terms. Email the invitation or copy the private link." />
+      <TaskHeader step={3} title="Invite" />
       {blocked && (
         <div data-testid="ask-blocked-notice" role="status" className="flex flex-col gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
           <p><span className="font-semibold">Plan v{sheet.current.version.number} fails a check.</span></p>

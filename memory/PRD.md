@@ -113,3 +113,5 @@
 - Extraction consistency eval
 
 ## 2026-06 — Sites table fits without horizontal scroll (fixed layout, narrow ID/Due wk columns); Scope summary textarea non-resizable.
+
+## 2026-06 — Sign-in page: dots scattered across the page converge into the Assemble wordmark (20% larger), replay on hover/tap; Invite step lead sentence removed. Engine: frontend/src/lib/dotsEngine.js (adapted from user-supplied assemble-dots.html), component LogoDots.jsx.
