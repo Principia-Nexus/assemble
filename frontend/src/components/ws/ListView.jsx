@@ -67,7 +67,7 @@ export default function ListView({ sheet, items, pkgs, conds, run, onSelect, sel
           </Section>
         )}
         {conds.length > 0 && (
-          <Section title="Open conditions" count={`${conds.length}`} testId="list-conditions">
+          <Section title="Open items" count={`${conds.length}`} testId="list-conditions">
             {conds.filter(filter).map((c) => (
               <button key={c.id} type="button" onClick={() => onSelect(c.id)} data-testid={`list-row-${c.id}`} className="block w-full border-b border-[#F1F5F9] px-3 py-2 text-left text-[13px] text-[#1A2838] hover:bg-[#FDF5E6]">
                 <span className="mr-2 text-[10px] font-semibold uppercase tracking-wide text-[#B4690E]">{c.kind}</span>{c.title}

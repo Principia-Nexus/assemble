@@ -69,6 +69,8 @@ function Draft({ q, onSaved }) {
       {preview && (
         <div className="rounded-md border border-slate-200 bg-white p-4" data-testid="quote-preview">
           <p className="text-sm font-semibold">Customer will see {preview.snapshot.number}: {usd(preview.snapshot.price_cents)}</p>
+          {[["Excluded", preview.snapshot.exclusions, "quote-preview-exclusions"], ["Conditions", preview.snapshot.conditions, "quote-preview-conditions"], ["Not covered", preview.snapshot.not_covered, "quote-preview-not-covered"]]
+            .filter(([, xs]) => xs?.length).map(([l, xs, id]) => <p key={id} className="mt-1 text-xs text-slate-700" data-testid={id}><b>{l}:</b> {xs.join("; ")}</p>)}
           {preview.support?.firms.length > 0 && (
             <ul className="mt-2 space-y-0.5 text-xs" data-testid="quote-support">
               {preview.support.firms.map((x) => <li key={x.partner_id} className={["confirmed", "confirmed_conditional"].includes(x.status) ? "text-emerald-800" : "text-amber-800"} data-testid={`quote-support-${x.partner_id}`}>{x.name}: {x.text}</li>)}

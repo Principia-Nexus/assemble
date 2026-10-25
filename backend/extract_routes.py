@@ -658,8 +658,10 @@ def fact_where(f):
 
 
 def apply_exclusion(exclusions, f, user):
-    if not any(x["level"] == "job" and norm(x["text"]) == norm(f["parsed"]) for x in exclusions):
-        exclusions.append({"ex_id": new_id("ex"), "text": str(f["parsed"])[:500], "level": "job", "target": None,
+    t = str(f["parsed"]).strip()[:500]
+    t = t[:1].upper() + t[1:]
+    if not any(x["level"] == "job" and norm(x["text"]) == norm(t) for x in exclusions):
+        exclusions.append({"ex_id": new_id("ex"), "text": t, "level": "job", "target": None,
                            "added_by": user["name"], "added_at": now_iso(), "source": fact_where(f)})
 
 

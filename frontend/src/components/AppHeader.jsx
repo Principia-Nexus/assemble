@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { FolderOpen, History, Inbox } from "lucide-react";
+import { FolderOpen, History, Inbox, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { confirmLeave, setDirty } from "@/lib/dirty";
@@ -39,9 +39,9 @@ export default function AppHeader({ onHistory }) {
           <Button variant="ghost" size="sm" asChild data-testid="header-my-reviews-link">
             <Link to="/reviews" onClick={guard}><Inbox className="h-4 w-4" /> <span className="hidden sm:inline">My reviews</span></Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => { if (confirmLeave()) { setDirty(false); logout(); } }} data-testid="header-logout-button"
-            className="rounded-none border-2 border-[#1A2838] bg-transparent text-sm font-semibold text-[#1A2838] hover:bg-[#1A2838] hover:text-[#FFFFFF]">
-            Sign out
+          <Button variant="outline" size="sm" onClick={() => { if (confirmLeave()) { setDirty(false); logout(); } }} data-testid="header-logout-button" aria-label="Sign out"
+            className="rounded-none border-2 border-[#1A2838] bg-transparent px-2 text-sm font-semibold text-[#1A2838] hover:bg-[#1A2838] hover:text-[#FFFFFF] min-[400px]:px-3">
+            <LogOut className="h-4 w-4 min-[400px]:hidden" /><span className="hidden min-[400px]:inline">Sign out</span>
           </Button>
         </div>
       </div>

@@ -140,7 +140,7 @@ function PackageDetail({ pkg, openTool }) {
 
 export default function Inspector({ target, sheet, items, edges, run, onSheet, onClose, openTool }) {
   const it = target?.item_id ? target : null;
-  const head = it ? KIND_LABEL[it.kind] : target.kind === "package" ? "Scope package" : "Condition";
+  const head = it ? KIND_LABEL[it.kind] : { package: "Scope package", requirement: "Requirement", unknown: "Unknown", open_scope: "Open scope", finding: "Finding" }[target.kind] || "Condition";
   return (
     <aside className="ws-panel-in flex h-full w-full flex-col border-l border-[#E2E8F0] bg-[#FFFFFF] min-[720px]:w-[360px]" data-testid="inspector-panel" aria-label="Inspector">
       <div className="flex items-center gap-2 border-b border-[#E2E8F0] px-4 py-3">

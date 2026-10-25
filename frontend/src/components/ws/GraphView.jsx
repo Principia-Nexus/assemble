@@ -190,7 +190,7 @@ export default function GraphView({ sheet, items, edges, pkgs, conds, selectedId
               </Frame>
             )}
             {conds.length > 0 && (
-              <Frame title="Open conditions" count={`${conds.length}`} testId="graph-conditions-frame" open={!closed.conds} onToggle={() => toggle("conds")} tone="border-dashed border-[#F3D9A8]">
+              <Frame title="Open items" count={`${conds.length}`} testId="graph-conditions-frame" open={!closed.conds} onToggle={() => toggle("conds")} tone="border-dashed border-[#F3D9A8]">
                 {conds.filter(filter).map((c) => wrap(c.id, <ConditionCard c={c} selected={selectedId === c.id} onSelect={onSelect} />))}
               </Frame>
             )}

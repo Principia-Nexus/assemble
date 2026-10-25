@@ -81,7 +81,7 @@ export function statusSentence(sheet) {
   if (sheet.preview) parts.push(`private draft v${sheet.preview.version.number}`);
   if (!v) parts.push("no plan yet");
   const open = conditions(sheet).length;
-  if (open) parts.push(`${open} open condition${open === 1 ? "" : "s"}`);
+  if (open) parts.push(`${open} open item${open === 1 ? "" : "s"}`);
   const ps = sheet.current?.partners || [];
   if (ps.length) parts.push(`${ps.filter((p) => RESPONDED.includes(p.status)).length} of ${ps.length} firms responded`);
   return parts.join(" · ");

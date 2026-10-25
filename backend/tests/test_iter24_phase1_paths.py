@@ -210,9 +210,16 @@ class TestHappyPath:
 
 
 # GATE 4: stale writes
+def _stale_session():
+    # Own session so this class is independent of TestHappyPath ordering (xdist-safe)
+    if "stale_s" not in CTX:
+        CTX["stale_s"] = login("organizer@demo.assemble.test", "t24s-" + uuid.uuid4().hex[:10])
+    return CTX["stale_s"]
+
+
 class TestStale:
     def test_stale_assign_and_intake(self):
-        s = CTX["org"]
+        s = _stale_session()
         sheet = sh(s)
         r = s.post(f"{P}/plan/assign", json={"rev": sheet["project"]["rev"] - 1, "site_id": "S01", "owner": None})
         print("ASSIGN_STALE", r.status_code, r.text[:200])
@@ -222,7 +229,7 @@ class TestStale:
         assert sh(s)["intake"]["job_name"] != "CLOBBER"
 
     def test_ask_stale_rev_409(self):
-        s = CTX["org"]
+        s = _stale_session()
         r = s.post(A, json={"message": "hello", "rev": sh(s)["project"]["rev"] - 1})
         assert r.status_code == 409
 

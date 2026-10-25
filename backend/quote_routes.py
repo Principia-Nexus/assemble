@@ -143,6 +143,30 @@ def missing(q):
     return m
 
 
+SUFFIX_RE = re.compile(r"\((synthetic)\)|\b(inc|llc|ltd|co|corp|company|services|electric(al)?|crews?|power|group)\b\.?", re.I)
+COMMON = {"the", "and", "street", "line", "field", "grid", "circuit", "city", "north", "south", "east", "west"}
+
+
+def firm_aliases(partners):
+    """Full names, names without suffixes, distinctive first words and email local parts of every partner."""
+    out = set()
+    for x in partners:
+        n = (x.get("name") or "").strip()
+        if not n:
+            continue
+        out.add(n)
+        core = re.sub(r"\s+", " ", SUFFIX_RE.sub(" ", n)).strip(" .,")
+        if len(core) >= 3:
+            out.add(core)
+        first = re.split(r"[\s,]+", core or n)[0]
+        if len(first) >= 3 and first.lower() not in COMMON:
+            out.add(first)
+        local = (x.get("email") or "").split("@")[0]
+        if len(local) >= 3 and local.isalpha():
+            out.add(local)
+    return out
+
+
 def snapshot_of(q, p, firm_name, ready=None):
     snap = {"number": q["number"], "kind": q["kind"], "baseline_number": q.get("baseline_number"), "project": p["intake"].get("job_name") or p["name"],
             "seller": firm_name, "synthetic": bool(p.get("synthetic")), **{k: q.get(k) for k in DRAFT_FIELDS}}
@@ -152,8 +176,9 @@ def snapshot_of(q, p, firm_name, ready=None):
         exc += [x["text"] for x in ready["exclusions"] if x["text"] not in exc]
         con = list(snap.get("conditions") or [])
         con += [c["text"] for c in ready["conditions"] if c["decision"] == "in_offer" and c["text"] not in con]
-        names = sorted({x["name"] for x in p["intake"].get("partners") or [] if x.get("name")}, key=len, reverse=True)
-        scrub = lambda t: re.sub("|".join(re.escape(n) for n in names), "the subcontractor", t, flags=re.I) if names else t  # noqa: E731
+        names = sorted(firm_aliases(p["intake"].get("partners") or []), key=len, reverse=True)
+        pat = re.compile(r"\b(?:" + "|".join(re.escape(n) for n in names) + r")(?:'s)?\b", re.I) if names else None
+        scrub = lambda t: pat.sub("the subcontractor", t) if pat else t  # noqa: E731
         exc, con = [scrub(x) for x in exc], [scrub(x) for x in con]
         snap.update(exclusions=exc, conditions=con, not_covered=ready["not_covered"])
     return snap

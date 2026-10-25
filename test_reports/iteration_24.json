@@ -1,0 +1,51 @@
+{
+  "summary": "Iteration 24 retest of the iter23 deviations, plus the full Phase 1 matrix (preview only). DEVIATION A FIXED: 'Exclude ceiling repairs' typed in chat was saved as a job exclusion with its source ('Pine St chat brief ... line 1') in 3 of 3 fresh runs (iter24 API serial, iter24 under xdist, fresh UI). It shows in the Exclusions list and in the customer quote. DEVIATION B FIXED: the requirement is doc-C-10-<alder pid>, origin=document, status=required, shown as 'Required by source' with no Dismiss button, and the API dismiss returns 422. It only applies to Alder's sites (8 Birch/Cedar sites are not asked for C-10), sug-C-10 is suppressed, and the licence-only condition no longer appears in the graph Open conditions, the header count or the quote condition decisions. Also verified: a future observed_on returns 422 'Observed on cannot be in the future.'; a 'page N' source gives source.page; the assistant now sees the evidence (it answered that C-10 is active and fits on S01/S02/S09/S10); inspector-note sits on its own line and inspector-open-qualify works; customer and organizer receipts read 'accepted'; at 390px the zoom controls do not overlap the '1 package' count and scrollWidth is 390; the tray has max-height 28vh (302px at 1080, 236px at 844), 70% white with blur(12px), scrolls internally (scrollHeight 1020 > clientHeight 197), closes on pointerdown on the graph (desktop and 390px), and tray-expand reopens it; the QualPanel uses shadcn Selects (firm, status, level, target all work), has no empty grid cell, and observed-on max=today. RESULTS TABLE: [HAPPY PATH] PASS. API: visitor t24-7bea511c4a3f. UI: visitor ui25f-f1ad4778, project prj_0f42ea505f08, steps: New project -> chat brief -> 'Actually Alder is $9,500 per site' (saved 950000) -> Required by source -> evidence recorded in the UI form (Fits) -> Draft and check -> Select plan -> Request review -> shared -> Alder confirms in a fresh context ('Response saved against these exact terms') -> quote (0 condition decisions needed) -> issue -> customer accepts in a fresh context (sees 'ceiling repairs', no Alder/$9,500/$19,000) -> Accepted after reload, and the organizer primary action reads 'View accepted quote' after reload. [GATE 1 qualification/uncovered] PASS. [GATE 2 reading/private-draft] PASS. [GATE 3 isolated recipients/privacy] FAIL (partial): Birch gets 403, the customer view and /ask never show prices, and full firm names are replaced with 'the subcontractor', BUT a short firm name ('Alder' for 'Alder Line Electric (Synthetic)') is not redacted in firm exclusions or 'in offer' conditions. [GATE 4 stale writes] PASS. [GATE 5 cancel/retry] PASS. 200% zoom: PASS (no horizontal overflow; composer and primary action visible). 320px: PASS functionally, with one design overlap (below). Keyboard: Tab reaches primary-action (12th stop) and composer-input (35th stop). Publish/production: NOT RUN (preview only, not authorized). Regression: full suite 180 passed; the only failure is the new strict short-name redaction test.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "quote_routes.snapshot_of (GET /api/project/quotes/{id}/preview, issue, customer view)", "issue": "Firm-name scrub only matches full partner names (e.g. 'Alder Line Electric (Synthetic)'). A short or first-word name such as 'Alder' in a firm exclusion ('Alder excludes core drilling') or in a partner condition put 'in offer' ('Alder needs ...') reaches the customer snapshot unredacted. Reproduced in test_iter25_retest_deviations.py::TestRedaction (SNAP_EXC ['the subcontractor excludes patching and painting', 'Alder excludes core drilling']).", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "logic.py normalize job_conditions", "issue": "If source is a dict {label, page}, text() stores it as a Python repr string ('{\\'label\\': ...}') and the page is lost (qualify._src then gets page None). Real reader paths send a string 'X, page N, line M', so this only affects API callers."},
+      {"endpoint": "extract_routes apply_exclusion", "issue": "Chat exclusions are saved in lowercase ('ceiling repairs'), so the customer sees a lowercase bullet. Preserve the original casing or capitalize the first letter."},
+      {"endpoint": "assistant replies", "issue": "Replies include internal jargon and raw values: 'work_items are empty', 'the snapshot lists', 'checker', and 'Price per site (Alder Line Electric) = 9500' instead of $9,500."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "QualPanel evidence observed-on", "issue": "max uses new Date().toISOString() (UTC date) but the backend checks the Pacific date. After about 4-5pm PT the picker allows tomorrow and saving returns 422.", "selector": "[data-testid=evidence-form] input[aria-label='Observed on']", "priority": "LOW"},
+      {"component": "Inspector", "issue": "The header kicker reads 'CONDITION' for a requirement card (the card itself says 'REQUIREMENT').", "selector": "card-req-sug-C-10 -> inspector", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Quote draft preview", "issue": "'Customer will see Q1' and the Excluded textarea do not show project exclusions carried into the offer ('ceiling repairs'), so the organizer cannot see the exclusion before issuing even though the customer sees it.", "affected_selectors": ["quote-preview", "quote-exclusions"]},
+      {"flow": "Exclusions list", "issue": "Exclusion rows do not show their source/provenance, although the backend stores source for chat exclusions.", "affected_selectors": ["exclusion-list"]}
+    ],
+    "design_issues": [
+      {"screen": "Header at 320px", "issues": ["The 'Assemble' brand (right edge x=116) overlaps the History icon button (x=89)."]},
+      {"screen": "Quote panel", "issues": ["Valid until uses the native datetime-local picker, and the evidence dates use native date inputs, instead of the shadcn calendar."]},
+      {"screen": "Workspace header", "issues": ["'7 open conditions' counts 'unknown' gaps (Scope summary: unknown, Budget ceiling: unknown ...) as conditions. Consider saying 'unknowns', or separating them."]},
+      {"screen": "320px with inspector", "issues": ["The inspector is full-screen and covers the composer/conversation, so the inspector and the conversation cannot both be open at 320px. Acceptable, but noted."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter24_phase1_paths.py", "/app/backend/tests/test_iter25_retest_deviations.py", "/app/backend/tests/test_iter25_assistant_evidence.py", "/app/backend/tests/iter25_dump_state.py", "/app/test_reports/pytest/pytest_results_iter25.xml"],
+  "action_items": [
+    "HIGH: In snapshot_of, scrub firm-name variants as well as full names: the name without '(Synthetic)' and company suffixes, the first word or distinctive leading token (length >= 3), and the email local part. Use word boundaries. Then rerun test_iter25_retest_deviations.py::TestRedaction.",
+    "Use the Pacific 'today' (or a server-provided today) for the observed-on max in QualPanel.",
+    "Show carried project exclusions (and in-offer conditions) in the organizer's 'Customer will see' preview, and show exclusion source in the Exclusions list.",
+    "Preserve the casing of chat-extracted exclusion text.",
+    "Fix the 320px header overlap between the brand and the History icon.",
+    "Inspector kicker: show 'REQUIREMENT' for requirement targets.",
+    "Optional: accept a dict source in logic job_conditions (keep label/page) instead of storing a repr string."
+  ],
+  "critical_code_review_comments": [
+    "quote_routes.snapshot_of: regex built from full names only; no word boundaries and no short-name/alias handling (see the HIGH issue).",
+    "QualPanel max date: new Date().toISOString().slice(0,10) is a UTC date, mismatched with L.today_pacific() on the backend.",
+    "logic.py job_conditions 'source' is coerced with text(), which turns structured sources into a repr string."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter24_phase1_paths.py (TestStale now uses its own session, xdist-safe)", "/app/backend/tests/test_iter25_retest_deviations.py (new)", "/app/backend/tests/test_iter25_assistant_evidence.py (new)", "/app/backend/tests/iter25_dump_state.py (helper)"],
+  "success_rate": {"backend": "99% (180/181 in the full suite; the only fail is the short-name redaction)", "frontend": "95% (all requested UI checks pass; minor design items open)"},
+  "seed_data_creation": "Fresh visitor sandboxes only: t24-7bea511c4a3f (API happy path, prj_a8ba28b6da7a), ui25f-f1ad4778 (UI happy path, prj_0f42ea505f08, quote token KZMOLSptooHynIL09tB78kI8y5zXT2SJ), plus t25-*/ui25-* sandboxes on the 12-branch demo.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run test_iter25_retest_deviations.py (about 3s, deterministic, no LLM) to verify the redaction fix. The iter24 file is now xdist-safe. Chat intake was 3 of 3 reliable this session (0% flake). Review token: read it from db.links by project_id. Quote token: db.quotes. Partner UI: signin-review-as-partner-toggle -> signin-demo-alder-button -> partner-review-confirm-button -> partner-review-submit-button. Quote valid-until is datetime-local: fill 'YYYY-MM-DDTHH:MM'. Server date is 2026-10-25.",
+  "rca of the issue": "Short-name leak: snapshot_of builds names from intake.partners[].name (full legal-style names) and replaces only exact case-insensitive matches. Organizers and chat briefs refer to firms by short names ('Alder'), so those references are never matched. Repro: on the 12-branch demo, add a firm exclusion 'Alder excludes core drilling' and open the quote preview; snapshot.exclusions contains 'Alder excludes core drilling'. Mitigation: derive aliases per partner (strip '(Synthetic)' and suffixes, take the first word, take the email local part), sort them by length and use a \\b-bounded regex."
+}

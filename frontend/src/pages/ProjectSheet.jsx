@@ -168,12 +168,15 @@ export default function ProjectSheet() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem onSelect={() => setResetOpen(true)} data-testid="demo-reset-button">Reset this example</DropdownMenuItem>
+                    {sheet.project.fixture_id && (
+                      <DropdownMenuItem onSelect={async () => { try { const { data } = await api.post("/project/clean-copy"); window.location.assign(`/projects/${data.project_id}`); } catch (e) { toast.error(errList(e)[0]); } }} data-testid="clean-copy-button">Make a clean copy</DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
             </div>
           </div>
-          {q && conds.length > 0 && <p className="mx-auto max-w-[1440px] px-4 pb-2 sm:px-6 text-xs text-amber-800" data-testid="filter-conditions-note">{conds.length} open condition{conds.length === 1 ? "" : "s"} in this project</p>}
+          {q && conds.length > 0 && <p className="mx-auto max-w-[1440px] px-4 pb-2 sm:px-6 text-xs text-amber-800" data-testid="filter-conditions-note">{conds.length} open item{conds.length === 1 ? "" : "s"} in this project</p>}
         </div>
         <div className="relative flex min-h-0 flex-1">
           <main key={view} className="ws-view-in min-w-0 flex-1" onPointerDown={() => composer.current?.close()} data-testid={`view-${view}`}>

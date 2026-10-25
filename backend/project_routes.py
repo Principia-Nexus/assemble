@@ -620,6 +620,19 @@ async def history(user=Depends(current_user)):
     return {"events": events, "versions": versions, "responses": responses}
 
 
+@router.post("/clean-copy")
+async def clean_copy(user=Depends(current_user)):
+    """A fresh project from the same fixture; the original project and its history are untouched."""
+    from demo import seed_project
+    p = await get_project(user)
+    if not p.get("fixture_id") or not user.get("sandbox_id"):
+        raise HTTPException(400, "Only the twelve-site example can be copied clean.")
+    pid = new_id("prj")
+    await seed_project(user["sandbox_id"], user["firm_id"], org(user), p["fixture_id"], project_id=pid)
+    await db.projects.update_one({"project_id": pid}, {"$set": {"name": f"{p['intake'].get('job_name') or p['name']} · recording copy", "position": 1}})
+    return {"project_id": pid}
+
+
 @router.post("/demo-reset")
 async def demo_reset(user=Depends(current_user)):
     if not user.get("sandbox_id") or user.get("demo_key") != "organizer":

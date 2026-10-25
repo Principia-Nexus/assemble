@@ -57,7 +57,7 @@ function AddEvidence({ sheet, act, busy, firm }) {
         <SelectTrigger className="h-9" aria-label="Observed status" data-testid="evidence-status"><SelectValue /></SelectTrigger>
         <SelectContent>{["active", "expired", "suspended", "inactive", "revoked"].map((x) => <SelectItem key={x} value={x} data-testid={`evidence-status-${x}`}>Status shown: {x}</SelectItem>)}</SelectContent>
       </Select>
-      <Input type="date" max={new Date().toISOString().slice(0, 10)} value={f.observed_on} onChange={(e) => setF({ ...f, observed_on: e.target.value })} aria-label="Observed on" title="Observed on" data-testid="evidence-observed-on" />
+      <Input type="date" max={new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" })} value={f.observed_on} onChange={(e) => setF({ ...f, observed_on: e.target.value })} aria-label="Observed on" title="Observed on" data-testid="evidence-observed-on" />
       <Button size="sm" type="submit" className="h-9 sm:col-span-2" disabled={busy || !f.partner_id || !f.license_class.trim() || !f.source_record.trim() || !f.observed_on} data-testid="evidence-save">Record reviewed evidence</Button>
     </form>
   );
@@ -97,7 +97,7 @@ export default function QualPanel({ sheet, act, busy, firm }) {
         <ul data-testid="exclusion-list">
           {q.exclusions.map((x) => (
             <li key={x.ex_id} className={row} data-testid={`exclusion-${x.ex_id}`}>
-              <p className="min-w-0 flex-1 text-sm text-slate-800">{x.text} <span className="text-xs text-slate-500">· {x.level === "job" ? "whole job" : x.level === "scope" ? x.target : firmName(sheet, x.target)}</span></p>
+              <p className="min-w-0 flex-1 text-sm text-slate-800">{x.text} <span className="text-xs text-slate-500">· {x.level === "job" ? "whole job" : x.level === "scope" ? x.target : firmName(sheet, x.target)}{x.source ? ` · from ${x.source}` : ""}</span></p>
               <Button size="sm" variant="ghost" disabled={busy} onClick={() => act("delete", `/project/exclusions/${x.ex_id}`, undefined, "Removed")} data-testid={`exclusion-remove-${x.ex_id}`}>Remove</Button>
             </li>
           ))}

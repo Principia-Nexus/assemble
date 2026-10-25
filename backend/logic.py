@@ -163,9 +163,12 @@ def validate_intake(raw):
             e.append(f"Job condition {i + 1}: describe the condition or remove it.")
             continue
         cid = c.get("id")
+        src = c.get("source")
+        if isinstance(src, dict):
+            src = ", ".join(x for x in (src.get("label"), f"page {src['page']}" if src.get("page") else None) if x)
         it["job_conditions"].append({
             "id": cid if isinstance(cid, str) and PID_RE.match(cid) else "jc_" + uuid.uuid4().hex[:8],
-            "text": t, "source": text(c.get("source"), f"Job condition {i + 1} source", e, 300),
+            "text": t, "source": text(src, f"Job condition {i + 1} source", e, 300),
             "resolved": c.get("resolved") is True,
         })
     return it, e
