@@ -95,7 +95,7 @@ function RespondBox({ data, token, onDone }) {
   };
 
   const choices = [
-    ["confirm", "Confirm these proposed terms"],
+    ["confirm", "Confirm"],
     ["request_change", "Request a change"],
     ["decline", "Decline"],
   ];
@@ -183,9 +183,9 @@ export default function Review() {
         {data && (
           <>
             <div className="rise">
-              <p className="eyebrow flex items-center gap-2">Private review · from {data.job.organizer_firm}</p>
+              <p className="eyebrow flex items-center gap-2">From {data.job.organizer_firm}</p>
               <h1 data-testid="review-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{data.partner.name}: your part of {data.job.job_name}{data.job.synthetic && <SynthBadge />}</h1>
-              <p className="mt-1 text-sm text-slate-600">Customer: {data.job.customer_name || "Unknown"}. You see only your own sites and terms.</p>
+              <p className="mt-1 text-sm text-slate-600">Customer: {data.job.customer_name || "Unknown"}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <StatusPill testId="review-status" tone={s.tone} label={s.label} />
                 {data.version && <span className="font-mono text-xs text-slate-500">Terms v{data.version.number} · {fmtTime(data.version.created_at)}</span>}

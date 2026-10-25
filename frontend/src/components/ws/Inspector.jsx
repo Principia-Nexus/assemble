@@ -1,3 +1,5 @@
+import { api, errText } from "@/lib/api";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,7 @@ const REL = { prerequisite: "must finish before", uses_input: "is input to", pro
 const sel = "h-9 w-full rounded-md border border-[#E2E8F0] bg-white px-2 text-sm text-[#1A2838] focus:outline-none focus:ring-2 focus:ring-[#215273]";
 const Lbl = ({ children, htmlFor }) => <label htmlFor={htmlFor} className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{children}</label>;
 
-function ItemForm({ it, sheet, items, edges, run }) {
+function ItemForm({ it, sheet, items, edges, run, onSheet }) {
   const [f, setF] = useState(it);
   const [errors, setErrors] = useState([]);
   useEffect(() => { setF(it); setErrors([]); }, [it]);
@@ -28,6 +30,15 @@ function ItemForm({ it, sheet, items, edges, run }) {
   const [link, setLink] = useState({ to: "", kind: "prerequisite" });
   const title = (id) => items.find((x) => x.item_id === id)?.title || id;
 
+  // Site work follows the plan: changing the firm moves the site in the plan (as a private draft until you select it).
+  const assign = async (owner) => {
+    if (!owner) { toast.error("Planned site work needs a firm. Choose one, or remove the site from the plan in Draft plan."); return; }
+    try {
+      const { data } = await api.post("/project/plan/assign", { rev: sheet.project.rev, site_id: it.plan_site, owner });
+      onSheet(data.sheet);
+      toast.success(`${it.plan_site} moved in the plan`);
+    } catch (e) { toast.error(errText(e)); }
+  };
   return (
     <div className="space-y-4">
       <div><Lbl htmlFor="insp-title">Title</Lbl><Input id="insp-title" className="bg-white" {...txt("title")} data-testid="inspector-title-input" /></div>
@@ -40,7 +51,7 @@ function ItemForm({ it, sheet, items, edges, run }) {
         </div>
       )}
       <div><Lbl htmlFor="insp-firm">{it.kind === "group" ? "Proposed responsible firm" : "Assignee firm"}</Lbl>
-        <select id="insp-firm" className={sel} value={f.firm_id || ""} onChange={(e) => save({ firm_id: e.target.value || null })} data-testid="inspector-firm-select">
+        <select id="insp-firm" className={sel} value={f.firm_id || ""} onChange={(e) => (it.plan_site ? assign(e.target.value) : save({ firm_id: e.target.value || null }))} data-testid="inspector-firm-select">
           <option value="">Unassigned</option><option value="own">Own crews</option>
           {firms.map((p) => <option key={p.partner_id} value={p.partner_id}>{p.name}</option>)}
         </select>
@@ -125,7 +136,7 @@ function PackageDetail({ pkg, openTool }) {
   );
 }
 
-export default function Inspector({ target, sheet, items, edges, run, onClose, openTool }) {
+export default function Inspector({ target, sheet, items, edges, run, onSheet, onClose, openTool }) {
   const it = target?.item_id ? target : null;
   const head = it ? KIND_LABEL[it.kind] : target.kind === "package" ? "Scope package" : "Condition";
   return (
@@ -137,7 +148,7 @@ export default function Inspector({ target, sheet, items, edges, run, onClose, o
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {!it && <h2 className="mb-3 text-[15px] font-semibold leading-snug text-[#1A2838]">{target.title}</h2>}
-        {it ? <ItemForm it={it} sheet={sheet} items={items} edges={edges} run={run} />
+        {it ? <ItemForm it={it} sheet={sheet} items={items} edges={edges} run={run} onSheet={onSheet} />
           : target.kind === "package" ? <PackageDetail pkg={target} openTool={openTool} />
             : (
               <div className="space-y-3 text-sm text-[#1A2838]">

@@ -12,7 +12,7 @@ import { RouteDenied } from "@/components/RouteDenied";
 import HistoryDrawer from "@/components/sheet/HistoryDrawer";
 import { clearDemoContent } from "@/lib/demoContent";
 import { useItems } from "@/components/ws/useItems";
-import { conditions, firmName, matches, packages, statusSentence } from "@/components/ws/derive";
+import { conditions, firmName, matches, packages, statusSentence, withPlan } from "@/components/ws/derive";
 import AppHeader from "@/components/AppHeader";
 import GraphView from "@/components/ws/GraphView";
 import ListView from "@/components/ws/ListView";
@@ -84,7 +84,8 @@ export default function ProjectSheet() {
   }, [load]);
 
   const rev = sheet?.project.rev;
-  const { items, edges, save, run, undo, adopt, reload } = useItems(rev, load);
+  const { items: raw, edges, save, run, undo, adopt, reload } = useItems(rev, load);
+  const items = useMemo(() => (sheet ? withPlan(raw, sheet) : raw), [raw, sheet]);
   const pid = sheet?.project.project_id;
   useEffect(() => { if (pid && !view) setViewState("graph"); }, [pid, view]);
   const setView = setViewState;
@@ -182,7 +183,7 @@ export default function ProjectSheet() {
           </main>
           {target && (
             <div className={narrow ? "fixed inset-0 z-40" : "no-print shrink-0"}>
-              <Inspector target={target} sheet={sheet} items={items} edges={edges} run={run} onClose={() => setSelectedId(null)} openTool={setTool} />
+              <Inspector target={target} sheet={sheet} items={items} edges={edges} run={run} onSheet={setSheet} onClose={() => setSelectedId(null)} openTool={setTool} />
             </div>
           )}
           <div className="no-print pointer-events-none absolute bottom-0 left-0 z-20" style={{ right: target && !narrow ? 360 : 0 }}>

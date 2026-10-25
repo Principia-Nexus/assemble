@@ -85,3 +85,14 @@ export function firmTone(sheet, owner) {
   return i < 0 ? NONE_TONE : FIRM_TONES[i % FIRM_TONES.length];
 }
 export const RESP_TONE = { confirmed: "text-[#1E7B5C]", confirmed_conditional: "text-[#1E7B5C]", declined: "text-[#A93A3A]", change_requested: "text-[#A93A3A]", expired: "text-[#A93A3A]" };
+
+// The plan is the source of truth for site work: a task tied to one planned site shows the plan's firm and week.
+export function withPlan(items, sheet) {
+  const v = planVersion(sheet);
+  if (!v) return items;
+  return items.map((it) => {
+    const sid = it.kind === "task" && it.site_ids?.length === 1 ? it.site_ids[0] : null;
+    const a = sid && v.assignments?.[sid];
+    return a ? { ...it, firm_id: a.owner || null, plan_site: sid, plan_week: a.week ?? null } : it;
+  });
+}

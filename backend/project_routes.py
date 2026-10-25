@@ -364,6 +364,36 @@ async def edit_preview(body: PreviewEditIn, user=Depends(current_user)):
     return {"sheet": await sheet(p["project_id"])}
 
 
+class AssignIn(BaseModel):
+    rev: int
+    site_id: str
+    owner: str
+    week: Optional[Any] = None
+
+
+@router.post("/plan/assign")
+async def assign_site(body: AssignIn, user=Depends(current_user)):
+    """Moves one site in the plan. Selected terms are never edited in place: this opens or edits the private draft."""
+    p = await get_project(user)
+    rev = body.rev
+    if not p.get("preview_version_id"):
+        if not p.get("current_version_id"):
+            raise HTTPException(409, "No plan yet. Use Draft plan.")
+        await start_preview(PreviewIn(rev=rev), user)
+        rev = (await get_project(user))["rev"]
+    pre = await get_version((await get_project(user))["preview_version_id"])
+    if body.site_id not in pre["assignments"]:
+        bad(f"{body.site_id} is not a site in this plan.")
+    sites = []
+    for s in pre["sites"]:
+        a = pre["assignments"].get(s["site_id"]) or {}
+        mine = s["site_id"] == body.site_id
+        sites.append(SiteEdit(site_id=s["site_id"], owner=body.owner if mine else a.get("owner"),
+                              week=(body.week if mine and body.week is not None else a.get("week")) or 1))
+    adj = {k: f"{v / 100:.2f}" for k, v in (pre.get("adjustments") or {}).items()}
+    return await edit_preview(PreviewEditIn(rev=rev, sites=sites, adjustments=adj), user)
+
+
 @router.post("/preview/discard")
 async def discard_preview(body: RevIn, user=Depends(current_user)):
     p = await get_project(user)

@@ -30,7 +30,7 @@ function useEvents(sheet, items, filter) {
     }
     for (const it of items) {
       const d = it.start_date || it.due_date;
-      if (!d || !filter(it)) continue;
+      if (!d || it.plan_site || !filter(it)) continue;
       ev.push({ key: it.item_id, from: d, to: it.due_date || d, kind: "item", label: it.title, provisional: it.date_kind === "provisional", select: it.item_id });
     }
     const dues = {};
