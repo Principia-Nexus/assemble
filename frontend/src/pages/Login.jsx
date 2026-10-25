@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,24 +50,27 @@ function DemoAccounts({ onUse, busy }) {
           <span className="text-[11px] font-normal opacity-80">Synthetic example · organizer view</span>
         </Button>
       )}
-      <button type="button" className="mx-auto block text-xs font-medium text-slate-600 underline-offset-4 hover:underline" onClick={() => setShowPartners(!showPartners)} aria-expanded={showPartners} data-testid="signin-review-as-partner-toggle">
-        {showPartners ? "Hide partner logins" : "Review as a partner"}
-      </button>
-      {showPartners && (
-        <ul data-testid="signin-partner-list" className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
-          {partners.map((a) => (
-            <li key={a.key} className="flex items-center justify-between gap-3 px-3 py-2.5">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-900">{a.firm}</p>
-                <p className="truncate font-mono text-[11px] text-slate-500">{a.role} · {a.email}</p>
-              </div>
-              <Button size="sm" variant="outline" disabled={busy} onClick={() => onUse(a.email, demo.password)} data-testid={`signin-demo-${a.key}-button`} aria-label={`Sign in as ${a.firm}`}>
-                Use
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="overflow-hidden rounded-md border border-slate-300 bg-white">
+        <button type="button" className="flex h-11 w-full items-center justify-center gap-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50" onClick={() => setShowPartners(!showPartners)} aria-expanded={showPartners} data-testid="signin-review-as-partner-toggle">
+          Review as a partner
+          <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showPartners ? "rotate-180" : ""}`} />
+        </button>
+        {showPartners && (
+          <ul data-testid="signin-partner-list" className="divide-y divide-slate-200 border-t border-slate-200">
+            {partners.map((a) => (
+              <li key={a.key} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-900">{a.firm}</p>
+                  <p className="truncate font-mono text-[11px] text-slate-500">{a.role} · {a.email}</p>
+                </div>
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => onUse(a.email, demo.password)} data-testid={`signin-demo-${a.key}-button`} aria-label={`Sign in as ${a.firm}`}>
+                  Use
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
