@@ -33,7 +33,7 @@ export default function Stepper({ info, selected, onSelect }) {
             </span>
             <span className="hidden text-sm font-semibold sm:block">{s.title}</span>
             <span className={cn("hidden font-mono text-[10px] uppercase tracking-wider md:block", active ? "text-white/70" : "text-slate-500")}>
-              {isCurrent ? "Current task" : info.done[s.key] ? "Done" : "Not yet"}
+              {isCurrent ? "Current task" : info.done[s.key] ? "\u00A0" : "Not yet"}
             </span>
           </button>
         );
