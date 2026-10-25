@@ -330,7 +330,8 @@ async def edit_preview(body: PreviewEditIn, user=Depends(current_user)):
         w = L.whole(se.week, f"{se.site_id} week", e, 1, weeks)
         if w is None and L.blank(se.week):
             e.append(f"{se.site_id}: week is required.")
-        by_id[se.site_id]["deadline_week"] = L.whole(se.deadline_week, f"{se.site_id} deadline week", e, 1, weeks)
+        if "deadline_week" in se.model_fields_set:
+            by_id[se.site_id]["deadline_week"] = L.whole(se.deadline_week, f"{se.site_id} deadline week", e, 1, weeks)
         assignments[se.site_id] = {"owner": se.owner, "week": w}
     missing = set(smap) - set(assignments)
     if missing:

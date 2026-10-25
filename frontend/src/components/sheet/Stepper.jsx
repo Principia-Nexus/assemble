@@ -47,7 +47,7 @@ export function Rail({ sheet, info, selected, onSelect }) {
   const cur = sheet.current;
   const counts = {
     intake: sheet.gap.unknowns.length ? `${sheet.gap.unknowns.length} unknown` : `${sheet.gap.site_count} sites`,
-    draft: sheet.preview ? `v${sheet.preview.version.number} draft` : cur ? `v${cur.version.number}` : "none",
+    draft: sheet.preview ? "draft open" : cur ? "checked" : "none",
     ask: cur ? `${cur.partners.filter((p) => ["confirmed", "confirmed_conditional", "declined", "change_requested"].includes(p.status)).length}/${cur.partners.length}` : "—",
     decide: cur ? `${cur.checker.rules.filter((r) => r.status !== "pass").length} issues` : "—",
   };

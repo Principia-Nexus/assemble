@@ -94,6 +94,13 @@
 - Real email to chosenvictor12@gmail.com accepted by provider (202); inbox receipt unconfirmed.
 - UI removals per user: assistant subtitle/placeholder, "Fix these first:", "total against ceiling", "responses to these terms".
 
+## Wording + graph round (2026-10-25)
+- Invite email cut to subject "Review your terms: <job>", one sentence, "Open review" button, "Opens only for this email address." Code email cut too.
+- Map (Stage 2 graph): GET /api/project/graph (authorized) → bands Sources → Changes (applied facts grouped per source+entity, open customer changes, private-draft moves) → Sites → Firms; SVG curves; click node highlights its trace. Hidden when no edges and below md.
+- Draft: firm toggle buttons (aria-pressed) in a "Firms" card with "Check draft" in its header; removed many explanatory lines/version labels; read form sample buttons removed, inputs aligned, "Date".
+- Jev removed from assistant.
+- PUT /project/preview keeps deadline when omitted.
+
 ## Backlog
 - Confirm the test invitation arrived at chosenvictor12@gmail.com, then do the second-device partner response (register, verify code, respond)
 - Stage 2 full graph (bands + connectors, source→change→firm trace); current build ships the 3-column shell

@@ -103,7 +103,7 @@ export default function DecideTask(props) {
       {showForm && !sheet.preview && <CustomerChangeForm sheet={sheet} act={act} busy={busy} onDone={() => setShowForm(false)} />}
       <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
         <table className="w-full min-w-[620px] text-sm">
-          <thead><tr className="text-left font-mono text-[10px] text-slate-500"><th className="p-3">Partner · plan v{cur.version.number}</th><th className="p-3">Status</th><th className="p-3">Sites</th><th className="p-3">Their total</th><th className="p-3">Answered</th></tr></thead>
+          <thead><tr className="text-left font-mono text-[10px] text-slate-500"><th className="p-3">Partner</th><th className="p-3">Status</th><th className="p-3">Sites</th><th className="p-3">Their total</th><th className="p-3">Answered</th></tr></thead>
           <tbody>
             {cur.partners.map((p) => (
               <tr key={p.partner_id} className="border-t border-slate-100" data-testid={`decide-partner-row-${slug(p.partner_id)}`}>

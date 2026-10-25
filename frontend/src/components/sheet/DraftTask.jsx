@@ -34,7 +34,7 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
       <ErrorList errors={errors} testId="draft-errors" />
       {sheet.preview && (
         <div data-testid="draft-preview-open-notice" role="status" className="flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
-          <p><span className="font-semibold">Proposed changes v{sheet.preview.version.number} are open.</span></p>
+          <p><span className="font-semibold">Proposed changes are open.</span></p>
           <Button size="sm" onClick={() => goTo("decide")} data-testid="draft-open-preview-button">Open preview</Button>
         </div>
       )}

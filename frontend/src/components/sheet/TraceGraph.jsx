@@ -24,8 +24,8 @@ function trace(edges, start) {
 function Node({ n, on, dim, onClick, refFn }) {
   const sub = n.band === 3 ? STATUS[n.sub]?.label || n.sub : n.sub;
   return (
-    <button ref={refFn} type="button" onClick={onClick} aria-pressed={on} data-testid={`graph-node-${n.id.replace(/[^a-zA-Z0-9-]/g, "-")}`}
-      className={`relative z-10 w-full rounded-md border px-2.5 py-1.5 text-left transition-[opacity,border-color,background-color] duration-200 ${
+    <button ref={refFn} type="button" onClick={onClick} aria-pressed={on} title={sub ? `${n.label} · ${sub}` : n.label} data-testid={`graph-node-${n.id.replace(/[^a-zA-Z0-9-]/g, "-")}`}
+      className={`relative z-10 w-full rounded-md border px-2.5 py-1 text-left transition-[opacity,border-color,background-color] duration-200 ${
         on ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white hover:border-slate-400"} ${dim ? "opacity-30" : "opacity-100"}`}>
       <span className="block truncate text-xs font-semibold">{n.label}</span>
       {sub && <span className={`block truncate text-[10px] ${on ? "text-white/70" : "text-slate-500"}`}>{sub}</span>}
@@ -59,20 +59,19 @@ export default function TraceGraph({ rev }) {
     if (box.current) ro.observe(box.current);
     return () => ro.disconnect();
   }, [layout]);
-  if (!g) return null;
-  if (!g.nodes.length) return null;
+  if (!g || !g.edges.length) return null;
+  const bands = BANDS.map((title, band) => ({ title, band, ns: g.nodes.filter((n) => n.band === band) })).filter((b) => b.ns.length || b.band >= 2);
   return (
-    <section data-testid="trace-graph" aria-label="Map" className="no-print rounded-md border border-slate-200 bg-white p-3">
-      <div ref={box} className="relative grid grid-cols-1 gap-4 md:grid-cols-4 md:gap-8">
+    <section data-testid="trace-graph" aria-label="Map" className="no-print hidden rounded-md border border-slate-200 bg-white p-3 md:block">
+      <div ref={box} className="relative grid gap-8" style={{ gridTemplateColumns: `repeat(${bands.length}, minmax(0, 1fr))` }}>
         <svg className="pointer-events-none absolute inset-0 hidden h-full w-full md:block" aria-hidden>
           {paths.map((p) => <path key={p.k} d={p.d} fill="none" strokeWidth={p.on ? 2 : 1}
             className={`transition-[stroke,opacity] duration-200 ${p.on ? "stroke-slate-900" : "stroke-slate-300"}`} opacity={lit && !p.on ? 0.25 : 1} />)}
         </svg>
-        {BANDS.map((title, band) => {
-          const ns = g.nodes.filter((n) => n.band === band);
+        {bands.map(({ title, band, ns }) => {
           return (
-            <div key={title} className={`min-w-0 ${ns.length > 6 ? "grid grid-cols-2 content-start gap-1.5" : "space-y-1.5"}`} data-testid={`graph-band-${band}`}>
-              <p className={`eyebrow ${ns.length > 6 ? "col-span-2" : ""}`}>{title}</p>
+            <div key={title} className="min-w-0 space-y-1" data-testid={`graph-band-${band}`}>
+              <p className="eyebrow">{title}</p>
               {ns.length === 0 && <p className="text-[11px] text-slate-400">None</p>}
               {ns.map((n) => (
                 <Node key={n.id} n={n} on={sel === n.id} dim={!!lit && !lit.has(n.id)} refFn={(el) => { refs.current[n.id] = el; }}

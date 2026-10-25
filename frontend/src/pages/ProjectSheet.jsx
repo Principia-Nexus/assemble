@@ -143,7 +143,7 @@ export default function ProjectSheet() {
             <span className="rounded-full border border-dashed border-amber-400 bg-amber-50 px-2.5 py-1 font-semibold text-amber-900" data-testid="chip-draft">Private draft</span>
           </div>
         )}
-        <div className="mt-4"><TraceGraph rev={sheet.project.rev} /></div>
+        <div className="mt-4"><TraceGraph rev={`${sheet.project.rev}:${(sheet.current?.partners || []).map((x) => x.status).join(",")}`} /></div>
         <div key={selected} className="rise mt-4">
           {selected === "intake" && <IntakeTask key={sheet.project.rev} {...props} />}
           {selected === "draft" && <DraftTask {...props} />}
