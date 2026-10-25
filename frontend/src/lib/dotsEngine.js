@@ -76,12 +76,12 @@ const PASS_BEHIND = 0.05, PASS_SOFT = 10;
 
 // Timeline (seconds). See NOTES.md for the table.
 const T = {
-  emergeEnd: 0.12,       // last dot starts fading in
-  emergeDur: 0.35,
-  convStart: 1.4,      // first dot leaves the ring (end of wind-up)
-  sweep: 0.3,           // left-to-right release stagger across the word
+  emergeEnd: 0.2,       // last dot starts fading in
+  emergeDur: 0.6,
+  convStart: 1.6,      // first dot leaves the ring (end of wind-up)
+  sweep: 0.5,           // left-to-right release stagger across the word
   jitter: 0.04,
-  flight: 1.25,          // + up to 0.1 random
+  flight: 1.85,          // + up to 0.1 random
   duration: 0,          // set below: exact logo + HOLD
 };
 const LOOP_FADE = 0.45, LOOP_BLANK = 0.35;  // live playback only: fade the logo out, then fade the opening ring back in
@@ -270,7 +270,18 @@ function sampleLetter(L, li) {
 }
 
 // ---------------------------------------------------------------- dots
-letters.forEach(sampleLetter);
+// Sampling is deterministic and slow (~0.2 s), so it is cached after the first visit.
+{
+  const KEY = 'assemble-dots-v1';
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(KEY)); } catch (e) { cached = null; }
+  if (Array.isArray(cached) && cached.length === letters.length) {
+    letters.forEach((L, li) => { L.dots = cached[li].map(([tx, ty, r, ed]) => ({ tx, ty, r, li, edgeDot: !!ed })); });
+  } else {
+    letters.forEach(sampleLetter);
+    try { localStorage.setItem(KEY, JSON.stringify(letters.map((L) => L.dots.map((d) => [+d.tx.toFixed(3), +d.ty.toFixed(3), +d.r.toFixed(3), d.edgeDot ? 1 : 0])))); } catch (e) { /* storage full */ }
+  }
+}
 const rand = mulberry32(SEED);
 let FIELD_CX = 480, FIELD_CY = 310, FIELD_RX = 420, FIELD_RY = 238;
 const dots = letters.flatMap((L) => L.dots);
@@ -615,15 +626,16 @@ function drawInk(L, t, a, e, f) {
 }
 
 // ---------------------------------------------------------------- playback
-let t0 = null, raf = 0;
+// Clock advances by real frame time, capped, so a slow frame slows the motion instead of skipping it.
+let prev = null, tt = 0, raf = 0;
 function frame(now) {
-  if (t0 === null) t0 = now;
-  const tt = (now - t0) / 1000;
+  if (prev !== null) tt += Math.min(1 / 30, (now - prev) / 1000);
+  prev = now;
   render(tt);
   raf = tt < T.duration ? requestAnimationFrame(frame) : 0;
 }
 const playing = () => raf !== 0;
-function play() { if (raf) return; t0 = null; raf = requestAnimationFrame(frame); }
+function play() { if (raf) return; prev = null; tt = 0; raf = requestAnimationFrame(frame); }
 const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (reduce) render(T.duration); else play();
 const onResize = () => { if (!raf) render(lastT); };

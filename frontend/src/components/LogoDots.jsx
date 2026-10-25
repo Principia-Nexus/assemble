@@ -18,10 +18,13 @@ const DotsLogo = () => {
       const r = slot.current.getBoundingClientRect();
       return { x: r.left, w: r.width, cy: r.top + r.height / 2 };
     };
-    engine.current = createDots(canvas.current, target);
     const ro = new ResizeObserver(() => engine.current?.redraw());
-    ro.observe(slot.current);
-    return () => { ro.disconnect(); engine.current?.destroy(); };
+    // Deferred so the page paints first and a strict-mode remount never builds it twice.
+    const id = setTimeout(() => {
+      engine.current = createDots(canvas.current, target);
+      ro.observe(slot.current);
+    }, 450);
+    return () => { clearTimeout(id); ro.disconnect(); engine.current?.destroy(); engine.current = null; };
   }, []);
 
   return (
