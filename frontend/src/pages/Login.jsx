@@ -55,7 +55,8 @@ function DemoAccounts({ onUse, busy }) {
           Review as a partner
           <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showPartners ? "rotate-180" : ""}`} />
         </button>
-        {showPartners && (
+        <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${showPartners ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} aria-hidden={!showPartners} inert={showPartners ? undefined : ""}>
+          <div className="overflow-hidden">
           <ul data-testid="signin-partner-list" className="divide-y divide-slate-200 border-t border-slate-200">
             {partners.map((a) => (
               <li key={a.key} className="flex items-center justify-between gap-3 px-3 py-2.5">
@@ -69,7 +70,8 @@ function DemoAccounts({ onUse, busy }) {
               </li>
             ))}
           </ul>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );
