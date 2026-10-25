@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { ArrowUp, Camera, ChevronDown, ChevronUp, Loader2, Mic, Paperclip, Plus, Square } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { api, errText } from "@/lib/api";
 
 function Receipt({ batch, onUndo, onShow, undone }) {
@@ -128,21 +128,10 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
             <DropdownMenuTrigger asChild>
               <button type="button" className="flex h-9 shrink-0 items-center gap-1 rounded-full px-3 text-[13px] font-medium text-[#1A2838] hover:bg-[#F1F5F9]" data-testid="composer-add-button"><Plus className="h-4 w-4" /> Add</button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start" className="w-56" data-testid="add-menu">
-              <DropdownMenuItem onSelect={() => onAdd("details")} data-testid="add-details">Add details</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onAdd("source")} data-testid="add-source">Add source</DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger data-testid="add-work-item">Add work item</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  {[["group", "Group / scope package"], ["task", "Task"], ["milestone", "Milestone"], ["condition", "Question / condition"]].map(([k, l]) => (
-                    <DropdownMenuItem key={k} onSelect={() => onAdd(`item:${k}`)} data-testid={`add-item-${k}`}>{l}</DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => onAdd("check")} data-testid="add-run-checks">Run checks</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onAdd("review")} data-testid="add-prepare-review">Prepare review</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onAdd("quote")} data-testid="add-customer-quote">Customer quote</DropdownMenuItem>
+            <DropdownMenuContent side="top" align="start" className="w-52" data-testid="add-menu">
+              {[["group", "Group / scope package"], ["task", "Task"], ["milestone", "Milestone"], ["condition", "Question / condition"]].map(([k, l]) => (
+                <DropdownMenuItem key={k} onSelect={() => onAdd(`item:${k}`)} data-testid={`add-item-${k}`}>{l}</DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
           <button type="button" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#64748B] hover:bg-[#F1F5F9]" onClick={() => onAdd("source")} aria-label="Attach a document" data-testid="composer-attach-button"><Paperclip className="h-4 w-4" /></button>

@@ -77,7 +77,7 @@ export default function ListView({ sheet, items, pkgs, conds, run, onSelect, sel
         )}
         <Section title="Work" count={`${items.length - groups.length} items · ${groups.length} groups`} testId="list-work">
           {rows.length ? rows.map(({ it, depth }) => <Row key={it.item_id} it={it} depth={depth} sheet={sheet} run={run} onSelect={onSelect} selectedId={selectedId} hot={hot} />)
-            : <p className="px-3 py-3 text-xs text-[#64748B]" data-testid="list-empty">No work items yet. Use Add › Add work item, or ask below.</p>}
+            : <p className="px-3 py-3 text-xs text-[#64748B]" data-testid="list-empty">No work items yet. Use Add, or ask below.</p>}
         </Section>
       </div>
     </div>

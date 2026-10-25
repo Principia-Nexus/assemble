@@ -56,13 +56,12 @@ export default function WeekView({ sheet, items, onSelect, selectedId, filter })
             </div>
           ))}
         </div>
-        <section className="mt-4 rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] p-3" data-testid="week-unscheduled">
+        {undated.length > 0 && <section className="mt-4 rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] p-3" data-testid="week-unscheduled">
           <p className="mb-2 text-[13px] font-semibold text-[#1A2838]">Unscheduled <span className="font-mono text-[10.5px] font-normal text-[#64748B]">{undated.length}</span></p>
           <div className="flex flex-wrap gap-2">
             {undated.map((it) => <button key={it.item_id} type="button" onClick={() => onSelect(it.item_id)} className="rounded-full border border-[#E2E8F0] bg-white px-3 py-1 text-[12px] text-[#1A2838] hover:border-[#215273]" data-testid={`week-undated-${it.item_id}`}>{it.title}</button>)}
-            {!undated.length && <p className="text-xs text-[#64748B]">Everything has a date.</p>}
           </div>
-        </section>
+        </section>}
       </div>
     </div>
   );

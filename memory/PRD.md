@@ -132,4 +132,6 @@ User overrides: keep original Assemble colours/fonts and AppHeader top bar; no l
 - Stage 2 customer quote (quote_routes.py, QuotePanel.jsx, /quote/:token QuoteReview.jsx): draft → preview digest → issue immutable snapshot → copy link / email (Resend) → customer 6-digit emailed code (synthetic .test shows code on screen) → accept (name+intent) / decline / request changes, one guarded transition, idempotent key, expiry server-time (UTC Z), replacement supersedes, amendment keeps accepted baseline.
 - Stage 3 inputs (media_routes.py): Whisper voice → transcript placed in composer for review (utterance id attributed, no-speech filtered); Claude sonnet-5-5 photo observations with regions/unknowns, stored in object storage.
 - Tests: iteration_17/18 reports; backend 21/21 new + 95 regression pass.
-Not done / backlog: rule packs as versioned files, bounded AI-run cancel/queue states, source manifest for multi-sheet PDFs, partner-support prerequisites on quotes, customer-facing assistant, AI-off parity audit at 200% zoom, published-build verification.
+
+## 2026-06 — Removed guided tour (button, menu item, DemoTour component). Removed duplicate 'Print report' from project ⋯ menu (Report view has Print/PDF). Week view hides Unscheduled when empty.
+- Composer Add menu trimmed to the 4 work-item types only (details/source/checks/review/quote already in ⋯ menu or paperclip).

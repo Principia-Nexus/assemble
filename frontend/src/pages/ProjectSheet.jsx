@@ -11,7 +11,6 @@ import { useAuth } from "@/context/AuthContext";
 import { Loading } from "@/App";
 import { RouteDenied } from "@/components/RouteDenied";
 import HistoryDrawer from "@/components/sheet/HistoryDrawer";
-import DemoTour from "@/components/sheet/DemoTour";
 import { clearDemoContent } from "@/lib/demoContent";
 import { useItems } from "@/components/ws/useItems";
 import { conditions, firmName, matches, packages, statusSentence } from "@/components/ws/derive";
@@ -41,7 +40,6 @@ export default function ProjectSheet() {
   const [busy, setBusy] = useState(false);
   const [tool, setTool] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [tourOpen, setTourOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [showChanges, setShowChanges] = useState(false);
@@ -108,7 +106,6 @@ export default function ProjectSheet() {
   if (sheet === undefined || !view) return <Loading label="Loading your project" />;
   if (!sheet) return <Navigate to="/projects" replace />;
 
-  const isCanon = sheet.project.synthetic && !!sheet.project.fixture_id;
   const narrow = width < 720;
   const target = selectedId && (items.find((i) => i.item_id === selectedId) || pkgs.find((p) => p.id === selectedId) || conds.find((c) => c.id === selectedId));
   const onAdd = async (k) => {
@@ -158,7 +155,6 @@ export default function ProjectSheet() {
                   <Eye className="h-3.5 w-3.5" /> Show changes
                 </Button>
               )}
-              {isCanon && <Button size="sm" variant="ghost" className="hidden h-8 sm:inline-flex" onClick={() => setTourOpen(true)} data-testid="demo-tour-open">Guided tour</Button>}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="icon" variant="outline" className="h-8 w-8" aria-label="More" data-testid="header-overflow"><MoreHorizontal className="h-4 w-4" /></Button>
@@ -169,8 +165,6 @@ export default function ProjectSheet() {
                   <DropdownMenuItem onSelect={() => setTool("review")} data-testid="overflow-review">Prepare review</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setTool("decide")} data-testid="overflow-decide">Decide on changes</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setTool("quote")} data-testid="overflow-quote">Customer quote</DropdownMenuItem>
-                  {isCanon && <DropdownMenuItem className="sm:hidden" onSelect={() => setTourOpen(true)} data-testid="overflow-tour">Guided tour</DropdownMenuItem>}
-                  <DropdownMenuItem onSelect={() => { setView("report"); setTimeout(() => window.print(), 300); }} data-testid="overflow-print">Print report</DropdownMenuItem>
                   {sheet.project.synthetic && user?.demo_key === "organizer" && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setResetOpen(true)} data-testid="demo-reset-button">Reset this example</DropdownMenuItem></>}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -207,7 +201,6 @@ export default function ProjectSheet() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {isCanon && tourOpen && <DemoTour sheet={sheet} act={act} busy={busy} goTo={(step) => setTool({ intake: "details", draft: "check", ask: "review", decide: "decide" }[step] || null)} onClose={() => setTourOpen(false)} />}
     </div>
   );
 }
