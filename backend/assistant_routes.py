@@ -295,7 +295,7 @@ async def advance(p, user, result, rev):
             except HTTPException as ex:
                 errors.append(ex.detail if isinstance(ex.detail, str) else " ".join(ex.detail))
         if made:
-            notes.append(f"Private review links prepared for {', '.join(made)}. Nothing was sent: share them from Prepare review.")
+            notes.append(f"Private review links prepared for {', '.join(made)}. Nothing was sent: share them with Send for review.")
     return await sheet(p["project_id"]), errors, notes
 
 

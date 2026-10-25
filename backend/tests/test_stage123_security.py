@@ -130,7 +130,7 @@ class TestCors:
             assert r.status_code == 403 and r.json()["detail"] == "Request origin not allowed.", r.text
 
     def test_same_origin_ok(self):
-        r = requests.post(f"{BASE_URL}/api/auth/login", json={"email": "nobody_x@example.com", "password": "zzzzzzzz"},
+        r = requests.post(f"{BASE_URL}/api/auth/login", json={"email": f"nobody_{uuid.uuid4().hex[:8]}@example.com", "password": "zzzzzzzz"},
                           headers={"Origin": BASE_URL})
         assert r.status_code == 401
 

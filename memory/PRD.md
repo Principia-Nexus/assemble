@@ -135,3 +135,14 @@ User overrides: keep original Assemble colours/fonts and AppHeader top bar; no l
 
 ## 2026-06 — Removed guided tour (button, menu item, DemoTour component). Removed duplicate 'Print report' from project ⋯ menu (Report view has Print/PDF). Week view hides Unscheduled when empty.
 - Composer Add menu trimmed to the 4 work-item types only (details/source/checks/review/quote already in ⋯ menu or paperclip).
+
+## 2026-10-25 — Founder brief Round 1 (iteration_19: backend 132/132; frontend core flows pass, follow-up fixes applied)
+- Chat composer floats over the canvas (no band), clears on send; server-backed AI runs (queued/working/committing/draft_ready/needs_input/failed/stopped), Stop, one run per project, 409 auto-rebase + items reload.
+- AI modes: advance (solver draft → checks → private review links, never sent), intake (chat text → attributed source → reader → apply facts), money args normalized; AI snapshot includes saved sources/readings/firm responses.
+- Rule packs: backend/rule_packs/{core,capabilities,profiles}.json from both appendices; selection recorded per run (meta.packs) and per source read; checker version in Report footer.
+- PDF page manifest/coverage per page (readable/partial/unreadable/uninspected), OCR only low-text pages (≤8), 40k char budget marks rest uninspected.
+- Quote issue requires confirmed support from every assigned firm (no override). Amendments seed from accepted snapshot. Customer quote assistant (/api/quote/{token}/ask) on released snapshot only, can draft change request.
+- Graph: bounded pan, draggable cards (PUT /api/project/layout), drag-to-link with relationship menu. Always opens in Graph.
+- Primary action top-right (Draft plan → Review draft → Send for review → Awaiting <firm> → Customer quote) + Quote button; ⋯ only Reset example; title click = Job details; Highlight changes removed; synthetic badges removed outside projects list.
+- Calendar: month/week, weekly firm bars, grouped deadlines, no Unscheduled tray. Schedule grid stacked on mobile.
+### Round 2 (next): requirement/licence constraints per scope (C-10/C-33/C-39 acceptance), rapid-edit merge + two-tab conflicts, isolated-session partner access repro, job exclusions independent of partners, larger PDF page batches/page ranges, publish + repeat full journey on public URL, true 200% zoom check.

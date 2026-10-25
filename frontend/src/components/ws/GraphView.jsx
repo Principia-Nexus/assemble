@@ -61,7 +61,7 @@ function Movable({ id, pos, dragging, onStart, linkable, onLink, children }) {
       {children}
       {linkable && (
         <span role="button" tabIndex={-1} aria-label="Drag to another card to link" data-link-handle onPointerDown={(e) => onLink(e, id)} data-testid={`link-handle-${id}`}
-          className="absolute -right-2 top-1/2 z-10 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-white bg-[#215273] opacity-0 shadow transition-opacity duration-150 group-hover/m:opacity-100" />
+          className="absolute -right-2 top-1/2 z-10 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-white bg-[#215273] opacity-0 shadow transition-opacity duration-150 group-hover/m:opacity-100 [@media(hover:none)]:opacity-100" />
       )}
     </div>
   );
@@ -148,7 +148,7 @@ export default function GraphView({ sheet, items, edges, pkgs, conds, selectedId
     track((m) => { const b = local(m.clientX, m.clientY); setDraft((d) => d && { ...d, x2: b.x, y2: b.y }); }, (u) => {
       setDraft(null);
       const to = document.elementFromPoint(u.clientX, u.clientY)?.closest("[data-item-id]")?.dataset.itemId;
-      if (to && to !== id) setMenu({ from: id, to, ...local(u.clientX, u.clientY) });
+      if (to && to !== id) { const at = local(u.clientX, u.clientY); setMenu({ from: id, to, x: at.x, y: u.clientY > window.innerHeight - 280 ? at.y - 200 / zoomRef.current : at.y }); }
     });
   };
   const link = async (kind) => {
@@ -208,7 +208,7 @@ export default function GraphView({ sheet, items, edges, pkgs, conds, selectedId
             {loose.length > 0 && <div className="flex flex-wrap gap-3" data-testid="graph-loose">{loose.map(card)}</div>}
             <Edges edges={edges} refs={refs} contentRef={contentRef} zoom={zoom} tick={tick} focus={focus} draft={draft} />
             {menu && (
-              <div data-link-menu className="ws-tray-in absolute z-40 w-48 overflow-hidden rounded-xl border border-[#E2E8F0] bg-white py-1 shadow-lg" style={{ left: menu.x, top: menu.y }} data-testid="graph-link-menu">
+              <div data-link-menu className="ws-tray-in absolute z-50 w-48 overflow-hidden rounded-xl border border-[#E2E8F0] bg-white py-1 shadow-lg" style={{ left: menu.x, top: menu.y }} data-testid="graph-link-menu">
                 {LINK_KINDS.map(([k, l]) => <button key={k} type="button" onClick={() => link(k)} className="block w-full px-3 py-1.5 text-left text-[12.5px] text-[#1A2838] transition-colors hover:bg-[#F1F5F9]" data-testid={`graph-link-${k}`}>{l}</button>)}
                 <button type="button" onClick={() => setMenu(null)} className="block w-full px-3 py-1.5 text-left text-[12px] text-[#64748B] transition-colors hover:bg-[#F1F5F9]" data-testid="graph-link-cancel">Cancel</button>
               </div>

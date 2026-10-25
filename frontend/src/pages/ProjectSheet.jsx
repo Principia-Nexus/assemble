@@ -84,7 +84,7 @@ export default function ProjectSheet() {
   }, [load]);
 
   const rev = sheet?.project.rev;
-  const { items, edges, save, run, undo, adopt } = useItems(rev, load);
+  const { items, edges, save, run, undo, adopt, reload } = useItems(rev, load);
   const pid = sheet?.project.project_id;
   useEffect(() => { if (pid && !view) setViewState("graph"); }, [pid, view]);
   const setView = setViewState;
@@ -122,7 +122,7 @@ export default function ProjectSheet() {
   };
   const runOps = async (ops, summary) => { const r = await run(ops, summary); if (!r.ok) toast.error(r.errors.join(" ")); return r; };
   const doUndo = async (batchId) => { const r = await undo(batchId); if (r.ok) toast.success("Undone"); else toast.error(r.errors.join(" ")); return r; };
-  const stale = async () => { const { data } = await api.get("/project"); setSheet(data.sheet); return data.sheet.project.rev; };
+  const stale = async () => { const { data } = await api.get("/project"); setSheet(data.sheet); reload().catch(() => {}); return data.sheet.project.rev; };
   const primary = primaryAction(sheet);
   const suggestions = items.length ? ["What's still open?", "Summarize the plan"] : ["Organize this job into scope groups", conds.length ? "What's still open?" : "Summarize the plan"];
   const saveText = { saving: "Saving…", saved: "Saved", failed: "Not saved" }[save] || (busy ? "Saving…" : "");
@@ -158,6 +158,7 @@ export default function ProjectSheet() {
                 {q && <button type="button" onClick={() => setQ("")} className="text-[11px] text-[#215273]" data-testid="toolbar-search-clear">Clear</button>}
               </label>
               <Button size="sm" className="h-8 bg-[#1A2838] transition-[background-color,transform] hover:bg-[#2F4A66] active:scale-[.97]" onClick={() => setTool(primary.tool)} data-testid="primary-action">{primary.label}</Button>
+              {primary.tool !== "quote" && (sheet.current || sheet.preview) && <Button size="sm" variant="outline" className="h-8 transition-colors" onClick={() => setTool("quote")} data-testid="open-quote">Quote</Button>}
               {sheet.project.synthetic && user?.demo_key === "organizer" && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import IntakeTask from "@/components/sheet/IntakeTask";
 import ExtractPanel from "@/components/sheet/ExtractPanel";
@@ -14,9 +15,10 @@ export default function ToolSheet({ tool, onClose, onTool, sheet, act, busy, use
   const props = { sheet, act, busy, user, goTo: (step) => onTool(STEP_TO_TOOL[step] || step) };
   return (
     <Sheet open={!!tool} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto bg-[#FFFFFF] p-0 sm:max-w-[860px]" data-testid={`tool-sheet-${tool}`}>
-        <div className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#FFFFFF]/95 px-5 py-3 backdrop-blur">
+      <SheetContent side="right" className="w-full overflow-y-auto bg-[#FFFFFF] p-0 sm:max-w-[860px] [&>button.absolute]:hidden" data-testid={`tool-sheet-${tool}`}>
+        <div className="sticky top-0 z-10 flex items-center border-b border-[#E2E8F0] bg-[#FFFFFF]/95 px-5 py-3 backdrop-blur">
           <SheetTitle className="text-[15px] font-semibold text-[#1A2838]">{TOOL_TITLES[tool]}</SheetTitle>
+          <button type="button" onClick={onClose} aria-label="Close" className="ml-auto rounded-md p-1.5 text-[#64748B] transition-colors hover:bg-[#F1F5F9] hover:text-[#1A2838] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#215273]" data-testid="tool-sheet-close"><X className="h-4 w-4" /></button>
         </div>
         <div className="px-4 py-5 sm:px-6">
           {tool === "details" && <IntakeTask key={sheet.project.rev} {...props} />}
