@@ -19,7 +19,7 @@ export default function AppHeader({ onHistory }) {
         <Brand />
         <div className="flex items-center gap-1 sm:gap-2">
           <span data-testid="header-user-name" className="hidden text-xs text-slate-500 md:inline">
-            {user?.name} · {user?.firm_name}
+            {user?.firm_name || user?.name}
           </span>
           {onHistory && (
             <Button variant="ghost" size="sm" onClick={onHistory} data-testid="history-drawer-trigger">

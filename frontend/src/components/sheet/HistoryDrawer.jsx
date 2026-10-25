@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { api, errText } from "@/lib/api";
 import { fmtTime } from "@/lib/format";
 
@@ -15,7 +15,6 @@ export default function HistoryDrawer({ open, onOpenChange, rev }) {
       <SheetContent className="w-full overflow-y-auto sm:max-w-md" data-testid="history-drawer">
         <SheetHeader>
           <SheetTitle>History</SheetTitle>
-          <SheetDescription>Every change and response, newest first. This is the receipt.</SheetDescription>
         </SheetHeader>
         {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
         {!data && !error && <p className="mt-4 text-sm text-slate-500">Loading…</p>}
