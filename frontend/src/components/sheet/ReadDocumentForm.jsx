@@ -47,7 +47,10 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
     if (file) takeFile(file);
   };
 
+  const [preparing, setPreparing] = useState(false);
   const loadSamplePdf = async (scanned = false) => {
+    setPreparing(true);
+    setErrors([]);
     try {
       const { data } = await api.get(`/project/sample-pdf${scanned ? "?scanned=true" : ""}`, { responseType: "blob" });
       const q = demo?.pdf || {};
@@ -55,6 +58,7 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
       setF({ ...EMPTY, kind: q.kind || "quote", label: label || "", source_date: q.source_date || "" });
       takeFile(new File([data], (scanned ? "scanned-" : "") + (q.filename || "sample.pdf"), { type: "application/pdf" }));
     } catch (e) { setErrors(errList(e)); }
+    finally { setPreparing(false); }
   };
   const [dragging, setDragging] = useState(false);
   const onDrop = (e) => {
@@ -66,6 +70,7 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
 
   const submit = async () => {
     setBusy(true);
+    setErrors([]);
     try {
       let data;
       if (pdf) {
@@ -106,8 +111,8 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
           {demo.documents.map((s) => (
             <Button key={s.key} size="sm" variant="outline" onClick={() => { setPdf(null); setF({ ...s, filename: null }); }} data-testid={`read-sample-${s.key}-button`}>{s.label}</Button>
           ))}
-          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(false)} data-testid="read-sample-pdf-button">{demo.pdf.label}</Button>
-          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(true)} data-testid="read-sample-scanned-pdf-button">{demo.pdf.scanned_label}</Button>
+          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(false)} disabled={preparing} data-testid="read-sample-pdf-button">{demo.pdf.label}</Button>
+          <Button size="sm" variant="outline" onClick={() => loadSamplePdf(true)} disabled={preparing} data-testid="read-sample-scanned-pdf-button">{demo.pdf.scanned_label}</Button>
         </div>
       )}
       <div className="grid gap-3 sm:grid-cols-3">
@@ -139,8 +144,8 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
         <Textarea rows={7} className="font-mono text-xs" placeholder="Paste the document text here, or drop / choose a PDF or text file…" value={f.text} onChange={set("text")} data-testid="read-text-input" />
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={submit} disabled={busy} data-testid="read-submit-button">
-          {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Reading… (up to 2 min)</> : "Read document"}
+        <Button onClick={submit} disabled={busy || preparing} data-testid="read-submit-button">
+          {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Reading… (up to 2 min)</> : preparing ? <><Loader2 className="h-4 w-4 animate-spin" /> Preparing sample PDF…</> : "Read document"}
         </Button>
         <input ref={fileRef} type="file" accept={ALL_EXT.join(",")} className="hidden" onChange={pickFile} data-testid="read-file-input" />
         <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={busy} data-testid="read-file-button"><FileUp className="h-4 w-4" /> Choose PDF or text file</Button>

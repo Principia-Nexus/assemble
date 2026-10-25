@@ -10,10 +10,15 @@ import { useDemoContent } from "@/lib/demoContent";
 import AmendmentPanel from "./AmendmentPanel";
 import ChangeRequests from "./ChangeRequests";
 
+export function openConditions(cur) {
+  const fromResponses = cur.partners.filter((p) => p.response?.conditions).map((p) => ({ scope: p.name, text: p.response.conditions, source: "their response" }));
+  return [...(cur.checker.open_conditions || []), ...fromResponses];
+}
+
 function nextAction(sheet) {
   const cur = sheet.current;
   if (!cur) return "Prepare a draft first.";
-  if (sheet.preview) return "Review the amendment preview below, then discard it or select the revised terms.";
+  if (sheet.preview) return "Review the amendment preview below. Save and recheck any edits, then discard it or select it.";
   if (cur.checker.overall === "fail") return "The current plan fails";
   const open = sheet.change_requests.filter((c) => c.status === "open");
   if (open.length) return `Resolve ${open.length} open change request(s): open one as an amendment preview or close it.`;
@@ -22,8 +27,36 @@ function nextAction(sheet) {
   if (st.some((s) => ["no_link", "link_not_shared", "awaiting", "needs_rereview", "expired"].includes(s)))
     return "Some partners have not answered these exact terms yet. No response is not agreement.";
   if (cur.checker.overall === "unknown") return "Every partner answered, but some checks cannot run because inputs are unknown.";
-  if (st.includes("confirmed_conditional")) return "Every partner confirmed, some with conditions that stay open until you resolve them.";
+  const n = openConditions(cur).length;
+  if (n) return `Every partner confirmed these terms and the checks pass, but ${n} condition${n > 1 ? "s are" : " is"} still open. Resolve ${n > 1 ? "them" : "it"} with the customer and partners before you commit to the bid.`;
   return "Every partner confirmed these proposal-stage terms and the plan passes every check. This is not an award, contract or crew hold.";
+}
+
+function Fact({ label, value, tone, testId }) {
+  const tones = { ok: "text-emerald-800", bad: "text-red-800", wait: "text-amber-800", none: "text-slate-700" };
+  return (
+    <div className="min-w-0 px-4 py-3" data-testid={testId}>
+      <dt className="text-xs text-slate-500">{label}</dt>
+      <dd className={`mt-0.5 text-sm font-semibold tabular-nums ${tones[tone]}`}>{value}</dd>
+    </div>
+  );
+}
+
+function SummaryStrip({ cur }) {
+  const rule = (k) => cur.checker.rules.find((r) => r.key === k)?.status;
+  const sched = ["capacity", "crew_week", "deadlines", "owner"].map(rule);
+  const fits = sched.includes("fail") ? "bad" : sched.includes("unknown") ? "wait" : "ok";
+  const budget = rule("ceiling");
+  const confirmed = cur.partners.filter((p) => ["confirmed", "confirmed_conditional"].includes(p.status)).length;
+  const open = openConditions(cur).length;
+  return (
+    <dl data-testid="decide-summary-strip" className="grid grid-cols-2 divide-x divide-y divide-slate-100 rounded-md border border-slate-200 bg-white md:grid-cols-4 md:divide-y-0">
+      <Fact testId="decide-q-schedule" label="Does the schedule fit?" value={{ ok: "Yes", bad: "No", wait: "Not known yet" }[fits]} tone={fits} />
+      <Fact testId="decide-q-budget" label="Within budget?" value={budget === "pass" ? `Yes · ${money(cur.checker.total_cents)} of ${money(cur.checker.ceiling_cents)}` : budget === "fail" ? `No · ${money(cur.checker.total_cents)}` : "Not known yet"} tone={budget === "pass" ? "ok" : budget === "fail" ? "bad" : "wait"} />
+      <Fact testId="decide-q-confirmed" label="Confirmed these terms" value={`${confirmed} of ${cur.partners.length} partners`} tone={confirmed === cur.partners.length && confirmed > 0 ? "ok" : "wait"} />
+      <Fact testId="decide-q-open" label="Still unresolved" value={open ? `${open} condition${open > 1 ? "s" : ""}` : "None stated"} tone={open ? "wait" : "none"} />
+    </dl>
+  );
 }
 
 function CustomerChangeForm({ sheet, act, busy, onDone }) {
@@ -71,7 +104,7 @@ export default function DecideTask(props) {
   const cur = sheet.current;
   if (!cur) return <p data-testid="decide-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Prepare a draft first.</p>;
   const declined = cur.partners.filter((p) => p.status === "declined");
-  const conds = cur.partners.filter((p) => p.response?.conditions || p.terms.conditions);
+  const conds = openConditions(cur);
   return (
     <section data-testid="task-decide" className="space-y-6">
       <TaskHeader step={4} title="Decide next action" lead="Each partner's status against the exact terms they saw, open conditions, and any gap. Changes go through an amendment preview first.">
@@ -80,6 +113,15 @@ export default function DecideTask(props) {
         <Button variant="ghost" asChild data-testid="decide-summary-link"><Link to="/summary"><FileText className="h-4 w-4" /> Printable summary</Link></Button>
       </TaskHeader>
       <div data-testid="decide-next-action" className="rounded-md border-l-4 border-slate-900 bg-white p-4 text-sm text-slate-800"><span className="eyebrow mr-2">Next</span>{nextAction(sheet)}</div>
+      <SummaryStrip cur={cur} />
+      {conds.length > 0 && (
+        <div data-testid="decide-open-conditions" className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Unresolved conditions · a stated prerequisite is not proof it's met</p>
+          <ul className="mt-1 space-y-1 text-xs">
+            {conds.map((c, i) => <li key={i} data-testid={`decide-condition-${i}`}><span className="font-semibold">{c.scope}:</span> {c.text}{c.source && <span className="text-amber-700"> · {c.source}</span>}</li>)}
+          </ul>
+        </div>
+      )}
       {showForm && !sheet.preview && <CustomerChangeForm sheet={sheet} act={act} busy={busy} onDone={() => setShowForm(false)} />}
       <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
         <table className="w-full min-w-[620px] text-sm">
@@ -90,25 +132,19 @@ export default function DecideTask(props) {
                 <td className="p-3 font-semibold">{p.name}</td>
                 <td className="p-3"><StatusPill testId={`decide-partner-status-${slug(p.partner_id)}`} tone={STATUS[p.status].tone} label={STATUS[p.status].label} /></td>
                 <td className="p-3 font-mono text-xs">{p.terms.sites.map((s) => s.site_id).join(", ")}</td>
-                <td className="p-3 font-mono">{money(p.terms.price_total_cents)}</td>
-                <td className="p-3 text-xs text-slate-500">{p.response ? `${fmtTime(p.response.created_at)}${p.response.carried_from ? " · carried over" : ""}` : "No response"}</td>
+                <td className="p-3 font-mono tabular-nums">{money(p.terms.price_total_cents)}</td>
+                <td className="p-3 text-xs text-slate-500">{p.response ? (p.response.carried_from ? `${fmtTime(p.response.responded_at || p.response.created_at)} · carried to v${cur.version.number} ${fmtTime(p.response.created_at)}` : fmtTime(p.response.created_at)) : "No response"}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {(declined.length > 0 || conds.length > 0) && (
+      {declined.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
           {declined.length > 0 && (
             <div data-testid="decide-decline-gaps" className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-900">
               <p className="font-semibold">Gap opened by a decline</p>
               {declined.map((p) => <p key={p.partner_id} className="mt-1 text-xs">{p.name}: {p.terms.sites.map((s) => s.site_id).join(", ")} have no confirmed owner.</p>)}
-            </div>
-          )}
-          {conds.length > 0 && (
-            <div data-testid="decide-open-conditions" className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <p className="font-semibold">Unresolved conditions</p>
-              {conds.map((p) => <p key={p.partner_id} className="mt-1 text-xs">{p.name}: {[p.terms.conditions, p.response?.conditions].filter(Boolean).join(" · ")}</p>)}
             </div>
           )}
         </div>

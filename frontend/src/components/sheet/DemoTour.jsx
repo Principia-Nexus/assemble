@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Minus, Plus, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { useDemoContent } from "@/lib/demoContent";
 
 const KEY = "assemble_tour_step";
@@ -14,19 +15,31 @@ const reassigned = (v, owners) => v.sites.map((s) => ({
 const ACTIONS = {
   draft: (a, s, act) => act("post", "/project/draft", { rev: s.project.rev, partner_ids: a.partner_ids, include_own: true }, "Candidate checked"),
   share_links: async (a, s, act) => {
+    if (s.current?.checker.overall === "fail") { toast.error("The current plan fails a check, so review links stay locked. Generate the passing plan first."); return; }
     for (const p of s.current?.partners || []) {
       const r = p.link ? { ok: true, data: { link: p.link } } : await act("post", "/project/links", { partner_id: p.partner_id });
-      if (r.ok && !r.data.link.shared_at) await act("post", `/project/links/${r.data.link.token}/shared`, {});
+      if (r.ok && !r.data.link.shared_at && !p.response) await act("post", `/project/links/${r.data.link.token}/shared`, {});
     }
   },
   customer_change: async (a, s, act, demo) => {
-    const r = await act("post", "/project/change-requests", demo.customer_change);
+    if (s.preview) { toast.message("An amendment preview is already open, shown below."); return; }
+    const open = s.change_requests.find((c) => c.status === "open" && !c.partner_id);
+    if (!open && s.change_requests.some((c) => c.status === "applied" && c.source === "customer")) {
+      toast.message(`This copy already includes the customer change in plan v${s.current.version.number}. Reset the demo copy to replay it.`);
+      return;
+    }
+    const r = open ? { ok: true, data: { sheet: s } } : await act("post", "/project/change-requests", demo.customer_change);
     if (!r.ok) return;
-    const cr = r.data.sheet.change_requests.find((c) => c.status === "open");
-    await act("post", "/project/preview", { rev: r.data.sheet.project.rev, change_request_id: cr.cr_id }, "Amendment preview opened");
+    const cr = open || r.data.sheet.change_requests.find((c) => c.status === "open" && !c.partner_id);
+    return act("post", "/project/preview", { rev: r.data.sheet.project.rev, change_request_id: cr.cr_id }, "Amendment preview opened");
   },
-  reassign: (a, s, act) => s.preview && act("put", "/project/preview", { rev: s.project.rev, sites: reassigned(s.preview.version, a.owners), adjustments: {} }, "Repair checked"),
-  select: (a, s, act) => s.preview && act("post", "/project/preview/select", { rev: s.project.rev }, "Revised terms selected"),
+  reassign: (a, s, act) => (s.preview
+    ? act("put", "/project/preview", { rev: s.project.rev, sites: reassigned(s.preview.version, a.owners), adjustments: {} }, "Repair checked")
+    : toast.message("Open the customer change as a preview first (previous step).")),
+  select: (a, s) => {
+    if (!s.preview) { toast.message("There is no open preview to select. This copy may already include the repair."); return; }
+    toast.message("Check the preview, then press Select checked revision and confirm.");
+  },
 };
 
 export function focusEl(testId) {
@@ -48,12 +61,18 @@ export default function DemoTour({ sheet, act, busy, goTo, onClose }) {
   const idx = Math.min(i, tour.length - 1);
   const step = tour[idx];
   const go = (n) => { setI(n); localStorage.setItem(KEY, String(n)); };
-  const show = (st = step) => {
-    goTo(st.task);
-    if (st.tab) { sessionStorage.setItem("assemble_intake_tab", st.tab); window.dispatchEvent(new CustomEvent("assemble:intake-tab", { detail: st.tab })); }
-    if (st.focus) focusEl(st.focus);
+  const show = (st = step, task = st.task) => {
+    goTo(task);
+    if (task === "intake") { const t = st.tab || "form"; sessionStorage.setItem("assemble_intake_tab", t); window.dispatchEvent(new CustomEvent("assemble:intake-tab", { detail: t })); }
+    if (st.focus) focusEl(task === st.task ? st.focus : "amendment-panel");
   };
-  const run = async () => { await ACTIONS[step.action.type](step.action, sheet, act, demo); show(); };
+  const run = async () => {
+    const r = await ACTIONS[step.action.type](step.action, sheet, act, demo);
+    const s = r?.data?.sheet || sheet;
+    const toPreview = s.preview && ["draft", "ask"].includes(step.task);
+    show(step, toPreview || step.action.type === "select" ? "decide" : step.task);
+    if (step.action.type === "select" && s.preview) focusEl("amend-select-button");
+  };
 
   return (
     <aside data-testid="demo-tour" className="no-print fixed inset-x-3 bottom-3 z-40 rounded-md border border-slate-900 bg-white shadow-2xl sm:left-auto sm:right-5 sm:w-96">

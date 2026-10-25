@@ -151,7 +151,33 @@ def validate_intake(raw):
             "scope": text(p.get("scope"), f"{label} scope", e, 1000),
             "valid_until": iso_date(p.get("valid_until"), f"{label} valid until", e),
         })
+    raw_conds = raw.get("job_conditions") or []
+    if len(raw_conds) > 30:
+        e.append("A job can have at most 30 job-wide conditions.")
+    it["job_conditions"] = []
+    for i, c in enumerate(raw_conds[:30]):
+        t = text(c.get("text"), f"Job condition {i + 1}", e, 500)
+        if not t:
+            e.append(f"Job condition {i + 1}: describe the condition or remove it.")
+            continue
+        cid = c.get("id")
+        it["job_conditions"].append({
+            "id": cid if isinstance(cid, str) and PID_RE.match(cid) else "jc_" + uuid.uuid4().hex[:8],
+            "text": t, "source": text(c.get("source"), f"Job condition {i + 1} source", e, 300),
+            "resolved": c.get("resolved") is True,
+        })
     return it, e
+
+
+def open_conditions(it, v=None):
+    out = [{"scope": "Job", "text": c["text"], "source": c.get("source")}
+           for c in it.get("job_conditions") or [] if not c.get("resolved")]
+    if v:
+        for o in sorted(partner_owners(v), key=lambda x: owner_name(v, x)):
+            p = pmap(v).get(o) or {}
+            if p.get("conditions"):
+                out.append({"scope": p.get("name"), "text": p["conditions"], "source": None})
+    return out
 
 
 # ---------- helpers ----------
@@ -238,7 +264,7 @@ def terms_hash(t):
 def fmt(c):
     if c is None:
         return "unknown"
-    return f"${c / 100:,.2f}".replace(".00", "")
+    return ("-" if c < 0 else "") + f"${abs(c) / 100:,.2f}".replace(".00", "")
 
 
 # ---------- gap analysis ----------
@@ -282,6 +308,8 @@ def gap_analysis(it):
     return {
         "provisional": True,
         "unknowns": unknowns,
+        "open_conditions": open_conditions(it) + [{"scope": p["name"], "text": p["conditions"], "source": None}
+                                                  for p in it.get("partners") or [] if p.get("conditions")],
         "weekly": weekly,
         "site_count": len(it.get("sites") or []),
         "sites_without_deadline": sum(1 for s in it.get("sites") or [] if s.get("deadline_week") is None),
@@ -444,7 +472,20 @@ def check(v):
                              f"Budget headroom {fmt(headroom)} (headroom only, not profit or savings).")
     rules.append(ce)
 
+    pay = _rule("payments", "Resulting payments are not negative")
+    for o in sorted(partner_owners(v) | set(v.get("adjustments") or {}), key=lambda x: owner_name(v, x)):
+        t = partner_terms(v, o)
+        if t["price_total_cents"] is not None and t["price_total_cents"] < 0:
+            _bump(pay, "fail", f"{t['partner_name']}: total {fmt(t['price_total_cents'])} after a "
+                               f"{fmt(t['adjustment_cents'])} adjustment. A discount cannot exceed the sites' price.")
+    if not pay["details"]:
+        pay["details"].append("Every partner's total, advance and balance is zero or more.")
+    rules.append(pay)
+
     co = _rule("conditions", "Stated payment and prerequisite conditions")
+    for c in v.get("job_conditions") or []:
+        if not c.get("resolved"):
+            co["details"].append(f"Job condition (stays open until resolved): {c['text']}")
     for o in sorted(partner_owners(v), key=lambda x: owner_name(v, x)):
         p = P.get(o) or {}
         for key, label in [("payer", "payer"), ("advance_pct", "advance"), ("balance_terms", "balance terms"),
@@ -457,6 +498,7 @@ def check(v):
             _bump(co, "fail", f"{p.get('name')}: terms expired on {p['valid_until']}; recheck needed.")
     if not co["details"]:
         co["details"].append("Payment terms are stated for every partner in the plan.")
+    co["open_count"] = len(open_conditions(v, v))
     rules.append(co)
 
     overall = max((r["status"] for r in rules), key=lambda s: RANK[s]) if rules else "unknown"
@@ -469,6 +511,7 @@ def check(v):
         note = ("This candidate passes every check. It came from a single greedy pass, so the search is incomplete "
                 "and cheaper valid plans may exist.")
     return {"overall": overall, "rules": rules, "weekly": weekly_load(v), "total_cents": total,
+            "open_conditions": open_conditions(v, v),
             "ceiling_cents": ceiling, "headroom_cents": headroom, "note": note}
 
 

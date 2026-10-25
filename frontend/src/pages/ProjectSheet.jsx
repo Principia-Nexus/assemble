@@ -18,6 +18,7 @@ import DecideTask from "@/components/sheet/DecideTask";
 import HistoryDrawer from "@/components/sheet/HistoryDrawer";
 import DemoTour from "@/components/sheet/DemoTour";
 import { clearDemoContent } from "@/lib/demoContent";
+import { RouteDenied } from "@/components/RouteDenied";
 
 export default function ProjectSheet() {
   const { user } = useAuth();
@@ -26,7 +27,7 @@ export default function ProjectSheet() {
   const [busy, setBusy] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [tourOpen, setTourOpen] = useState(() => !localStorage.getItem("assemble_tour_closed"));
+  const [tourOpen, setTourOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -69,7 +70,7 @@ export default function ProjectSheet() {
   const info = useMemo(() => (sheet ? stepInfo(sheet) : null), [sheet]);
   useEffect(() => { if (info && !selected) setSelected(info.current); }, [info, selected]);
 
-  if (loadError) return <div className="p-10 text-sm text-red-700" data-testid="sheet-load-error">{loadError}</div>;
+  if (loadError) return <RouteDenied message={loadError} />;
   if (sheet === undefined) return <Loading label="Loading your job sheet" />;
 
   const reset = async () => { clearDemoContent(); await act("post", "/project/demo-reset", {}, "Demo copy reset"); };

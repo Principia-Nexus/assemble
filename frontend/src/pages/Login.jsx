@@ -33,28 +33,40 @@ function Field({ id, label, ...props }) {
 
 function DemoAccounts({ onUse, busy }) {
   const [demo, setDemo] = useState(null);
+  const [showPartners, setShowPartners] = useState(false);
   useEffect(() => {
     api.get("/auth/demo-accounts").then((r) => setDemo(r.data)).catch(() => setDemo(false));
   }, []);
   if (demo === false) return <p className="text-xs text-red-700">Demo accounts could not be loaded.</p>;
-  if (!demo) return <p className="text-xs text-slate-500">Loading demo accounts…</p>;
+  if (!demo) return <p className="text-xs text-slate-500">Loading the example…</p>;
+  const org = demo.accounts.find((a) => a.key === "organizer");
+  const partners = demo.accounts.filter((a) => a.key !== "organizer");
   return (
     <div data-testid="demo-accounts-panel" className="space-y-3">
-      <span className="eyebrow">Practice logins</span>
-      <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
-        {demo.accounts.map((a) => (
-          <li key={a.key} className="flex items-center justify-between gap-3 px-3 py-2.5">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-900">{a.firm}</p>
-              <p className="truncate font-mono text-[11px] text-slate-500">{a.role} · {a.email}</p>
-            </div>
-            <Button size="sm" variant={a.key === "organizer" ? "default" : "outline"} disabled={busy}
-              onClick={() => onUse(a.email, demo.password)} data-testid={`signin-demo-${a.key}-button`}>
-              Use
-            </Button>
-          </li>
-        ))}
-      </ul>
+      {org && (
+        <Button className="h-14 w-full flex-col gap-0 text-base" disabled={busy} onClick={() => onUse(org.email, demo.password)} data-testid="signin-demo-organizer-button">
+          Try the example
+          <span className="text-[11px] font-normal opacity-80">Synthetic example · organizer view</span>
+        </Button>
+      )}
+      <button type="button" className="mx-auto block text-xs font-medium text-slate-600 underline-offset-4 hover:underline" onClick={() => setShowPartners(!showPartners)} aria-expanded={showPartners} data-testid="signin-review-as-partner-toggle">
+        {showPartners ? "Hide partner logins" : "Review as a partner"}
+      </button>
+      {showPartners && (
+        <ul data-testid="signin-partner-list" className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+          {partners.map((a) => (
+            <li key={a.key} className="flex items-center justify-between gap-3 px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-900">{a.firm}</p>
+                <p className="truncate font-mono text-[11px] text-slate-500">{a.role} · {a.email}</p>
+              </div>
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => onUse(a.email, demo.password)} data-testid={`signin-demo-${a.key}-button`} aria-label={`Sign in as ${a.firm}`}>
+                Use
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -70,14 +82,23 @@ export default function Login() {
   const [tab, setTab] = useState("signin");
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  if (user) return <Navigate to={next || homeFor(user)} replace />;
+  const fits = (u) => {
+    if (!next) return false;
+    if (next.startsWith("/review/")) return true;
+    if (next.startsWith("/project") || next.startsWith("/summary")) return !!u?.firm_id;
+    if (next.startsWith("/reviews")) return !u?.firm_id;
+    return true;
+  };
+  const dest = (u) => (fits(u) ? next : homeFor(u));
+
+  if (user) return <Navigate to={dest(user)} replace />;
 
   const run = async (fn) => {
     setBusy(true);
     setError("");
     try {
       const u = await fn();
-      navigate(next || homeFor(u), { replace: true });
+      navigate(dest(u), { replace: true });
     } catch (e) {
       setError(errText(e));
     } finally {
@@ -88,12 +109,18 @@ export default function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#E8DCC4]">
       <section className="flex w-full max-w-md flex-col justify-center gap-8 px-5 py-10 sm:px-8">
-        <div className="flex justify-center"><Brand /></div>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Brand />
+          <p data-testid="signin-promise" className="text-2xl font-semibold tracking-tight text-slate-900">Check the job. Agree the plan.</p>
+          <p className="text-sm text-slate-600">See if your trusted partners can cover a multi-site job, then get each one to confirm their exact terms.</p>
+        </div>
         {next?.startsWith("/review/") && (
           <p data-testid="signin-review-notice" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
             Sign in with the email the organizer invited to open your private review.
           </p>
         )}
+        {tab === "signin" && <DemoAccounts busy={busy} onUse={(email, pw) => run(() => login(email, pw))} />}
+        <div className="flex items-center gap-3 text-[11px] uppercase tracking-wider text-slate-500"><span className="h-px flex-1 bg-slate-300" />or sign in<span className="h-px flex-1 bg-slate-300" /></div>
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="signin" data-testid="signin-tab">Sign in</TabsTrigger>
@@ -122,7 +149,6 @@ export default function Login() {
         </Tabs>
         {error && <p data-testid="signin-error" className="-mt-4 text-sm text-red-700">{error}</p>}
         <GoogleButton next={next} />
-        {tab === "signin" && <DemoAccounts busy={busy} onUse={(email, pw) => run(() => login(email, pw))} />}
       </section>
     </div>
   );

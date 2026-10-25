@@ -20,6 +20,7 @@ class CreateIn(BaseModel):
 
 class RevIn(BaseModel):
     rev: int
+    expected_version_id: Optional[str] = None
 
 
 class IntakeIn(BaseModel):
@@ -102,15 +103,17 @@ async def sheet(project_id):
     cur, pre = await get_version(p.get("current_version_id")), await get_version(p.get("preview_version_id"))
     out = {"project": {k: p.get(k) for k in ("project_id", "name", "rev", "synthetic", "sandbox_id", "created_at")},
            "intake": p["intake"], "gap": L.gap_analysis(p["intake"]), "current": None, "preview": None}
+    jc = p["intake"].get("job_conditions") or []
     if cur:
-        out["current"] = {"version": cur, "checker": L.check(cur), "partners": await partner_statuses(p, cur)}
+        out["current"] = {"version": cur, "checker": L.check({**cur, "job_conditions": jc}),
+                          "partners": await partner_statuses(p, cur)}
     if pre:
         d = L.diff(cur, pre) if cur else None
         if d:
             st = {x["partner_id"]: x["status"] for x in out["current"]["partners"]}
             for x in d["partners"]:
                 x["current_status"] = st.get(x["partner_id"])
-        out["preview"] = {"version": pre, "checker": L.check(pre), "diff": d}
+        out["preview"] = {"version": pre, "checker": L.check({**pre, "job_conditions": jc}), "diff": d}
     out["links_count"] = await db.links.count_documents({"project_id": project_id})
     out["change_requests"] = await db.change_requests.find({"project_id": project_id}, {"_id": 0}).sort(
         "created_at", -1).to_list(100)
@@ -232,6 +235,9 @@ async def start_preview(body: PreviewIn, user=Depends(current_user)):
             if m["site_id"] in smap:
                 smap[m["site_id"]]["deadline_week"] = m["new_week"]
                 assignments.setdefault(m["site_id"], {})["week"] = m["new_week"]
+        if cr.get("partner_id") and cr["partner_id"] not in L.partner_owners(cur):
+            raise HTTPException(409, f"This request came from {cr['partner_name']}, who has no sites in the current plan "
+                                     f"v{cur['number']}. It cannot change this plan; close it instead.")
         if cr.get("proposed_total_cents") is not None and cr.get("partner_id"):
             pid = cr["partner_id"]
             n = L.site_owner_counts({"sites": sites, "assignments": assignments}).get(pid, 0)
@@ -282,9 +288,16 @@ async def edit_preview(body: PreviewEditIn, user=Depends(current_user)):
         if pid not in P:
             e.append(f"Unknown partner {pid} in price adjustments.")
             continue
-        c = L.money(val, f"Price adjustment for {pid}", e, signed=True)
+        name = L.owner_name(pre, pid)
+        c = L.money(val, f"Price adjustment for {name}", e, signed=True)
         if c:
             adjustments[pid] = c
+    trial = {**pre, "sites": sites, "assignments": assignments, "adjustments": adjustments}
+    for pid, c in adjustments.items():
+        t = L.partner_terms(trial, pid)
+        if t["price_total_cents"] is not None and t["price_total_cents"] < 0:
+            e.append(f"Price adjustment for {t['partner_name']}: {L.fmt(c)} would make their total "
+                     f"{L.fmt(t['price_total_cents'])}. The largest discount allowed is {L.fmt(t['price_total_cents'] - c)}.")
     if e:
         bad(e)
     await claim_rev(p, body.rev)
@@ -320,6 +333,10 @@ async def select_preview(body: RevIn, user=Depends(current_user)):
     cur, pre = await get_version(p.get("current_version_id")), await get_version(p.get("preview_version_id"))
     if not pre or not cur:
         raise HTTPException(409, "There is no open amendment preview to select.")
+    if body.expected_version_id and body.expected_version_id != pre["version_id"]:
+        raise HTTPException(409, "The preview changed since you checked it. Review it again before selecting.")
+    if L.check(pre)["overall"] == "fail":
+        raise HTTPException(409, f"Preview v{pre['number']} fails a check. Repair it and recheck before selecting it.")
     await claim_rev(p, body.rev, {"current_version_id": pre["version_id"], "preview_version_id": None})
     await db.versions.update_one({"version_id": cur["version_id"]}, {"$set": {"state": "superseded"}})
     await db.versions.update_one({"version_id": pre["version_id"]}, {"$set": {"state": "current"}})
@@ -333,6 +350,7 @@ async def select_preview(body: RevIn, user=Depends(current_user)):
             if resp:
                 await db.responses.insert_one({**resp, "response_id": new_id("rsp"), "version_id": pre["version_id"],
                                                "version_number": pre["number"], "carried_from": resp["response_id"],
+                                               "responded_at": resp.get("responded_at") or resp["created_at"],
                                                "idempotency_key": f"carry:{resp['response_id']}:{pre['version_id']}",
                                                "created_at": now_iso()})
                 carried.append(tn["partner_name"])
@@ -355,6 +373,8 @@ async def create_link(body: LinkIn, user=Depends(current_user)):
         raise HTTPException(409, "Prepare a draft first.")
     if body.partner_id not in L.partner_owners(cur):
         raise HTTPException(400, "This partner has no sites in the current plan.")
+    if L.check(cur)["overall"] == "fail":
+        raise HTTPException(409, f"Plan v{cur['number']} fails a check. Repair the draft before asking partners to confirm it.")
     partner = next((x for x in p["intake"]["partners"] if x["partner_id"] == body.partner_id), None) or \
         next(x for x in cur["partners"] if x["partner_id"] == body.partner_id)
     if not partner.get("email"):

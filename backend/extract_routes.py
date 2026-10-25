@@ -19,6 +19,7 @@ from ocr import ocr_pdf, scanned_pdf
 router = APIRouter(prefix="/api/project")
 MAX_PDF = 10 * 1024 * 1024
 MODEL = ("anthropic", "claude-sonnet-5-5")
+PROMPT_VERSION = "extract-v2"
 LLM_TIMEOUT = 120
 KINDS = {"brief": "Customer brief", "quote": "Partner quote", "email": "Email", "other": "Other document"}
 CREW_SIZE_RE = re.compile(r"\b(\d+|one|two|three|four|five|six)[\s-]*(man|men|person|people|member|tech)\b", re.I)
@@ -53,6 +54,7 @@ Rules:
 - If the document narrows availability (for example "week three only"), report capacity 0 for each excluded week and say so in "note".
 - Money: plain US dollar digits without symbols or commas (e.g. "12800"). Percent: integer. Weeks: integer counted from week 1 of the job. Dates: YYYY-MM-DD only when the full date is stated; otherwise list it in unknowns.
 - If the document contradicts itself, report each statement as its own fact and describe it in "conflicts".
+- A prerequisite or condition that applies to the whole job (site access, permits, customer approvals) is a "conditions" fact with "partner": null.
 Output ONLY one JSON object, no prose, no code fences."""
 
 SCHEMA = """{"facts":[{"field":"<one of: %s>","partner":"<firm name or null>","site":"<site id like S09 or null>","week":<int or null>,"value":"<string>","excerpt":"<verbatim>","note":"<short or empty>"}],"unknowns":["..."],"conflicts":["..."],"ignored_instructions":["..."]}"""
@@ -165,7 +167,10 @@ def make_fact(src, raw, it):
     value = s("value")
     excerpt = s("excerpt")[:300]
     issues = []
-    if scope == "partner" and not pname:
+    label_out = label
+    if field == "conditions" and not pname:
+        scope, label_out = "job_condition", "Job condition"
+    elif scope == "partner" and not pname:
         issues.append("No partner named for this fact.")
     if scope == "site" and not site:
         issues.append("No site id given for this fact.")
@@ -187,10 +192,12 @@ def make_fact(src, raw, it):
     if not loc:
         issues.append("The quoted excerpt was not found in the source, so it is unverified.")
     target = "|".join([field, pid or (pname or "").lower(), site or "", str(week or "")])
+    if scope == "job_condition":
+        target = "job_condition|" + norm(value)[:80]
     return {
         "fact_id": new_id("fact"), "project_id": src["project_id"], "source_id": src["source_id"],
         "source_label": src["label"], "source_kind": src["kind"], "source_order": src["order"],
-        "field": field, "label": label, "scope": scope, "partner_id": pid, "partner_name": pname, "site_id": site,
+        "field": field, "label": label_out, "scope": scope, "partner_id": pid, "partner_name": pname, "site_id": site,
         "week": week, "target": target, "original_value": value, "value": value, "parsed": parsed,
         "excerpt": excerpt, "location": loc, "note": s("note")[:300],
         "status": "invalid" if issues else "proposed", "issues": issues, "corrections": [], "created_at": now_iso(),
@@ -223,7 +230,8 @@ async def run_extraction(src, p, user):
     if facts:
         await db.facts.insert_many([dict(f) for f in facts])
     await db.sources.update_one({"source_id": src["source_id"]}, {"$set": {
-        "status": "read", "error": None, "read_at": now_iso(), "fact_count": len(facts), **lists}})
+        "status": "read", "error": None, "read_at": now_iso(), "fact_count": len(facts),
+        "reader": {"model": MODEL[1], "prompt_version": PROMPT_VERSION}, **lists}})
     await log_event(p["project_id"], org(user), "extract",
                     f"Read {KINDS.get(src['kind'])} \"{src['label']}\": {len(facts)} proposed fact(s). Nothing applied yet.",
                     details=[f"Ignored instruction in document: {x}" for x in lists["ignored_instructions"]])
@@ -232,6 +240,12 @@ async def run_extraction(src, p, user):
 async def fail(src, p, user, msg):
     await db.sources.update_one({"source_id": src["source_id"]}, {"$set": {"status": "failed", "error": msg}})
     await log_event(p["project_id"], org(user), "extract", f"Reading \"{src['label']}\" failed: {msg}")
+
+
+def norm(v):
+    if isinstance(v, str):
+        return re.sub(r"[^a-z0-9@.]+", " ", v.lower().replace("(synthetic)", "")).strip()
+    return str(v)
 
 
 def readings_from(facts):
@@ -245,8 +259,10 @@ def readings_from(facts):
         fs.sort(key=lambda f: (f["source_order"], f["created_at"]))
         usable = [f for f in fs if f["status"] != "invalid"]
         reading = usable[-1] if usable else None
-        values = {str(f["parsed"]) for f in usable}
-        out.append({"target": target, "label": fs[-1]["label"], "field": fs[-1]["field"],
+        values = {norm(f["parsed"]) for f in usable}
+        sources = {f["source_id"] for f in usable}
+        out.append({"target": target, "label": fs[-1]["label"], "field": fs[-1]["field"], "scope": fs[-1]["scope"],
+                    "corroborated": len(values) == 1 and len(sources) > 1,
                     "partner_name": fs[-1]["partner_name"], "site_id": fs[-1]["site_id"], "week": fs[-1]["week"],
                     "reading": reading, "facts": fs, "conflict": len(values) > 1})
     out.sort(key=lambda r: (r["partner_name"] or "", r["site_id"] or "", r["field"], r["week"] or 0))
@@ -434,7 +450,15 @@ async def reject_fact(fact_id: str, user=Depends(current_user)):
 
 def apply_fact(it, f):
     field, val = f["field"], f["parsed"]
-    scope = FIELDS[field][0]
+    scope = f.get("scope") or FIELDS[field][0]
+    if scope == "job_condition":
+        conds = it.setdefault("job_conditions", [])
+        if not any(norm(c["text"]) == norm(val) for c in conds):
+            loc = f.get("location") or {}
+            where = (f"page {loc['page']}, " if loc.get("page") else "") + f"line {loc.get('line', '?')}"
+            conds.append({"id": "jc_" + new_id("x")[-8:], "text": val, "source": f"{f['source_label']}, {where}",
+                          "resolved": False})
+        return
     key = INTAKE_KEY.get(field, field)
     weeks = it.get("weeks")
     if scope == "job":

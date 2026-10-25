@@ -36,10 +36,9 @@ export default function ExtractPanel({ sheet, act, busy }) {
     <div data-testid="extract-panel" className="space-y-4">
       <ReadDocumentForm intake={sheet.intake} synthetic={sheet.project.synthetic} onRead={onRead} />
       <SourcesList sources={data.sources} onRead={onRead} />
-      <ReadingsTable readings={data.readings} selected={selected} setSelected={setSelected} onRead={onRead} />
       {usable.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-900 bg-slate-900 p-3 text-white shadow-lg">
-          <p className="text-xs">{selected.length} of {usable.length} reading(s) selected. Using them updates the job details and recalculates the candidate.</p>
+        <div data-testid="readings-action-bar" className="sticky top-16 z-10 flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-900 bg-slate-900 p-3 text-white shadow-lg">
+          <p className="text-xs" data-testid="readings-selected-count">{selected.length} of {usable.length} reading(s) selected. Using them updates the job details and recalculates the candidate.</p>
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => setSelected(usable.map((r) => r.reading.fact_id))} data-testid="readings-select-all">Select all</Button>
             <Button size="sm" variant="secondary" disabled={busy || !selected.length} onClick={apply} data-testid="readings-apply-button">Use selected readings</Button>
@@ -47,6 +46,7 @@ export default function ExtractPanel({ sheet, act, busy }) {
         </div>
       )}
       <ErrorList errors={errors} testId="readings-apply-errors" />
+      <ReadingsTable readings={data.readings} selected={selected} setSelected={setSelected} onRead={onRead} />
     </div>
   );
 }

@@ -11,29 +11,33 @@ export const STEPS = [
 export function stepInfo(sheet) {
   const hasIntake = !!sheet.intake.weeks && sheet.intake.sites.length > 0;
   const partners = sheet.current?.partners || [];
-  const allShared = partners.length > 0 && partners.every((p) => p.link?.shared_at);
-  const done = { intake: hasIntake, draft: !!sheet.current, ask: allShared, decide: false };
-  const current = sheet.preview ? "decide" : !hasIntake ? "intake" : !sheet.current ? "draft" : !allShared ? "ask" : "decide";
+  const failing = sheet.current?.checker.overall === "fail";
+  const reached = (p) => !!p.response || p.status === "needs_rereview" || !!p.link?.shared_at;
+  const allAsked = partners.length > 0 && partners.every(reached);
+  const done = { intake: hasIntake, draft: !!sheet.current && !failing, ask: allAsked, decide: false };
+  const current = sheet.preview ? "decide" : !hasIntake ? "intake" : !sheet.current || failing ? "draft" : !allAsked ? "ask" : "decide";
   return { done, current };
 }
 
 export default function Stepper({ info, selected, onSelect }) {
   return (
-    <nav className="no-print mt-6 grid grid-cols-4 overflow-hidden rounded-md border border-slate-200 bg-white" aria-label="Tasks">
+    <nav className="no-print mt-5 grid grid-cols-4 overflow-hidden rounded-md border border-slate-200 bg-white" aria-label="Tasks">
       {STEPS.map((s, i) => {
         const active = selected === s.key;
         const isCurrent = info.current === s.key;
         return (
-          <button key={s.key} onClick={() => onSelect(s.key)} data-testid={`task-step-${s.key}`}
-            className={cn("relative flex flex-col items-start gap-1 border-r border-slate-200 px-3 py-3 text-left transition-colors last:border-r-0 sm:px-4",
+          <button key={s.key} onClick={() => onSelect(s.key)} data-testid={`task-step-${s.key}`} aria-current={active ? "step" : undefined}
+            className={cn("relative flex items-center gap-2.5 border-r border-slate-200 px-3 py-2.5 text-left transition-colors last:border-r-0 sm:px-4",
               active ? "bg-slate-900 text-white" : "hover:bg-slate-50")}>
-            <span className={cn("flex h-6 w-6 items-center justify-center rounded-sm border font-mono text-xs",
+            <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border font-mono text-xs",
               active ? "border-white/40" : info.done[s.key] ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 text-slate-600")}>
               {info.done[s.key] && !active ? <Check className="h-3.5 w-3.5" /> : i + 1}
             </span>
-            <span className="hidden text-sm font-semibold sm:block">{s.title}</span>
-            <span className={cn("hidden font-mono text-[10px] uppercase tracking-wider md:block", active ? "text-white/70" : "text-slate-500")}>
-              {isCurrent ? "Current task" : info.done[s.key] ? "\u00A0" : "Not yet"}
+            <span className="min-w-0">
+              <span className="hidden text-sm font-semibold sm:block">{s.title}</span>
+              {isCurrent && !active && (
+                <span data-testid={`task-step-${s.key}-next`} className="hidden font-mono text-[10px] uppercase tracking-wider text-slate-500 md:block">Next step</span>
+              )}
             </span>
           </button>
         );

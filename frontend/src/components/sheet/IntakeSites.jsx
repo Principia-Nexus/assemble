@@ -33,11 +33,11 @@ export default function IntakeSites({ form, setForm, weeks }) {
             <tbody>
               {form.sites.map((s, i) => (
                 <tr key={i} className="border-t border-slate-100">
-                  <td className="py-1.5 pr-2"><Input className="h-8 w-20 font-mono" value={s.site_id} onChange={(e) => upd(i, "site_id", e.target.value)} data-testid={`intake-site-id-${i}`} /></td>
-                  <td className="py-1.5 pr-2"><Input className="h-8" value={s.name} onChange={(e) => upd(i, "name", e.target.value)} data-testid={`intake-site-name-${i}`} /></td>
-                  <td className="py-1.5 pr-2"><Input className="h-8 w-20" inputMode="numeric" placeholder="unknown" value={s.deadline_week} onChange={(e) => upd(i, "deadline_week", e.target.value)} data-testid={`intake-site-deadline-${i}`} /></td>
-                  <td className="py-1.5 pr-2"><Input className="h-8" value={s.scope} onChange={(e) => upd(i, "scope", e.target.value)} data-testid={`intake-site-scope-${i}`} /></td>
-                  <td className="py-1.5"><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => remove(i)} aria-label="Remove site" data-testid={`intake-site-remove-${i}`}><Trash2 className="h-4 w-4" /></Button></td>
+                  <td className="py-1.5 pr-2"><Input className="h-8 w-20 font-mono" value={s.site_id} onChange={(e) => upd(i, "site_id", e.target.value)} aria-label={`Site row ${i + 1} ID`} data-testid={`intake-site-id-${i}`} /></td>
+                  <td className="py-1.5 pr-2"><Input className="h-8" value={s.name} onChange={(e) => upd(i, "name", e.target.value)} aria-label={`${s.site_id || `Site row ${i + 1}`} name`} data-testid={`intake-site-name-${i}`} /></td>
+                  <td className="py-1.5 pr-2"><Input className="h-8 w-20" inputMode="numeric" placeholder="unknown" value={s.deadline_week} onChange={(e) => upd(i, "deadline_week", e.target.value)} aria-label={`${s.site_id || `Site row ${i + 1}`} due by week`} data-testid={`intake-site-deadline-${i}`} /></td>
+                  <td className="py-1.5 pr-2"><Input className="h-8" value={s.scope} onChange={(e) => upd(i, "scope", e.target.value)} aria-label={`${s.site_id || `Site row ${i + 1}`} scope`} data-testid={`intake-site-scope-${i}`} /></td>
+                  <td className="py-1.5"><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => remove(i)} aria-label={`Remove site ${s.site_id || i + 1}`} data-testid={`intake-site-remove-${i}`}><Trash2 className="h-4 w-4" /></Button></td>
                 </tr>
               ))}
             </tbody>

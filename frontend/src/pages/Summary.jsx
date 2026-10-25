@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { api, errText } from "@/lib/api";
 import { CHECK, OVERALL, STATUS, money, fmtDate, fmtTime } from "@/lib/format";
 import { Loading } from "@/App";
+import { RouteDenied } from "@/components/RouteDenied";
 
 const ACTION = { confirm: "Confirmed proposed terms", request_change: "Requested a change", decline: "Declined" };
 
@@ -74,12 +75,13 @@ export default function Summary() {
   useEffect(() => {
     api.get("/project").then((r) => (r.data.sheet ? setSheet(r.data.sheet) : setError("No job yet."))).catch((e) => setError(errText(e)));
   }, []);
-  if (error) return <div className="p-10 text-sm text-red-700" data-testid="summary-error">{error}</div>;
+  if (error) return <RouteDenied message={error} />;
   if (!sheet) return <Loading label="Preparing summary" />;
   const cur = sheet.current;
   const it = sheet.intake;
   const open = [
-    ...(cur?.partners || []).flatMap((p) => [p.terms.conditions, p.response?.conditions].filter(Boolean).map((c) => `${p.name}: ${c}`)),
+    ...(cur?.checker.open_conditions || sheet.gap.open_conditions || []).map((c) => `${c.scope}: ${c.text}${c.source ? ` (${c.source})` : ""}`),
+    ...(cur?.partners || []).filter((p) => p.response?.conditions).map((p) => `${p.name} (their response): ${p.response.conditions}`),
     ...sheet.change_requests.filter((c) => ["open", "in_preview"].includes(c.status)).map((c) => `Change request (${c.source === "partner" ? c.partner_name : "customer"}): ${c.note}`),
   ];
   return (

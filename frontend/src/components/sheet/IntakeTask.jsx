@@ -8,6 +8,7 @@ import { TaskHeader, ErrorList } from "./Stepper";
 import IntakeSites from "./IntakeSites";
 import IntakePartners from "./IntakePartners";
 import GapPanel from "./GapPanel";
+import JobConditions from "./JobConditions";
 import ExtractPanel from "./ExtractPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -22,6 +23,7 @@ const toForm = (it) => ({
     advance_pct: n2s(p.advance_pct), balance_terms: p.balance_terms || "", conditions: p.conditions || "",
     exclusions: p.exclusions || "", scope: p.scope || "", valid_until: p.valid_until || "",
   })),
+  job_conditions: (it.job_conditions || []).map((c) => ({ ...c, source: c.source || "" })),
 });
 
 export const weeksOf = (f) => (/^\d+$/.test(f.weeks) && +f.weeks >= 1 && +f.weeks <= 12 ? +f.weeks : 0);
@@ -47,6 +49,7 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
     return () => window.removeEventListener("assemble:intake-tab", h);
   }, []);
   const w = weeksOf(form);
+  const dirty = JSON.stringify(form) !== JSON.stringify(toForm(sheet.intake));
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const setCap = (i, v) => { const c = [...form.own_capacity]; c[i] = v; setForm({ ...form, own_capacity: c }); };
 
@@ -61,6 +64,7 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
   return (
     <section data-testid="task-intake" className="space-y-6">
       <TaskHeader step={1} title="Check this job">
+        {dirty && <span data-testid="intake-unsaved-badge" className="self-center rounded-sm bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Unsaved edits</span>}
         <Button onClick={save} disabled={busy} data-testid="intake-save-button">{busy ? "Saving…" : "Save and check gaps"}</Button>
         {sheet.gap.site_count > 0 && sheet.intake.weeks && (
           <Button variant="outline" onClick={() => goTo("draft")} data-testid="intake-next-button">Go to draft</Button>
@@ -109,8 +113,9 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
           </div>
           <IntakeSites form={form} setForm={setForm} weeks={w} />
           <IntakePartners form={form} setForm={setForm} weeks={w} />
+          <JobConditions form={form} setForm={setForm} />
         </div>
-        <GapPanel gap={sheet.gap} />
+        <GapPanel gap={sheet.gap} dirty={dirty} />
       </div>
         </TabsContent>
       </Tabs>
