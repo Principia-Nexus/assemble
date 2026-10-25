@@ -76,11 +76,11 @@ function DemoAccounts({ onUse, busy }) {
   );
 }
 
-function Reveal({ show, children, testId, pad = "pt-4" }) {
+function Reveal({ show, children, testId, pad = "pt-4 pb-px" }) {
   return (
     <div data-testid={testId} className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${show ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} aria-hidden={!show} inert={show ? undefined : ""}>
       <div className="min-h-0 overflow-hidden">
-        <div className={`space-y-4 px-px pb-px ${pad}`}>{children}</div>
+        <div className={`space-y-4 px-px ${pad}`}>{children}</div>
       </div>
     </div>
   );
@@ -144,7 +144,7 @@ export default function Login() {
           </p>
         )}
         <div>
-        <Reveal show={step === "email"} testId="demo-reveal" pad="pb-8">
+        <Reveal show={step === "email"} testId="demo-reveal" pad="pb-4">
           <DemoAccounts busy={busy} onUse={(email, pw) => run(() => login(email, pw))} />
         </Reveal>
         <form className="flex flex-col" data-testid="auth-form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
@@ -164,9 +164,9 @@ export default function Login() {
             {busy ? "One moment…" : step === "email" ? "Continue" : step === "signin" ? "Sign in" : "Create account"}
           </Button>
         </form>
+        {error && <p data-testid="signin-error" className="mt-3 text-sm text-red-700">{error}</p>}
+        <div className="mt-4"><GoogleButton next={next} /></div>
         </div>
-        {error && <p data-testid="signin-error" className="-mt-4 text-sm text-red-700">{error}</p>}
-        <GoogleButton next={next} />
       </section>
     </div>
   );

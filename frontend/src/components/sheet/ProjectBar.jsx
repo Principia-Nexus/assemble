@@ -5,10 +5,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/lib/api";
 import { confirmLeave, setDirty } from "@/lib/dirty";
 
-export default function ProjectBar({ projectId, children }) {
+export default function ProjectBar({ projectId, rev, children }) {
   const navigate = useNavigate();
   const [rows, setRows] = useState([]);
-  useEffect(() => { api.get("/projects").then((r) => setRows(r.data.projects)).catch(() => {}); }, []);
+  useEffect(() => { api.get("/projects").then((r) => setRows(r.data.projects)).catch(() => {}); }, [rev]);
   const go = (to) => { if (confirmLeave()) { setDirty(false); navigate(to); } };
   return (
     <div data-testid="project-bar" className="no-print border-b border-slate-200 bg-white">

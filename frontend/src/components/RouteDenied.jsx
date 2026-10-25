@@ -14,6 +14,7 @@ export function RouteDenied({ message }) {
           <h1 className="text-xl font-bold text-slate-900">{partner ? "This page is for the job's organizer" : "This page could not load"}</h1>
           <p className="text-sm text-slate-600">{message}</p>
           {partner && <Button asChild data-testid="route-denied-reviews-button"><Link to="/reviews">Go to my reviews</Link></Button>}
+          {user?.firm_id && <Button asChild data-testid="route-denied-projects-button"><Link to="/projects">Back to projects</Link></Button>}
         </div>
       </main>
     </div>

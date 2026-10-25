@@ -5,8 +5,9 @@ import { useAuth } from "@/context/AuthContext";
 import { confirmLeave, setDirty } from "@/lib/dirty";
 
 export function Brand({ light = false, large = false }) {
+  const guard = (e) => { if (!confirmLeave()) e.preventDefault(); else setDirty(false); };
   return (
-    <Link to="/" data-testid="brand-home-link" className={`font-semibold tracking-tight ${large ? "text-5xl sm:text-6xl lg:text-7xl" : "text-2xl sm:text-[28px]"} ${light ? "text-[#FFFFFF]" : "text-[#1A2838]"}`}>
+    <Link to="/" onClick={guard} data-testid="brand-home-link" className={`font-semibold tracking-tight ${large ? "text-5xl sm:text-6xl lg:text-7xl" : "text-2xl sm:text-[28px]"} ${light ? "text-[#FFFFFF]" : "text-[#1A2838]"}`}>
       Assemble
     </Link>
   );
@@ -14,14 +15,17 @@ export function Brand({ light = false, large = false }) {
 
 export default function AppHeader({ onHistory }) {
   const { user, logout } = useAuth();
+  const guard = (e) => { if (!confirmLeave()) e.preventDefault(); else setDirty(false); };
   return (
     <header className="no-print sticky top-0 z-30 border-b border-[#E5E7EB] bg-[#FFFFFF]">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-        <Brand />
-        <div className="flex items-center gap-1 sm:gap-2">
-          <span data-testid="header-user-name" className="hidden text-xs text-slate-500 md:inline">
+        <div className="flex min-w-0 items-baseline gap-3">
+          <Brand />
+          <span data-testid="header-user-name" className="hidden truncate border-l border-slate-200 pl-3 text-sm text-slate-500 md:inline">
             {user?.firm_name || user?.name}
           </span>
+        </div>
+        <div className="flex items-center gap-1 sm:gap-2">
           {onHistory && (
             <Button variant="ghost" size="sm" onClick={onHistory} data-testid="history-drawer-trigger">
               <History className="h-4 w-4" /> <span className="hidden sm:inline">History</span>
@@ -29,13 +33,13 @@ export default function AppHeader({ onHistory }) {
           )}
           {user?.firm_id && (
             <Button variant="ghost" size="sm" asChild data-testid="header-projects-link">
-              <Link to="/projects" onClick={(e) => { if (!confirmLeave()) e.preventDefault(); else setDirty(false); }}><FolderOpen className="h-4 w-4" /> <span className="hidden sm:inline">Projects</span></Link>
+              <Link to="/projects" onClick={guard}><FolderOpen className="h-4 w-4" /> <span className="hidden sm:inline">Projects</span></Link>
             </Button>
           )}
           <Button variant="ghost" size="sm" asChild data-testid="header-my-reviews-link">
-            <Link to="/reviews"><Inbox className="h-4 w-4" /> <span className="hidden sm:inline">My reviews</span></Link>
+            <Link to="/reviews" onClick={guard}><Inbox className="h-4 w-4" /> <span className="hidden sm:inline">My reviews</span></Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={logout} data-testid="header-logout-button"
+          <Button variant="outline" size="sm" onClick={() => { if (confirmLeave()) { setDirty(false); logout(); } }} data-testid="header-logout-button"
             className="rounded-none border-2 border-[#1A2838] bg-transparent text-sm font-semibold text-[#1A2838] hover:bg-[#1A2838] hover:text-[#FFFFFF]">
             Sign out
           </Button>

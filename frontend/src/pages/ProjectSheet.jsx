@@ -18,6 +18,7 @@ import PlanStrip from "@/components/sheet/PlanStrip";
 import { clearDemoContent } from "@/lib/demoContent";
 import { RouteDenied } from "@/components/RouteDenied";
 import ProjectBar from "@/components/sheet/ProjectBar";
+import { confirmLeave } from "@/lib/dirty";
 import { Navigate, useParams } from "react-router-dom";
 
 export default function ProjectSheet() {
@@ -77,6 +78,7 @@ export default function ProjectSheet() {
   if (sheet === undefined) return <Loading label="Loading your job sheet" />;
   if (!sheet) return <Navigate to="/projects" replace />;
 
+  const select = (k) => { if (k === selected || confirmLeave()) setSelected(k); };
   const isCanon = sheet.project.synthetic && !!sheet.project.fixture_id;
   const reset = async () => { clearDemoContent(); await act("post", "/project/demo-reset", {}, "Example reset"); };
 
@@ -85,7 +87,7 @@ export default function ProjectSheet() {
   return (
     <div className="min-h-screen bg-slate-50">
       <AppHeader onHistory={sheet ? () => setHistoryOpen(true) : null} />
-      <ProjectBar projectId={projectId}>
+      <ProjectBar projectId={projectId} rev={sheet.project.rev}>
         {isCanon && (
           <Button size="sm" variant="ghost" className="h-7" onClick={() => setTourOpen(true)} data-testid="demo-tour-open">
             <Sparkles className="h-3.5 w-3.5" /> Guided tour
@@ -116,8 +118,8 @@ export default function ProjectSheet() {
           {sheet.intake.job_name || sheet.project.name}
         </h1>
         {sheet.intake.customer_name && <p data-testid="project-customer" className="mt-1 text-sm text-slate-500">{sheet.intake.customer_name}</p>}
-        <PlanStrip sheet={sheet} goTo={setSelected} />
-        <Stepper info={info} selected={selected} onSelect={setSelected} />
+        <PlanStrip sheet={sheet} goTo={select} />
+        <Stepper info={info} selected={selected} onSelect={select} />
         <div key={selected} className="rise mt-6">
           {selected === "intake" && <IntakeTask key={sheet.project.rev} {...props} />}
           {selected === "draft" && <DraftTask {...props} />}

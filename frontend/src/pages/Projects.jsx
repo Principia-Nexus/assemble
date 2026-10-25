@@ -68,7 +68,7 @@ function ProjectRow({ p }) {
           <p className="mt-0.5 truncate text-sm text-slate-500">{p.customer || "Customer not set"}</p>
         </div>
         <span data-testid={`project-status-${slug(p.name)}`} className={`hidden shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold sm:inline ${TONE[p.status]}`}>{p.status}</span>
-        <span className="hidden w-36 shrink-0 text-right text-xs text-slate-500 md:inline">Edited {fmtTime(p.updated_at)}</span>
+        <span className="hidden w-48 shrink-0 text-right text-xs text-slate-500 md:inline">Edited {fmtTime(p.updated_at)}</span>
         <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
       </button>
       <p className="-mt-2 px-5 pb-3 text-xs text-slate-500 sm:hidden">{p.status} · Edited {fmtTime(p.updated_at)}</p>

@@ -43,7 +43,7 @@ export function F({ id, label, hint, className, ...props }) {
 export default function IntakeTask({ sheet, act, busy, goTo }) {
   const [form, setForm] = useState(() => toForm(sheet.intake));
   const [errors, setErrors] = useState([]);
-  const [tab, setTab] = useState(() => (sheet.intake.sites.length ? sessionStorage.getItem("assemble_intake_tab") || "form" : "read"));
+  const [tab, setTab] = useState(() => sessionStorage.getItem(`assemble_intake_tab_${sheet.project.project_id}`) || (sheet.intake.sites.length ? "form" : "read"));
   useEffect(() => {
     const h = (e) => setTab(e.detail);
     window.addEventListener("assemble:intake-tab", h);
@@ -73,8 +73,8 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
         )}
       </TaskHeader>
       <ErrorList errors={errors} testId="intake-errors" />
-      <Tabs value={tab} onValueChange={(v) => { setTab(v); sessionStorage.setItem("assemble_intake_tab", v); }}>
-        <TabsList>
+      <Tabs value={tab} onValueChange={(v) => { setTab(v); sessionStorage.setItem(`assemble_intake_tab_${sheet.project.project_id}`, v); }}>
+        <TabsList className="h-auto max-w-full flex-wrap">
           <TabsTrigger value="form" data-testid="intake-tab-form">Enter details manually</TabsTrigger>
           <TabsTrigger value="read" data-testid="intake-tab-read">Paste a brief or add files</TabsTrigger>
         </TabsList>
