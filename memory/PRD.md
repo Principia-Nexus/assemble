@@ -111,3 +111,5 @@
 - Publish + live acceptance run (needs user approval)
 - Collapse long intake detail for returning users; shadcn date pickers
 - Extraction consistency eval
+
+## 2026-06 — Sites table fits without horizontal scroll (fixed layout, narrow ID/Due wk columns); Scope summary textarea non-resizable.

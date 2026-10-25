@@ -118,7 +118,7 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
             </div>
             <div className="mt-4">
               <Label htmlFor="scope" className="text-xs font-semibold text-slate-700">Scope summary</Label>
-              <Textarea id="scope" className="mt-1 bg-white" rows={2} value={form.scope_summary} onChange={set("scope_summary")} data-testid="intake-scope-input" />
+              <Textarea id="scope" className="mt-1 resize-none bg-white" rows={2} value={form.scope_summary} onChange={set("scope_summary")} data-testid="intake-scope-input" />
             </div>
           </div>
           <IntakeSites form={form} setForm={setForm} weeks={w} />

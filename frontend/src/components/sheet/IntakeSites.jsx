@@ -22,20 +22,21 @@ export default function IntakeSites({ form, setForm, weeks }) {
       {form.sites.length === 0 ? (
         <p data-testid="intake-sites-empty" className="rounded border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">No sites yet. Add each branch or location as one row.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-sm">
+        <div>
+          <table className="w-full table-fixed text-sm">
+            <colgroup><col className="w-14 sm:w-16" /><col /><col className="w-11 sm:w-16" /><col /><col className="w-9" /></colgroup>
             <thead>
               <tr className="text-left font-mono text-[10px] text-slate-500">
                 <th className="pb-2 pr-2 font-semibold">ID</th><th className="pb-2 pr-2 font-semibold">Name</th>
-                <th className="pb-2 pr-2 font-semibold">Due by week{weeks ? ` (1–${weeks})` : ""}</th><th className="pb-2 pr-2 font-semibold">Scope</th><th />
+                <th className="pb-2 pr-2 font-semibold whitespace-nowrap">Due<span className="hidden sm:inline"> wk</span></th><th className="pb-2 pr-2 font-semibold">Scope</th><th />
               </tr>
             </thead>
             <tbody>
               {form.sites.map((s, i) => (
                 <tr key={i} className="border-t border-slate-100">
-                  <td className="py-1.5 pr-2"><Input className="h-8 w-20 font-mono" value={s.site_id} onChange={(e) => upd(i, "site_id", e.target.value)} aria-label={`Site row ${i + 1} ID`} data-testid={`intake-site-id-${i}`} /></td>
+                  <td className="py-1.5 pr-2"><Input className="h-8 w-full px-1.5 font-mono text-sm" value={s.site_id} onChange={(e) => upd(i, "site_id", e.target.value)} aria-label={`Site row ${i + 1} ID`} data-testid={`intake-site-id-${i}`} /></td>
                   <td className="py-1.5 pr-2"><Input className="h-8" value={s.name} onChange={(e) => upd(i, "name", e.target.value)} aria-label={`${s.site_id || `Site row ${i + 1}`} name`} data-testid={`intake-site-name-${i}`} /></td>
-                  <td className="py-1.5 pr-2"><Input className="h-8 w-20" inputMode="numeric" placeholder="unknown" value={s.deadline_week} onChange={(e) => upd(i, "deadline_week", e.target.value)} aria-label={`${s.site_id || `Site row ${i + 1}`} due by week`} data-testid={`intake-site-deadline-${i}`} /></td>
+                  <td className="py-1.5 pr-2"><Input className="h-8 w-full px-2" inputMode="numeric" placeholder={weeks ? `1–${weeks}` : "?"} value={s.deadline_week} onChange={(e) => upd(i, "deadline_week", e.target.value)} aria-label={`${s.site_id || `Site row ${i + 1}`} due by week`} data-testid={`intake-site-deadline-${i}`} /></td>
                   <td className="py-1.5 pr-2"><Input className="h-8" value={s.scope} onChange={(e) => upd(i, "scope", e.target.value)} aria-label={`${s.site_id || `Site row ${i + 1}`} scope`} data-testid={`intake-site-scope-${i}`} /></td>
                   <td className="py-1.5"><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => remove(i)} aria-label={`Remove site ${s.site_id || i + 1}`} data-testid={`intake-site-remove-${i}`}><Trash2 className="h-4 w-4" /></Button></td>
                 </tr>
