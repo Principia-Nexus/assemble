@@ -140,7 +140,7 @@ export default function ProjectSheet() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <button type="button" onClick={() => setTool("details")} className="group flex items-center gap-2 text-left" aria-label="Edit job details" data-testid="project-title-edit">
-                  <h1 data-testid="project-title" className="break-words text-[22px] font-bold sm:text-[26px] leading-tight tracking-tight text-slate-900">{sheet.intake.job_name || sheet.project.name}</h1>
+                  <h1 data-testid="project-title" className="break-words text-[22px] font-bold sm:text-[26px] leading-tight tracking-tight text-slate-900">{sheet.intake.job_name || sheet.project.name}{sheet.project.recording_copy && <span className="ml-2 align-middle text-xs font-medium text-[#64748B]" data-testid="recording-copy-tag">Recording copy</span>}</h1>
                   <Pencil className="h-3.5 w-3.5 text-slate-400 transition-colors group-hover:text-slate-700" />
                 </button>
                 {saveText && <span data-testid="save-state" aria-live="polite" className={`text-xs ${save === "failed" ? "text-red-700" : "text-slate-500"}`}>{saveText}</span>}
@@ -168,7 +168,7 @@ export default function ProjectSheet() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem onSelect={() => setResetOpen(true)} data-testid="demo-reset-button">Reset this example</DropdownMenuItem>
-                    {sheet.project.fixture_id && (
+                    {sheet.project.fixture_id && !sheet.project.recording_copy && (
                       <DropdownMenuItem onSelect={async () => { try { const { data } = await api.post("/project/clean-copy"); window.location.assign(`/projects/${data.project_id}`); } catch (e) { toast.error(errList(e)[0]); } }} data-testid="clean-copy-button">Make a clean copy</DropdownMenuItem>
                     )}
                   </DropdownMenuContent>

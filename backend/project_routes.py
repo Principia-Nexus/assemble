@@ -118,7 +118,7 @@ async def sheet(project_id):
     p = await db.projects.find_one({"project_id": project_id}, {"_id": 0})
     cur, pre = await get_version(p.get("current_version_id")), await get_version(p.get("preview_version_id"))
     out = {"project": {k: p.get(k) for k in ("project_id", "name", "rev", "synthetic", "sandbox_id", "created_at",
-                                             "fixture_id", "example_key", "layout")},
+                                             "fixture_id", "example_key", "layout", "recording_copy")},
            "intake": p["intake"], "gap": L.gap_analysis(p["intake"]), "current": None, "preview": None}
     jc = p["intake"].get("job_conditions") or []
     if cur:
@@ -625,11 +625,13 @@ async def clean_copy(user=Depends(current_user)):
     """A fresh project from the same fixture; the original project and its history are untouched."""
     from demo import seed_project
     p = await get_project(user)
-    if not p.get("fixture_id") or not user.get("sandbox_id"):
-        raise HTTPException(400, "Only the twelve-site example can be copied clean.")
+    if not p.get("fixture_id") or not user.get("sandbox_id") or p.get("recording_copy"):
+        raise HTTPException(400, "Only the original 12-branch example can be copied clean.")
     pid = new_id("prj")
     await seed_project(user["sandbox_id"], user["firm_id"], org(user), p["fixture_id"], project_id=pid)
-    await db.projects.update_one({"project_id": pid}, {"$set": {"name": f"{p['intake'].get('job_name') or p['name']} · recording copy", "position": 1}})
+    n = await db.projects.count_documents({"sandbox_id": user["sandbox_id"], "recording_copy": True})
+    await db.projects.update_one({"project_id": pid}, {"$set": {"name": f"{p['intake'].get('job_name') or p['name']} · recording copy{f' {n + 1}' if n else ''}",
+                                                                "position": 1 + n, "recording_copy": True}})
     return {"project_id": pid}
 
 

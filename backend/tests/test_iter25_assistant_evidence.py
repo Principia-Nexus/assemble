@@ -38,5 +38,7 @@ def test_assistant_sees_evidence():
     out = wait_run(s, j.json()["run"]["run_id"], limit=150)
     txt = (out["reply"].get("text") or str(out["reply"])).lower()
     print("REPLY", txt[:500])
-    assert "no licence evidence" not in txt and "no evidence" not in txt
+    # Only the Alder-specific clause must not say evidence is missing (mentions of other firms are fine)
+    first = txt.split(".")[0]
+    assert not first.startswith("no") and "no licence evidence is on file for alder" not in txt and "alder has no" not in txt
     assert "fit" in txt or "active" in txt

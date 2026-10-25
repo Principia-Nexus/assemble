@@ -14,7 +14,7 @@ function Requirement({ r, act, busy, sheet }) {
     <li className={row} data-testid={`req-${r.req_id}`}>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-slate-900">{r.label} <span className={`ml-1 text-xs font-medium ${cls}`} data-testid={`req-status-${r.req_id}`}>{st}</span></p>
-        <p className="text-xs text-slate-500">{r.firm ? `${firmName(sheet, r.firm)} · ` : ""}{r.reason || r.source?.label}{r.source?.page ? ` · page ${r.source.page}` : ""}{r.sites !== "all" ? ` · ${r.sites.join(", ")}` : ""}{r.dismiss_reason ? ` · dismissed: ${r.dismiss_reason}` : ""}</p>
+        <p className="text-xs text-slate-500">{r.firm ? `${firmName(sheet, r.firm)} · ` : ""}{r.reason || r.source?.label}{r.source?.page && !/page \d/i.test(r.reason || r.source?.label || "") ? ` · page ${r.source.page}` : ""}{r.sites !== "all" ? ` · ${r.sites.join(", ")}` : ""}{r.dismiss_reason ? ` · dismissed: ${r.dismiss_reason}` : ""}</p>
       </div>
       {(r.status === "suggested" || (r.status === "required" && r.origin === "organizer")) && why === null && (
         <div className="flex gap-1.5">

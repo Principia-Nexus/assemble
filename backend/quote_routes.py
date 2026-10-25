@@ -177,8 +177,9 @@ def snapshot_of(q, p, firm_name, ready=None):
         con = list(snap.get("conditions") or [])
         con += [c["text"] for c in ready["conditions"] if c["decision"] == "in_offer" and c["text"] not in con]
         names = sorted(firm_aliases(p["intake"].get("partners") or []), key=len, reverse=True)
-        pat = re.compile(r"\b(?:" + "|".join(re.escape(n) for n in names) + r")(?:'s)?\b", re.I) if names else None
-        scrub = lambda t: pat.sub("the subcontractor", t) if pat else t  # noqa: E731
+        pat = re.compile(r"\b(?:" + "|".join(re.escape(n) for n in names) + r")(?:'s)?(?!\w)", re.I) if names else None
+        email = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+        scrub = lambda t: pat.sub("the subcontractor", email.sub("the subcontractor", t)) if pat else email.sub("the subcontractor", t)  # noqa: E731
         exc, con = [scrub(x) for x in exc], [scrub(x) for x in con]
         snap.update(exclusions=exc, conditions=con, not_covered=ready["not_covered"])
     return snap

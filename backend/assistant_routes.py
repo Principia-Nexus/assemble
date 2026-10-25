@@ -263,7 +263,14 @@ async def chat_intake(p, user, result, msg):
         await X.apply_readings(X.ApplyIn(rev=fresh["rev"], fact_ids=ids), user)
     except HTTPException as ex:
         return await sheet(p["project_id"]), ex.detail if isinstance(ex.detail, list) else [str(ex.detail)], []
-    used = [f"{f['label']}{' (' + (f['partner_name'] or f['site_id']) + ')' if f['partner_name'] or f['site_id'] else ''} = {f['value']}"
+    def shown(f):
+        if X.FIELDS[f["field"]][1] == "money" and isinstance(f.get("parsed"), int):
+            c = f["parsed"]
+            return f"${c / 100:,.0f}" if c % 100 == 0 else f"${c / 100:,.2f}"
+        if f["field"] in X.WEEKLY and f.get("week"):
+            return f"{f['value']} in week {f['week']}"
+        return f["value"]
+    used = [f"{f['label']}{' for ' + (f['partner_name'] or f['site_id']).replace(' (Synthetic)', '') if f['partner_name'] or f['site_id'] else ''}: {shown(f)}"
             for f in facts if f["fact_id"] in ids]
     return await sheet(p["project_id"]), [], ["Saved to job details: " + "; ".join(used[:14]) + ("…" if len(used) > 14 else "") + "."]
 

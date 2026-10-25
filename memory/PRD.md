@@ -151,3 +151,15 @@ User overrides: keep original Assemble colours/fonts and AppHeader top bar; no l
 - withPlan() overlays plan owner/week on tasks tied to one planned site; Inspector firm change → POST /api/project/plan/assign (opens/edits private draft, validated before draft creation). Calendar no longer duplicates site tasks.
 - Firm colour system (FIRM_TONES in derive.js); left card ribbons removed; Example/Synthetic labels removed everywhere.
 - Partner page: "From <firm>", "Confirm", no organizer-only status badges, demo role-switch buttons removed.
+
+## 2026-10-25 — Dependable workflow: iteration_23 deviations closed (iterations 24–25 testing-agent PASS; backend 187/187)
+- Chat/reader job-wide exclusions (no firm named) → scope "job_exclusion" → saved in project.exclusions with source; shown in Exclusions list (with "from <source>") and in the quote preview and customer snapshot.
+- Licence statements in firm conditions → requirement doc-<code>-<partner_id> (Required by source, not dismissable, applies only to that firm's sites); suppresses sug-<code>; licence-only conditions are tracked as requirements, not as duplicate open conditions (qualify.tracked). Sourced requirements carry the page number.
+- Customer snapshot scrubs firm names, short names, first words and emails → "the subcontractor" (quote_routes.firm_aliases).
+- Evidence: observed_on in the future → 422; UI max = Pacific date. Assistant snapshot includes qualification by site, requirements and evidence; plain wording, $ amounts.
+- UI: tray 28vh, translucent blur, scrolls inside, collapses on graph pointerdown; mobile zoom controls no longer overlap the Plan count; "Open items" naming; Inspector kicker per kind; receipts say "accepted"; shadcn Selects in QualPanel; Sign out icon below 400px.
+- Clean recording copy: workspace ⋯ → "Make a clean copy" (12-branch fixture only) → POST /api/project/clean-copy creates "<job> · recording copy" (tagged "Recording copy"); originals untouched; copies cannot be re-copied.
+- Matrix (preview build https://assemble-app-1.preview.emergentagent.com): fresh full path PASS; Gates 1–5 PASS (Gate 3 after redaction fix); 200% zoom, 320/390px PASS; Publish/production NOT RUN (not authorized).
+### Backlog
+- P1: shadcn date pickers for quote valid-until / evidence dates; 320px frame-title wrapping next to zoom controls.
+- P2: CSLB lookup, scope splitting, drawing/spec conflict detection (not built); publish + repeat journey on public URL (needs approval).
