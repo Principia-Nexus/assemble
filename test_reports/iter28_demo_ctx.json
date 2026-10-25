@@ -1,26 +1,24 @@
 {
- "project_id": "prj_d0ea44aca94a",
- "visitor": "t28-71f4f06690b6",
+ "project_id": "prj_fd25cae8a870",
+ "visitor": "t28-5c6208310460",
  "owners": [
-  "p_3a6e050d",
-  "p_5e20ca1c",
-  "p_68ff2415",
-  "p_911542db"
+  "p_2f4f9583",
+  "p_40cd5bc4",
+  "p_c60ba6b3"
  ],
  "tokens": {
-  "p_3a6e050d": "8hubYJeYGALyCjn5K3djatGXqAppwoC8",
-  "p_5e20ca1c": "wurA-bT4VswW8U-S4lmcNUOpDofmz101",
-  "p_68ff2415": "AmvONK_hPHG4kIEDEwsOlKjQXCGHjAmI",
-  "p_911542db": "in8AeRIrKWF1NfLI9ejlorTXdmKpYGDk"
+  "p_2f4f9583": "QLbbv5VLhVJ9UjaOjVPtZRuKXJ43MI7N",
+  "p_40cd5bc4": "ZSWejaEjHw9CYOfUVv7EmpjhgQeKt0vs",
+  "p_c60ba6b3": "rK92q-Sagu2agNWEvd-5I8wHwB3iN-p3"
  },
- "qtoken": "EYdIzSVd0xRUFI7Sdt5FzBERgZbJOza_",
- "qid": "quo_7d5b326c4115",
- "q1_digest": "ac77d336b43acf92e078439a",
+ "qtoken": "3c4jpd-4e5Ln__xyZNI3EM0fD4Z5uuTi",
+ "qid": "quo_154f8b8d481e",
+ "q1_digest": "de73945b3f29624e547aa76e",
  "q1_snap": {
   "number": "Q1",
   "kind": "offer",
   "baseline_number": null,
-  "project": "Golden Valley Unified School District, California LED lighting retrofit",
+  "project": "Golden Valley Unified School District LED Lighting Retrofit",
   "seller": "Brightline Electrical (Synthetic)",
   "synthetic": false,
   "demo": true,
@@ -40,13 +38,13 @@
   "conditions": [],
   "not_covered": [],
   "line_items": [
-   "S01 Lincoln Elementary School: 120 LED troffers",
-   "S02 Maple Middle School Gym: 36 LED high-bay fixtures",
-   "S03 District Office: 64 LED troffers",
-   "S04 Oak Ridge Library: 52 LED troffers",
-   "S05 Transportation Yard: 24 LED wall packs",
-   "S06 the subcontractor Hill High School Cafeteria: 40 LED troffers"
+   "S01 Maple Elementary, Gymnasium: 24 LED high-bay fixtures replacing metal halide",
+   "S02 Maple Elementary, Classroom Wing: 60 LED troffers",
+   "S03 Oak Middle School, Library: 32 LED troffers",
+   "S04 Oak Middle School, Parking Lot: 14 LED pole-top fixtures",
+   "S05 District Office, Offices: 40 LED troffers",
+   "S06 Transportation Yard, Shop: 18 LED strip fixtures"
   ]
  },
- "qtoken2": "bM6ofvmepH6ARn876i-VJuflyXsYiE_i"
+ "qtoken2": "3yEhVqI9HXLKU32ahk2Li00cPrkEEBAO"
 }

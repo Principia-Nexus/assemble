@@ -178,3 +178,4 @@ User overrides: keep original Assemble colours/fonts and AppHeader top bar; no l
 - Fixed: solver respects partner max_sites; a new offer replaces an open issued offer; base offer cannot be accepted when another is accepted; amendments carry condition decisions; line items scrubbed of firm names/emails; stale "stays in force" banner hidden after acceptance; demo prompt uses fixture firm names, flat price, "N sites per week", payer, scope summary, own crew capacity.
 - Full backend suite: 205 passed (agent-run).
 - Not done this round: Hesperia 29-page bid demo, revision merge rules, small UI fixes (invite return, 200% zoom dock, login tab, $99 link), public URL repeat checks.
+- 2026-06: Published to https://assemble-app-1.emergent.host. Live checks: test_iter28_demo_e2e + test_iter24_phase1_paths = 30/30 passed against live URL (API level; live UI not re-screenshotted).
