@@ -84,7 +84,7 @@ export default function SourcesList({ sources, onRead }) {
   return (
     <div className="rounded-md border border-slate-200 bg-white">
       <p className="eyebrow border-b border-slate-200 p-4">Documents ({sources.length})</p>
-      <ul className="divide-y divide-slate-100">{sources.map((s) => <SourceItem key={s.source_id} s={s} onRead={onRead} />)}</ul>
+      <ul className="stagger divide-y divide-slate-100">{sources.map((s) => <SourceItem key={s.source_id} s={s} onRead={onRead} />)}</ul>
     </div>
   );
 }

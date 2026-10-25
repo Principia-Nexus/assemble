@@ -112,3 +112,33 @@ h1, h2, h3 { font-weight: 500; letter-spacing: -0.01em; }
 
 [data-sonner-toaster][data-rich-colors="true"] [data-sonner-toast][data-type="success"] { background: #EAF5F0; border-color: #BFE0D2; color: #17614A; }
 [data-sonner-toaster][data-rich-colors="true"] [data-sonner-toast][data-type="error"] { background: #FBEFEF; border-color: #EBC5C5; color: #8C2F2F; }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes panel-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes row-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
+
+@media (prefers-reduced-motion: no-preference) {
+    button, a, [role="tab"], [role="checkbox"], input, select, textarea, summary {
+        transition: background-color .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .12s ease, opacity .18s ease;
+    }
+    button:not(:disabled):active, a:active { transform: scale(0.98); }
+    [role="tabpanel"][data-state="active"] { animation: panel-in .28s cubic-bezier(.2,.7,.2,1) both; }
+    [role="alert"], [role="status"] { animation: panel-in .3s ease-out both; }
+    .stagger > * { animation: rise .4s cubic-bezier(.2,.7,.2,1) both; }
+    .stagger > *:nth-child(2) { animation-delay: .04s; }
+    .stagger > *:nth-child(3) { animation-delay: .08s; }
+    .stagger > *:nth-child(4) { animation-delay: .12s; }
+    .stagger > *:nth-child(5) { animation-delay: .16s; }
+    .stagger > *:nth-child(6) { animation-delay: .2s; }
+    .stagger > *:nth-child(n+7) { animation-delay: .24s; }
+    .rows-in > tr { animation: row-in .35s ease-out both; }
+    .rows-in > tr { animation-delay: calc(var(--i, 0) * 25ms); }
+    td { transition: background-color .3s ease, color .3s ease; }
+    details[open] > *:not(summary) { animation: fade-in .25s ease-out both; }
+    .lift { transition: border-color .18s ease, box-shadow .2s ease, transform .2s ease; }
+    .lift:hover { box-shadow: 0 4px 14px -6px rgba(14, 94, 140, .25); transform: translateY(-1px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+}

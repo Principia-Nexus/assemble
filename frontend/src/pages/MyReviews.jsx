@@ -21,7 +21,7 @@ export default function MyReviews() {
         {user?.firm_id && (
           <p className="mt-2 text-sm"><Link to="/project" className="font-semibold text-slate-900 underline" data-testid="my-reviews-project-link">Go to your own job sheet</Link></p>
         )}
-        <div className="mt-8 space-y-3">
+        <div className="stagger mt-8 space-y-3">
           {error && <p data-testid="my-reviews-error" className="text-sm text-red-700">{error}</p>}
           {!data && !error && <p className="text-sm text-slate-500">Loading…</p>}
           {data?.length === 0 && (

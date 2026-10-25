@@ -16,7 +16,7 @@ export default function CheckerPanel({ checker, notes, title, testPrefix }) {
           <p className="text-[11px] text-slate-500">Budget headroom {money(checker.headroom_cents)}.</p>
         )}
       </div>
-      <ul className="divide-y divide-slate-100">
+      <ul key={checker.total_cents + checker.overall} className="stagger divide-y divide-slate-100">
         {checker.rules.map((r) => (
           <li key={r.key} className="p-4" data-testid={`${testPrefix}-rule-${r.key}`}>
             <div className="flex items-center justify-between gap-2">

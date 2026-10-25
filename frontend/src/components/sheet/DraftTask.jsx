@@ -46,9 +46,9 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
       <div className="rounded-md border border-slate-200 bg-white p-5">
         <p className="eyebrow mb-3">Crews to include in this candidate</p>
         {partners.length === 0 && <p className="text-sm text-slate-500">No partners yet. Add them in Check this job.</p>}
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {partners.map((p) => (
-            <label key={p.partner_id} className="flex cursor-pointer items-start gap-3 rounded border border-slate-200 p-3 hover:border-slate-400">
+            <label key={p.partner_id} className="lift flex cursor-pointer items-start gap-3 rounded border border-slate-200 p-3 hover:border-slate-400">
               <Checkbox checked={chosen.includes(p.partner_id)} onCheckedChange={() => toggle(p.partner_id)} data-testid={`draft-include-${slug(p.partner_id)}`} aria-label={`Include ${p.name}`} />
               <span className="text-sm">
                 <span className="block font-semibold text-slate-900">{p.name}</span>

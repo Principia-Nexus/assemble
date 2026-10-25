@@ -32,11 +32,11 @@ export default function ScheduleGrid({ version, checker, testPrefix }) {
               ))}
             </tr>
           </thead>
-          <tbody>
-            {version.sites.map((s) => {
+          <tbody key={version.version_id} className="rows-in">
+            {version.sites.map((s, idx) => {
               const a = version.assignments[s.site_id] || {};
               return (
-                <tr key={s.site_id} className="border-t border-slate-100">
+                <tr key={s.site_id} className="border-t border-slate-100" style={{ "--i": idx }}>
                   <td className="px-4 py-1.5"><span className="font-mono text-xs font-semibold">{s.site_id}</span>
                     <span className="ml-2 hidden text-xs text-slate-500 sm:inline">due wk {s.deadline_week ?? "unknown"}</span></td>
                   {Array.from({ length: weeks }).map((_, i) => {

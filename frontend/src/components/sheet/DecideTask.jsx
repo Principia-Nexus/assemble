@@ -50,7 +50,7 @@ function SummaryStrip({ cur }) {
   const confirmed = cur.partners.filter((p) => ["confirmed", "confirmed_conditional"].includes(p.status)).length;
   const open = openConditions(cur).length;
   return (
-    <dl data-testid="decide-summary-strip" className="grid grid-cols-2 divide-x divide-y divide-slate-100 rounded-md border border-slate-200 bg-white md:grid-cols-4 md:divide-y-0">
+    <dl data-testid="decide-summary-strip" className="stagger grid grid-cols-2 divide-x divide-y divide-slate-100 rounded-md border border-slate-200 bg-white md:grid-cols-4 md:divide-y-0">
       <Fact testId="decide-q-schedule" label="Does the schedule fit?" value={{ ok: "Yes", bad: "No", wait: "Not known yet" }[fits]} tone={fits} />
       <Fact testId="decide-q-budget" label="Within budget?" value={budget === "pass" ? `Yes · ${money(cur.checker.total_cents)} of ${money(cur.checker.ceiling_cents)}` : budget === "fail" ? `No · ${money(cur.checker.total_cents)}` : "Not known yet"} tone={budget === "pass" ? "ok" : budget === "fail" ? "bad" : "wait"} />
       <Fact testId="decide-q-confirmed" label="Confirmed these terms" value={`${confirmed} of ${cur.partners.length} partners`} tone={confirmed === cur.partners.length && confirmed > 0 ? "ok" : "wait"} />

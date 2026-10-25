@@ -126,7 +126,7 @@ export default function ReadingsTable({ readings, selected, setSelected, onRead 
   return (
     <div data-testid="readings-table" className="rounded-md border border-slate-200 bg-white">
       <p className="eyebrow border-b border-slate-200 p-4">Readings · items needing attention first</p>
-      <ul className="divide-y divide-slate-100">
+      <ul className="stagger divide-y divide-slate-100">
         {sorted.map((r) => {
           if (!grouped.has(r.target)) return <Reading key={r.target} r={r} selected={selected} toggle={toggle} onRead={onRead} />;
           if (shownGroups.has(r.field)) return null;

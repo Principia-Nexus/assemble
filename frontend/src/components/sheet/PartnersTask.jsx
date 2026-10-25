@@ -27,7 +27,7 @@ function PartnerCard({ p, act, busy, demoPassword, blocked }) {
   };
   const s = STATUS[p.status];
   return (
-    <article data-testid={`partner-card-${id}`} className="flex flex-col rounded-md border border-slate-200 bg-white">
+    <article data-testid={`partner-card-${id}`} className="lift flex flex-col rounded-md border border-slate-200 bg-white">
       <div className="space-y-2 border-b border-slate-100 p-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-base font-semibold text-slate-900">{p.name}</h3>
@@ -93,7 +93,7 @@ export default function PartnersTask({ sheet, act, busy, goTo }) {
       {!sheet.current ? (
         <p data-testid="ask-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Prepare a draft first.</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {partners.map((p) => <PartnerCard key={p.partner_id} p={p} act={act} busy={busy} demoPassword={demoPassword} blocked={blocked} />)}
         </div>
       )}

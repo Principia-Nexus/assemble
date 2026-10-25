@@ -46,13 +46,13 @@ function DemoAccounts({ onUse, busy }) {
     <div data-testid="demo-accounts-panel" className="space-y-3">
       {org && (
         <Button className="h-14 w-full flex-col gap-0 text-base" disabled={busy} onClick={() => onUse(org.email, demo.password)} data-testid="signin-demo-organizer-button">
-          Try the example
-          <span className="text-[11px] font-normal opacity-80">Synthetic example · organizer view</span>
+          Organizer
+          <span className="text-[11px] font-normal opacity-80">Synthetic example</span>
         </Button>
       )}
       <div className="overflow-hidden rounded-md border border-slate-300 bg-white">
         <button type="button" className="flex h-11 w-full items-center justify-center gap-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50" onClick={() => setShowPartners(!showPartners)} aria-expanded={showPartners} data-testid="signin-review-as-partner-toggle">
-          Review as a partner
+          Partner
           <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showPartners ? "rotate-180" : ""}`} />
         </button>
         <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${showPartners ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} aria-hidden={!showPartners} inert={showPartners ? undefined : ""}>
@@ -114,7 +114,7 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#FFFFFF]">
-      <section className="flex w-full max-w-md flex-col justify-center gap-8 px-5 py-10 sm:px-8">
+      <section className="stagger flex w-full max-w-md flex-col justify-center gap-8 px-5 py-10 sm:px-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <Brand />
         </div>
@@ -125,9 +125,11 @@ export default function Login() {
         )}
         {tab === "signin" && <DemoAccounts busy={busy} onUse={(email, pw) => run(() => login(email, pw))} />}
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signin" data-testid="signin-tab">Sign in</TabsTrigger>
-            <TabsTrigger value="register" data-testid="register-tab">Create account</TabsTrigger>
+          <TabsList className="relative grid w-full grid-cols-2">
+            <span aria-hidden className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-sm bg-background shadow-sm transition-transform duration-300 ease-[cubic-bezier(.2,.7,.2,1)]"
+              style={{ transform: tab === "register" ? "translateX(100%)" : "translateX(0)" }} />
+            <TabsTrigger value="signin" className="relative z-10 data-[state=active]:bg-transparent data-[state=active]:shadow-none" data-testid="signin-tab">Sign in</TabsTrigger>
+            <TabsTrigger value="register" className="relative z-10 data-[state=active]:bg-transparent data-[state=active]:shadow-none" data-testid="register-tab">Create account</TabsTrigger>
           </TabsList>
           <TabsContent value="signin">
             <form className="mt-4 space-y-4" onSubmit={(e) => { e.preventDefault(); run(() => login(form.email, form.password)); }}>
