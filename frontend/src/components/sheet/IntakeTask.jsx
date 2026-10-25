@@ -41,7 +41,9 @@ export function F({ id, label, hint, className, ...props }) {
 }
 
 export default function IntakeTask({ sheet, act, busy, goTo }) {
-  const [form, setForm] = useState(() => toForm(sheet.intake));
+  const pendingKey = `assemble_intake_pending_${sheet.project.project_id}`;
+  const [kept, setKept] = useState(() => !!sessionStorage.getItem(pendingKey));
+  const [form, setForm] = useState(() => JSON.parse(sessionStorage.getItem(pendingKey) || "null") || toForm(sheet.intake));
   const [errors, setErrors] = useState([]);
   const [tab, setTab] = useState(() => sessionStorage.getItem(`assemble_intake_tab_${sheet.project.project_id}`) || (sheet.intake.sites.length ? "form" : "read"));
   useEffect(() => {
@@ -59,9 +61,12 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
     const intake = { ...form, own_capacity: trim(form.own_capacity, w),
       partners: form.partners.map((p) => ({ ...p, capacity: trim(p.capacity, w) })) };
     const r = await act("put", "/project/intake", { rev: sheet.project.rev, intake }, "Job details saved");
-    setErrors(r.ok ? [] : r.errors);
-    if (r.ok) setForm(toForm(r.data.sheet.intake));
+    if (!r.ok && r.errors.join(" ").includes("changed")) sessionStorage.setItem(pendingKey, JSON.stringify(form));
+    const r2 = r;
+    setErrors(r2.ok ? [] : r2.errors);
+    if (r2.ok) { sessionStorage.removeItem(pendingKey); setKept(false); setForm(toForm(r2.data.sheet.intake)); }
   };
+  const discardKept = () => { sessionStorage.removeItem(pendingKey); setKept(false); setForm(toForm(sheet.intake)); };
 
   return (
     <section data-testid="task-intake" className="space-y-6">
@@ -69,6 +74,12 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
         {dirty && <span data-testid="intake-unsaved-badge" className="self-center rounded-sm bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Unsaved edits</span>}
         <Button onClick={save} disabled={busy} data-testid="intake-save-button">{busy ? "Saving…" : "Save and check gaps"}</Button>
       </TaskHeader>
+      {kept && (
+        <div data-testid="intake-kept-edits" role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <span>The saved job changed while you were editing. Your edits are kept below; check them against the latest values, then save again.</span>
+          <Button size="sm" variant="outline" onClick={discardKept} data-testid="intake-discard-kept">Discard my edits</Button>
+        </div>
+      )}
       <ErrorList errors={errors} testId="intake-errors" />
       <Tabs value={tab} onValueChange={(v) => { setTab(v); sessionStorage.setItem(`assemble_intake_tab_${sheet.project.project_id}`, v); }}>
         <TabsList className="h-auto max-w-full flex-wrap">

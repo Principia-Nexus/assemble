@@ -101,10 +101,15 @@
             })(document, window.posthog || []);
             posthog.init("phc_DbsPb39SRc8z3EiQ6Dhj6ikv4H4rTKcht9d4sZSesceP", {
                 api_host: "https://ap.emergent.sh",
-                person_profiles: "identified_only", // or 'always' to create profiles for anonymous users as well,
-                session_recording: {
-                    recordCrossOriginIframes: true,
-                    capturePerformance: false,
+                person_profiles: "identified_only",
+                disable_session_recording: true,
+                autocapture: false,
+                mask_all_text: true,
+                mask_all_element_attributes: true,
+                sanitize_properties: function (props) {
+                    var scrub = function (v) { return typeof v === "string" ? v.replace(/\/review\/[^/?#]+/g, "/review/[redacted]").replace(/session_id=[^&#]+/g, "session_id=[redacted]") : v; };
+                    ["$current_url", "$pathname", "$referrer", "$initial_current_url", "$initial_referrer"].forEach(function (k) { if (props[k]) props[k] = scrub(props[k]); });
+                    return props;
                 },
             });
         </script>

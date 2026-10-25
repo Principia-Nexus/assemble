@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 import os
 import re
 import uuid
@@ -5,10 +7,11 @@ from datetime import timedelta
 from typing import Optional
 
 import httpx
+import mailer
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 
-from core import (db, now, now_iso, new_id, hash_password, verify_password, make_token, decode_token,
+from core import (db, now, now_iso, new_id, hash_password, verify_password, make_token, decode_token, token_live, user_from_request,
                   current_user, public_user, USER_PROJ)
 from demo import ensure_demo_user
 from fixtures import accounts, demo_key_for, get_fixture
@@ -86,6 +89,39 @@ class EmailIn(BaseModel):
     email: str
 
 
+class CodeIn(BaseModel):
+    code: str
+
+
+@router.post("/verify-email/send")
+async def verify_send(user=Depends(current_user)):
+    if user.get("email_verified"):
+        return {"verified": True}
+    if not mailer.sendable(user["email"]):
+        raise HTTPException(400, "This address can't receive email, so it can't be verified.")
+    recent = await db.email_codes.find_one({"user_id": user["user_id"], "at": {"$gt": (now() - timedelta(seconds=60)).isoformat()}})
+    if recent:
+        raise HTTPException(429, "A code was just sent. Wait a minute before asking for another.")
+    code = f"{secrets.randbelow(10**6):06d}"
+    await db.email_codes.delete_many({"user_id": user["user_id"]})
+    await db.email_codes.insert_one({"user_id": user["user_id"], "code_hash": hashlib.sha256(code.encode()).hexdigest(),
+                                     "at": now_iso(), "attempts": 0})
+    await mailer.send_email(to=user["email"], subject="Your Assemble verification code",
+                            html=mailer.code_html(code))
+    return {"sent": True}
+
+
+@router.post("/verify-email/confirm")
+async def verify_confirm(body: CodeIn, user=Depends(current_user)):
+    rec = await db.email_codes.find_one_and_update({"user_id": user["user_id"]}, {"$inc": {"attempts": 1}})
+    fresh = rec and rec["at"] > (now() - timedelta(minutes=15)).isoformat() and rec["attempts"] < 5
+    if not fresh or not secrets.compare_digest(rec["code_hash"], hashlib.sha256(body.code.strip().encode()).hexdigest()):
+        raise HTTPException(400, "That code is wrong or expired. Ask for a new one.")
+    await db.email_codes.delete_many({"user_id": user["user_id"]})
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"email_verified": True}})
+    return {"verified": True}
+
+
 @router.post("/check-email")
 async def check_email(body: EmailIn, request: Request):
     email = body.email.strip().lower()
@@ -132,9 +168,11 @@ async def login(body: LoginIn, request: Request, response: Response):
 
 @router.post("/refresh")
 async def refresh(request: Request, response: Response):
-    uid = decode_token(request.cookies.get("refresh_token") or "", "refresh")
-    if not uid or not await db.users.find_one({"user_id": uid}, {"_id": 1}):
+    got = decode_token(request.cookies.get("refresh_token") or "", "refresh", with_iat=True)
+    u = await db.users.find_one({"user_id": got[0]}, {"_id": 0, "tokens_valid_after": 1, "user_id": 1}) if got else None
+    if not got or not token_live(u, got[1]):
         raise HTTPException(401, "Session expired. Please sign in again.")
+    uid = got[0]
     cookie(response, "access_token", make_token(uid, "access", ACCESS_MIN), ACCESS_MIN * 60)
     return {"ok": True}
 
@@ -146,6 +184,9 @@ async def me(user=Depends(current_user)):
 
 @router.post("/logout")
 async def logout(request: Request, response: Response):
+    u = await user_from_request(request)
+    if u:
+        await db.users.update_one({"user_id": u["user_id"]}, {"$set": {"tokens_valid_after": now().timestamp()}})
     st = request.cookies.get("session_token")
     if st:
         await db.user_sessions.delete_many({"session_token": st})

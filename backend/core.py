@@ -43,16 +43,23 @@ def verify_password(pw: str, hashed: str) -> bool:
 
 
 def make_token(user_id: str, kind: str, minutes: int) -> str:
-    payload = {"sub": user_id, "type": kind, "exp": now() + timedelta(minutes=minutes)}
+    payload = {"sub": user_id, "type": kind, "t": now().timestamp(), "exp": now() + timedelta(minutes=minutes)}
     return jwt.encode(payload, os.environ["JWT_SECRET"], algorithm=JWT_ALG)
 
 
-def decode_token(token: str, kind: str):
+def decode_token(token: str, kind: str, with_iat=False):
     try:
         payload = jwt.decode(token, os.environ["JWT_SECRET"], algorithms=[JWT_ALG])
     except jwt.InvalidTokenError:
         return None
-    return payload.get("sub") if payload.get("type") == kind else None
+    if payload.get("type") != kind:
+        return None
+    return (payload.get("sub"), payload.get("t", 0)) if with_iat else payload.get("sub")
+
+
+def token_live(u, iat):
+    """Tokens issued before the user's last sign-out are revoked."""
+    return bool(u) and iat > (u.get("tokens_valid_after") or -1)
 
 
 def as_aware(dt):
@@ -66,9 +73,13 @@ async def user_from_request(request: Request):
     auth = request.headers.get("Authorization", "")
     bearer = auth[7:] if auth.startswith("Bearer ") else None
     for candidate in (tok, bearer):
-        uid = decode_token(candidate, "access") if candidate else None
-        if uid:
-            return await db.users.find_one({"user_id": uid}, USER_PROJ)
+        got = decode_token(candidate, "access", with_iat=True) if candidate else None
+        if got:
+            u = await db.users.find_one({"user_id": got[0]}, USER_PROJ)
+            if token_live(u, got[1]):
+                u.pop("tokens_valid_after", None)
+                return u
+            return None
     st = request.cookies.get("session_token") or bearer
     if st:
         s = await db.user_sessions.find_one({"session_token": st}, {"_id": 0})

@@ -12,7 +12,7 @@ export const answered = (p) => ANSWERED.includes(p.status);
 export function scopedResult(checker) {
   if (checker.overall === "fail") return { label: "Schedule or budget fails", tone: "declined" };
   if (checker.overall === "unknown") return { label: "Some checks can't run yet", tone: "pending" };
-  return { label: "Schedule and budget fit", tone: "confirmed" };
+  return { label: "Passes recorded checks", tone: "confirmed" };
 }
 
 export function nextStep(sheet) {

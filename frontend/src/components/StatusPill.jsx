@@ -18,3 +18,7 @@ export function StatusPill({ tone = "unknown", label, testId, className }) {
     </span>
   );
 }
+
+export const SynthBadge = () => (
+  <span data-testid="synthetic-badge" className="ml-2 inline-block rounded-sm border border-slate-300 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-slate-500">Synthetic</span>
+);

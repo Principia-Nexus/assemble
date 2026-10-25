@@ -9,6 +9,7 @@ from starlette.middleware.cors import CORSMiddleware
 from core import db, client, PROJECT_CTX
 import auth_routes
 import project_routes
+import assistant_routes
 import review_routes
 import extract_routes
 import billing_routes
@@ -17,6 +18,7 @@ app = FastAPI(title="Assemble")
 app.include_router(auth_routes.router)
 app.include_router(project_routes.router)
 app.include_router(project_routes.projects_router)
+app.include_router(assistant_routes.router)
 app.include_router(review_routes.router)
 app.include_router(extract_routes.router)
 app.include_router(billing_routes.router)
@@ -42,7 +44,7 @@ async def origin_guard(request: Request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=[o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip() not in ("", "*")],
     allow_methods=["*"],
     allow_headers=["*"],
 )

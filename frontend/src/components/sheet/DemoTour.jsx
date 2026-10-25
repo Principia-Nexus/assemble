@@ -18,9 +18,9 @@ const ACTIONS = {
   share_links: async (a, s, act) => {
     if (s.current?.checker.overall === "fail") { toast.error("The current plan fails a check, so review links stay locked. Generate the passing plan first."); return; }
     for (const p of s.current?.partners || []) {
-      const r = p.link ? { ok: true, data: { link: p.link } } : await act("post", "/project/links", { partner_id: p.partner_id });
-      if (r.ok && !r.data.link.shared_at && !p.response) await act("post", `/project/links/${r.data.link.token}/shared`, {});
+      if (!p.link) await act("post", "/project/links", { partner_id: p.partner_id });
     }
+    toast.message("Links created. Sharing stays your action: copy or email each one yourself.");
   },
   customer_change: async (a, s, act, demo) => {
     if (s.preview) { toast.message("An amendment preview is already open, shown below."); return; }

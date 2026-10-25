@@ -109,6 +109,13 @@ def invitation(organizer_firm, job_name, partner_name, version_number, url):
     return subject, text, html
 
 
+def code_html(code):
+    return (f'<table role="presentation" width="100%"><tr><td style="padding:24px;font-family:Arial,sans-serif;color:#1A2838">'
+            f'<p>Your Assemble verification code is</p><p style="font-size:28px;letter-spacing:6px;font-weight:bold">{escape(code)}</p>'
+            f'<p style="font-size:12px;color:#666">It expires in 15 minutes. Enter it in the page you were using. '
+            f'We never ask for your password by email.</p></td></tr></table>')
+
+
 async def send_email(*, to, subject, html):
     _assert_safe_email(subject, html)
     payload = {"to": [to], "subject": subject, "html": html, "from_name": EMAIL_FROM_NAME}

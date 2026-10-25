@@ -13,6 +13,12 @@ stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET"]
 LOOKUP_KEY = "assemble_pilot"
 AMOUNT, CURRENCY = 9900, "usd"
+TEST_ONLY = os.environ["STRIPE_MODE"] == "test" and stripe.api_key.startswith(("sk_test_", "rk_test_"))
+
+
+def require_test_mode():
+    if not TEST_ONLY:
+        raise HTTPException(503, "Payments are configured for test mode only; this configuration is refused.")
 
 
 async def pilot_state(user):
@@ -34,6 +40,8 @@ async def fulfil(session):
     """Idempotent: activate only for the expected paid product, once per session."""
     tx = await db.payment_transactions.find_one({"session_id": session["id"]})
     if not tx or tx.get("payment_status") == "paid":
+        return
+    if session.get("livemode") or not TEST_ONLY:
         return
     if session.get("payment_status") != "paid" or session.get("amount_subtotal") != AMOUNT or session.get("currency") != CURRENCY \
             or (session.get("metadata") or {}).get("firm_id") != tx["firm_id"]:
@@ -68,6 +76,7 @@ class CheckoutIn(BaseModel):
 
 @router.post("/billing/checkout")
 async def checkout(body: CheckoutIn, request: Request, user=Depends(current_user)):
+    require_test_mode()
     origin = body.origin_url.rstrip("/")
     if origin != (request.headers.get("origin") or "").rstrip("/"):
         raise HTTPException(400, "Checkout must start from this site.")

@@ -9,6 +9,7 @@ from core import db, now_iso, new_id, current_user, log_event
 from state import status_for, active_links
 
 router = APIRouter(prefix="/api")
+VERIFY_MSG = "VERIFY_EMAIL: Verify this email address before opening the review. We will email you a 6-digit code."
 FORWARD_MSG = ("This review link was issued to a different firm contact. A forwarded link gives no access. "
                "Sign in with the email address the organizer invited.")
 
@@ -40,9 +41,14 @@ async def access_link(token, user, allow_claim):
     email_ok = (user.get("email") or "").lower() == link["invite_email"]
     if not (allow_claim and email_ok and link.get("claimed_by") in (None, user["user_id"])):
         raise HTTPException(403, FORWARD_MSG)
+    if not user.get("email_verified"):
+        raise HTTPException(403, VERIFY_MSG)
+    res = await db.links.update_one({"token": token, "claimed_by": {"$in": [None, user["user_id"]]}},
+                                    {"$set": {"claimed_by": user["user_id"], "claimed_at": now_iso()}})
+    if not res.matched_count:
+        raise HTTPException(403, FORWARD_MSG)
     await db.users.update_one({"user_id": user["user_id"]},
                               {"$addToSet": {"partner_access": {"project_id": p["project_id"], "partner_id": link["partner_id"]}}})
-    await db.links.update_one({"token": token, "claimed_by": None}, {"$set": {"claimed_by": user["user_id"], "claimed_at": now_iso()}})
     await log_event(p["project_id"], {**user, "_kind": "partner"}, "link",
                     f"{link['partner_name']} signed in as {user['email']} and opened their review link.",
                     partner_id=link["partner_id"])
@@ -119,6 +125,12 @@ async def respond(token: str, body: RespondIn, user=Depends(current_user)):
         await db.responses.insert_one(doc)
     except DuplicateKeyError:
         return {"duplicate": True, "review": await review_payload(token, link, p)}
+    # Indivisible with selection: if newer terms were selected meanwhile, this answer is withdrawn and conflicts.
+    g = await db.projects.update_one({"project_id": p["project_id"], "current_version_id": v["version_id"]},
+                                     {"$inc": {"response_seq": 1}})
+    if not g.matched_count:
+        await db.responses.delete_one({"response_id": doc["response_id"]})
+        raise HTTPException(409, "These terms were replaced by a newer version while you answered. Nothing was saved; reload to review the current terms.")
     labels = {"confirm": "confirmed the proposed terms" + (" with conditions" if conditions else ""),
               "request_change": "requested a change", "decline": "declined"}
     if body.action == "request_change":

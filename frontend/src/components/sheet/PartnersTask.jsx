@@ -62,7 +62,7 @@ function PartnerCard({ p, email, act, busy, demoPassword, blocked }) {
             <p className="ml-auto text-[11px] text-slate-500" data-testid={`partner-card-history-${id}`}>
               {p.status === "needs_rereview" ? "Answered previous terms; revised terms await review."
                 : p.response ? `Answered these terms ${fmtTime(p.response.created_at)}.`
-                : p.link.emailed_at ? `Emailed ${fmtTime(p.link.emailed_at)}. No answer yet.`
+                : p.link.emailed_at ? `Email accepted for sending ${fmtTime(p.link.emailed_at)} (delivery not confirmed). No answer yet.`
                 : p.link.shared_at ? `Shared ${fmtTime(p.link.shared_at)}. No answer yet.` : "Not sent yet."}
             </p>
           </>

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import AppHeader from "@/components/AppHeader";
-import { StatusPill } from "@/components/StatusPill";
+import { StatusPill, SynthBadge } from "@/components/StatusPill";
 import { ErrorList } from "@/components/sheet/Stepper";
 import { api, errList, newKey, visitorId } from "@/lib/api";
 import { STATUS, money, fmtDate, fmtTime } from "@/lib/format";
@@ -135,6 +135,32 @@ function RespondBox({ data, token, onDone }) {
   );
 }
 
+function VerifyEmail({ onDone }) {
+  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const run = async (fn) => { setBusy(true); setMsg(""); try { await fn(); } catch (e) { setMsg(errList(e).join(" ")); } setBusy(false); };
+  return (
+    <div data-testid="review-verify-email" className="space-y-3 rounded-md border border-slate-200 bg-white p-5 text-sm">
+      <p className="font-semibold text-slate-900">Verify your email to open this review</p>
+      <p className="text-slate-600">The link only opens for the invited address, once you prove you can read its inbox.</p>
+      {!sent ? (
+        <Button disabled={busy} onClick={() => run(async () => { await api.post("/auth/verify-email/send"); setSent(true); })} data-testid="review-verify-send">Email me a code</Button>
+      ) : (
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1">
+            <label htmlFor="rv-code" className="block text-xs font-semibold text-slate-700">6-digit code</label>
+            <Input id="rv-code" inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} className="w-36" data-testid="review-verify-code" />
+          </div>
+          <Button disabled={busy || code.length !== 6} onClick={() => run(async () => { await api.post("/auth/verify-email/confirm", { code }); await onDone(); })} data-testid="review-verify-confirm">Verify</Button>
+        </div>
+      )}
+      {msg && <p role="alert" className="text-red-700">{msg}</p>}
+    </div>
+  );
+}
+
 export default function Review() {
   const { token } = useParams();
   const { user, setUser } = useAuth();
@@ -168,13 +194,14 @@ export default function Review() {
         </div>
       )}
       <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
-        {error && <div data-testid="review-error" className="rounded-md border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error}</div>}
+        {error.startsWith("VERIFY_EMAIL") && <VerifyEmail onDone={load} />}
+        {error && !error.startsWith("VERIFY_EMAIL") && <div data-testid="review-error" className="rounded-md border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error}</div>}
         {!data && !error && <Loading label="Loading your review" />}
         {data && (
           <>
             <div className="rise">
               <p className="eyebrow flex items-center gap-2">Private review · from {data.job.organizer_firm}</p>
-              <h1 data-testid="review-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{data.partner.name}: your part of {data.job.job_name}</h1>
+              <h1 data-testid="review-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{data.partner.name}: your part of {data.job.job_name}{data.job.synthetic && <SynthBadge />}</h1>
               <p className="mt-1 text-sm text-slate-600">Customer: {data.job.customer_name || "Unknown"}. You see only your own sites and terms.</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <StatusPill testId="review-status" tone={s.tone} label={s.label} />

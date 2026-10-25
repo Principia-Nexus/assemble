@@ -1,3 +1,4 @@
+import { SynthBadge } from "@/components/StatusPill";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Printer, ArrowLeft } from "lucide-react";
@@ -95,7 +96,7 @@ export default function Summary() {
       <article data-testid="summary-document" className="mx-auto max-w-4xl space-y-6 bg-white p-8 shadow-sm print:max-w-none print:p-0 print:shadow-none sm:p-12">
         <header className="space-y-1">
           <p className="flex items-center gap-2 font-mono text-[10px] text-slate-500">Assemble · organizer summary · not for partners</p>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">{it.job_name || sheet.project.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">{it.job_name || sheet.project.name}{sheet.project.synthetic && <SynthBadge />}</h1>
           <p className="text-sm text-slate-600">Customer: {it.customer_name || "Unknown"} · Starts {fmtDate(it.start_date)} · {it.weeks ?? "?"} weeks · Ceiling {money(it.budget_ceiling_cents)}</p>
           <p data-testid="summary-date" className="text-xs text-slate-500">Prepared {fmtTime(printedAt, true)}{cur ? ` · current plan v${cur.version.number}` : ""}{sheet.preview ? ` · amendment preview v${sheet.preview.version.number} open (not included)` : ""}</p>
         </header>

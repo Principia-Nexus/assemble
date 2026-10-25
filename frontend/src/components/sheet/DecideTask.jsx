@@ -25,7 +25,7 @@ function nextAction(sheet) {
   if (cur.checker.overall === "unknown") return "Every partner answered, but some checks cannot run because inputs are unknown.";
   const n = openConditions(cur).length;
   if (n) return `Every partner confirmed these terms and the checks pass, but ${n} condition${n > 1 ? "s are" : " is"} still open. Resolve ${n > 1 ? "them" : "it"} with the customer and partners before you commit to the bid.`;
-  return "Every partner confirmed these proposal-stage terms and the plan passes every check. This is not an award, contract or crew hold.";
+  return "Every partner confirmed these proposal-stage terms, and this version passes recorded checks. This is not an award, contract or crew hold.";
 }
 
 function Fact({ label, value, tone, testId }) {

@@ -43,6 +43,31 @@ export default function Stepper({ info, selected, onSelect }) {
   );
 }
 
+export function Rail({ sheet, info, selected, onSelect }) {
+  const cur = sheet.current;
+  const counts = {
+    intake: sheet.gap.unknowns.length ? `${sheet.gap.unknowns.length} unknown` : `${sheet.gap.site_count} sites`,
+    draft: sheet.preview ? `v${sheet.preview.version.number} draft` : cur ? `v${cur.version.number}` : "none",
+    ask: cur ? `${cur.partners.filter((p) => ["confirmed", "confirmed_conditional", "declined", "change_requested"].includes(p.status)).length}/${cur.partners.length}` : "—",
+    decide: cur ? `${cur.checker.rules.filter((r) => r.status !== "pass").length} issues` : "—",
+  };
+  return (
+    <nav aria-label="Sections" data-testid="workspace-rail" className="no-print flex flex-col gap-1">
+      {STEPS.map((s) => {
+        const active = selected === s.key;
+        return (
+          <button key={s.key} onClick={() => onSelect(s.key)} data-testid={`rail-step-${s.key}`} aria-current={active ? "step" : undefined}
+            className={cn("flex min-h-[52px] flex-col items-center justify-center rounded-md px-1 py-2 text-center transition-colors",
+              active ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-white")}>
+            <span className="flex items-center gap-1 text-[13px] font-semibold">{info.done[s.key] && !active && <Check className="h-3 w-3 text-emerald-600" />}{s.title}</span>
+            <span className={cn("text-[11px] tabular-nums", active ? "text-white/70" : "text-slate-500")}>{counts[s.key]}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 export function TaskHeader({ title, lead, children }) {
   if (!lead && !children) return <h2 className="sr-only">{title}</h2>;
   return (
