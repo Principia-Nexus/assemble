@@ -29,7 +29,7 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
 
   return (
     <section data-testid="task-draft" className="space-y-6">
-      <TaskHeader step={2} title="Prepare a draft">
+      <TaskHeader step={2} title="Draft">
         <Button onClick={generate} disabled={busy || !!sheet.preview} data-testid="draft-generate-button">{busy ? "Checking…" : failing ? "Regenerate with these crews" : "Generate and check candidate"}</Button>
         {sheet.current && !linksExist && !failing && <Button variant="outline" onClick={() => goTo("ask")} data-testid="draft-next-button">Go to partners</Button>}
       </TaskHeader>
@@ -52,7 +52,7 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
       )}
       <div className="rounded-md border border-slate-200 bg-white p-5">
         <p className="eyebrow mb-3">Crews to include in this candidate</p>
-        {partners.length === 0 && <p className="text-sm text-slate-500">No partners yet. Add them in Check this job.</p>}
+        {partners.length === 0 && <p className="text-sm text-slate-500">No partners yet. Add them in Check.</p>}
         <div className="stagger grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {partners.map((p) => (
             <label key={p.partner_id} className="lift flex cursor-pointer items-start gap-3 rounded border border-slate-200 p-3 hover:border-slate-400">
@@ -67,7 +67,7 @@ export default function DraftTask({ sheet, act, busy, goTo }) {
             <Checkbox checked={includeOwn && ownCap > 0} disabled={ownCap === 0} onCheckedChange={(v) => setIncludeOwn(!!v)} data-testid="draft-include-own" aria-label="Include your own crew" />
             <span className="text-sm"><span className="block font-semibold text-slate-900">Your own crew</span>
               <span className="font-mono text-[11px] text-slate-500">cap {(sheet.intake.own_capacity || []).map((c) => c ?? "?").join("/") || "unknown"}</span>
-              {ownCap === 0 && <span data-testid="draft-own-zero-note" className="block text-[11px] text-slate-500">No capacity entered for your crew, so it can't take sites. Add it in Check this job.</span>}</span>
+              {ownCap === 0 && <span data-testid="draft-own-zero-note" className="block text-[11px] text-slate-500">No capacity entered for your crew, so it can't take sites. Add it in Check.</span>}</span>
           </label>
         </div>
       </div>

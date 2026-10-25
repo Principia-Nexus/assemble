@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 const ST = {
   pending: { label: "Waiting", tone: "unknown" }, reading: { label: "Reading", tone: "pending" },
-  read: { label: "Read", tone: "confirmed" }, failed: { label: "Failed: not read", tone: "declined" },
+  read: { label: "Read", tone: "confirmed" }, stored: { label: "Not read yet", tone: "unknown" }, failed: { label: "Failed: not read", tone: "declined" },
 };
 
 function SourceItem({ s, onRead }) {
@@ -46,7 +46,7 @@ function SourceItem({ s, onRead }) {
           <StatusPill testId={`source-status-${s.source_id}`} tone={ST[s.status].tone} label={ST[s.status].label} />
           {s.status !== "reading" && (
             <Button size="sm" variant="ghost" onClick={retry} disabled={busy} data-testid={`source-retry-${s.source_id}`}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />} {s.status === "failed" ? "Retry" : "Read again"}
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />} {s.status === "failed" ? "Retry" : s.status === "stored" ? "Read" : "Read again"}
             </Button>
           )}
         </div>

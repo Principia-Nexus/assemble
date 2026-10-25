@@ -8,7 +8,6 @@ import { api, errList } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Loading } from "@/App";
 import Stepper, { stepInfo } from "@/components/sheet/Stepper";
-import CreateProject from "@/components/sheet/CreateProject";
 import IntakeTask from "@/components/sheet/IntakeTask";
 import DraftTask from "@/components/sheet/DraftTask";
 import PartnersTask from "@/components/sheet/PartnersTask";
@@ -18,9 +17,12 @@ import DemoTour from "@/components/sheet/DemoTour";
 import PlanStrip from "@/components/sheet/PlanStrip";
 import { clearDemoContent } from "@/lib/demoContent";
 import { RouteDenied } from "@/components/RouteDenied";
+import ProjectBar from "@/components/sheet/ProjectBar";
+import { Navigate, useParams } from "react-router-dom";
 
 export default function ProjectSheet() {
   const { user } = useAuth();
+  const { projectId } = useParams();
   const [sheet, setSheet] = useState(undefined);
   const [loadError, setLoadError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -73,65 +75,58 @@ export default function ProjectSheet() {
 
   if (loadError) return <RouteDenied message={loadError} />;
   if (sheet === undefined) return <Loading label="Loading your job sheet" />;
+  if (!sheet) return <Navigate to="/projects" replace />;
 
-  const reset = async () => { clearDemoContent(); await act("post", "/project/demo-reset", {}, "Demo copy reset"); };
+  const isCanon = sheet.project.synthetic && !!sheet.project.fixture_id;
+  const reset = async () => { clearDemoContent(); await act("post", "/project/demo-reset", {}, "Example reset"); };
 
   const props = { sheet, act, busy, goTo: setSelected, user };
 
   return (
     <div className="min-h-screen bg-slate-50">
       <AppHeader onHistory={sheet ? () => setHistoryOpen(true) : null} />
-      {sheet?.project.synthetic && (
-        <div data-testid="demo-toolbar" className="no-print">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-end gap-2 px-4 pt-3 sm:px-6">
-            <div className="flex items-center gap-1">
-              <Button size="sm" variant="ghost" className="h-7" onClick={() => setTourOpen(true)} data-testid="demo-tour-open">
-                <Sparkles className="h-3.5 w-3.5" /> Guided tour
-              </Button>
-            {user?.demo_key === "organizer" && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" variant="ghost" className="h-7" disabled={busy} data-testid="demo-reset-button">
-                    <RotateCcw className="h-3.5 w-3.5" /> Reset my demo copy
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Reset your demo copy?</AlertDialogTitle>
-                    <AlertDialogDescription>Your job, links and responses return to the starting point. Other visitors are not affected.</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel data-testid="demo-reset-cancel">Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={reset} data-testid="demo-reset-confirm">Reset</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-            </div>
-          </div>
-        </div>
-      )}
-      <main className={`mx-auto max-w-6xl px-4 pt-8 sm:px-6 ${tourOpen && sheet?.project.synthetic ? "pb-80 sm:pb-64" : "pb-24"}`}>
-        {!sheet ? (
-          <CreateProject act={act} busy={busy} />
-        ) : (
-          <>
-            <h1 data-testid="project-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              {sheet.intake.job_name || sheet.project.name}
-            </h1>
-            <PlanStrip sheet={sheet} goTo={setSelected} />
-            <Stepper info={info} selected={selected} onSelect={setSelected} />
-            <div key={selected} className="rise mt-6">
-              {selected === "intake" && <IntakeTask key={sheet.project.rev} {...props} />}
-              {selected === "draft" && <DraftTask {...props} />}
-              {selected === "ask" && <PartnersTask {...props} />}
-              {selected === "decide" && <DecideTask {...props} />}
-            </div>
-          </>
+      <ProjectBar projectId={projectId}>
+        {isCanon && (
+          <Button size="sm" variant="ghost" className="h-7" onClick={() => setTourOpen(true)} data-testid="demo-tour-open">
+            <Sparkles className="h-3.5 w-3.5" /> Guided tour
+          </Button>
         )}
+        {sheet.project.synthetic && user?.demo_key === "organizer" && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="ghost" className="h-7" disabled={busy} data-testid="demo-reset-button">
+                <RotateCcw className="h-3.5 w-3.5" /> Reset this example
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset this example?</AlertDialogTitle>
+                <AlertDialogDescription>Only this example returns to its starting point. Your other projects are not changed.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel data-testid="demo-reset-cancel">Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={reset} data-testid="demo-reset-confirm">Reset</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </ProjectBar>
+      <main className={`mx-auto max-w-6xl px-4 pt-8 sm:px-6 ${tourOpen && isCanon ? "pb-80 sm:pb-64" : "pb-24"}`}>
+        <h1 data-testid="project-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          {sheet.intake.job_name || sheet.project.name}
+        </h1>
+        {sheet.intake.customer_name && <p data-testid="project-customer" className="mt-1 text-sm text-slate-500">{sheet.intake.customer_name}</p>}
+        <PlanStrip sheet={sheet} goTo={setSelected} />
+        <Stepper info={info} selected={selected} onSelect={setSelected} />
+        <div key={selected} className="rise mt-6">
+          {selected === "intake" && <IntakeTask key={sheet.project.rev} {...props} />}
+          {selected === "draft" && <DraftTask {...props} />}
+          {selected === "ask" && <PartnersTask {...props} />}
+          {selected === "decide" && <DecideTask {...props} />}
+        </div>
       </main>
-      {sheet && <HistoryDrawer open={historyOpen} onOpenChange={setHistoryOpen} rev={sheet.project.rev} />}
-      {sheet?.project.synthetic && tourOpen && (
+      <HistoryDrawer open={historyOpen} onOpenChange={setHistoryOpen} rev={sheet.project.rev} />
+      {isCanon && tourOpen && (
         <DemoTour sheet={sheet} act={act} busy={busy} goTo={setSelected} onClose={() => { setTourOpen(false); localStorage.setItem("assemble_tour_closed", "1"); }} />
       )}
     </div>

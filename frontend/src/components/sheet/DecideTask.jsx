@@ -13,7 +13,7 @@ import ChangeRequests from "./ChangeRequests";
 
 function nextAction(sheet) {
   const cur = sheet.current;
-  if (!cur) return "Prepare a draft first.";
+  if (!cur) return "Make a draft first.";
   if (sheet.preview) return "Review the amendment preview below. Save and recheck any edits, then discard it or select it.";
   if (cur.checker.overall === "fail") return "The current plan fails";
   const open = sheet.change_requests.filter((c) => c.status === "open");
@@ -98,15 +98,15 @@ export default function DecideTask(props) {
   const { sheet, act, busy } = props;
   const [showForm, setShowForm] = useState(false);
   const cur = sheet.current;
-  if (!cur) return <p data-testid="decide-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Prepare a draft first.</p>;
+  if (!cur) return <p data-testid="decide-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Make a draft first.</p>;
   const declined = cur.partners.filter((p) => p.status === "declined");
   const conds = openConditions(cur);
   return (
     <section data-testid="task-decide" className="space-y-6">
-      <TaskHeader step={4} title="Decide next action" lead="Each partner's status against the exact terms they saw, open conditions, and any gap.">
+      <TaskHeader step={4} title="Decide" lead="Each partner's status against the exact terms they saw, open conditions, and any gap.">
         {!sheet.preview && <Button onClick={() => act("post", "/project/preview", { rev: sheet.project.rev }, "Amendment preview opened")} disabled={busy} data-testid="decide-start-amendment-button">Start amendment preview</Button>}
         {!sheet.preview && <Button variant="outline" onClick={() => setShowForm(!showForm)} data-testid="decide-log-change-button">Log customer change</Button>}
-        <Button variant="ghost" asChild data-testid="decide-summary-link"><Link to="/summary"><FileText className="h-4 w-4" /> Printable summary</Link></Button>
+        <Button variant="ghost" asChild data-testid="decide-summary-link"><Link to="summary"><FileText className="h-4 w-4" /> Printable summary</Link></Button>
       </TaskHeader>
       <div data-testid="decide-next-action" className="rounded-md border-l-4 border-slate-900 bg-white p-4 text-sm text-slate-800"><span className="eyebrow mr-2">Next</span>{nextAction(sheet)}</div>
       <SummaryStrip cur={cur} />

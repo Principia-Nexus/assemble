@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { c2s, n2s } from "@/lib/format";
+import { setDirty } from "@/lib/dirty";
 import { TaskHeader, ErrorList } from "./Stepper";
 import IntakeSites from "./IntakeSites";
 import IntakePartners from "./IntakePartners";
@@ -50,6 +51,7 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
   }, []);
   const w = weeksOf(form);
   const dirty = JSON.stringify(form) !== JSON.stringify(toForm(sheet.intake));
+  useEffect(() => { setDirty(dirty); return () => setDirty(false); }, [dirty]);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const setCap = (i, v) => { const c = [...form.own_capacity]; c[i] = v; setForm({ ...form, own_capacity: c }); };
 
@@ -63,7 +65,7 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
 
   return (
     <section data-testid="task-intake" className="space-y-6">
-      <TaskHeader step={1} title="Check this job">
+      <TaskHeader step={1} title={sheet.intake.sites.length ? "Check" : "Add the job details"}>
         {dirty && <span data-testid="intake-unsaved-badge" className="self-center rounded-sm bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Unsaved edits</span>}
         <Button onClick={save} disabled={busy} data-testid="intake-save-button">{busy ? "Saving…" : "Save and check gaps"}</Button>
         {sheet.gap.site_count > 0 && sheet.intake.weeks && (
@@ -73,8 +75,8 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
       <ErrorList errors={errors} testId="intake-errors" />
       <Tabs value={tab} onValueChange={(v) => { setTab(v); sessionStorage.setItem("assemble_intake_tab", v); }}>
         <TabsList>
-          <TabsTrigger value="form" data-testid="intake-tab-form">Manual form</TabsTrigger>
-          <TabsTrigger value="read" data-testid="intake-tab-read">Read a document</TabsTrigger>
+          <TabsTrigger value="form" data-testid="intake-tab-form">Enter details manually</TabsTrigger>
+          <TabsTrigger value="read" data-testid="intake-tab-read">Paste a brief or add files</TabsTrigger>
         </TabsList>
         <TabsContent value="read" className="mt-4">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">

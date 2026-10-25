@@ -29,9 +29,9 @@ if not prod:
                                  metadata={"managed_by": "emergent", "emergent_product_id": "assemble_pilot"})
 elif prod.name != "Assemble pilot":
     stripe.Product.modify(prod.id, name="Assemble pilot")
-ex = stripe.Price.list(lookup_keys=["assemble_pilot_90d"], active=True, limit=1).data
+ex = stripe.Price.list(lookup_keys=["assemble_pilot"], active=True, limit=1).data
 if ex and (ex[0].unit_amount != 9900 or ex[0].currency != "usd"):
     stripe.Price.modify(ex[0].id, active=False); ex = []
 if not ex:
-    stripe.Price.create(product=prod.id, unit_amount=9900, currency="usd", lookup_key="assemble_pilot_90d", transfer_lookup_key=True)
+    stripe.Price.create(product=prod.id, unit_amount=9900, currency="usd", lookup_key="assemble_pilot", transfer_lookup_key=True)
 print("catalog ok")

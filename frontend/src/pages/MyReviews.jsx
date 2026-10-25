@@ -19,7 +19,7 @@ export default function MyReviews() {
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Reviews shared with you</h1>
         {user?.firm_id && (
-          <p className="mt-2 text-sm"><Link to="/project" className="font-semibold text-slate-900 underline" data-testid="my-reviews-project-link">Go to your own job sheet</Link></p>
+          <p className="mt-2 text-sm"><Link to="/projects" className="font-semibold text-slate-900 underline" data-testid="my-reviews-project-link">Go to your projects</Link></p>
         )}
         <div className="stagger mt-8 space-y-3">
           {error && <p data-testid="my-reviews-error" className="text-sm text-red-700">{error}</p>}

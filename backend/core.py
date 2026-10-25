@@ -1,5 +1,6 @@
 import os
 import uuid
+from contextvars import ContextVar
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
@@ -17,6 +18,8 @@ db = client[os.environ["DB_NAME"]]
 JWT_ALG = "HS256"
 USER_PROJ = {"_id": 0, "password_hash": 0}
 STALE_MSG = "This sheet changed in another tab or save. Reload to see the latest version before saving again."
+# Project chosen by the client (X-Project-Id). Never authorization on its own: get_project re-checks firm ownership.
+PROJECT_CTX = ContextVar("project_id", default=None)
 
 
 def now():
@@ -98,3 +101,5 @@ async def log_event(project_id, actor, kind, summary, partner_id=None, details=N
         "partner_id": partner_id,
         "details": details or [],
     })
+    if project_id:
+        await db.projects.update_one({"project_id": project_id}, {"$set": {"updated_at": now_iso()}})

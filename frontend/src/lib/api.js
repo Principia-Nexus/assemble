@@ -5,6 +5,15 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+// The open project travels on every request; the server re-checks that it belongs to the signed-in firm.
+let projectId = null;
+export const currentProjectId = () => projectId;
+export function setProjectId(id) {
+  projectId = id || null;
+  if (projectId) api.defaults.headers.common["X-Project-Id"] = projectId;
+  else delete api.defaults.headers.common["X-Project-Id"];
+}
+
 const TAG = / ?\(Synthetic\)/g;
 const untag = (v) =>
   typeof v === "string" ? v.replace(TAG, "")

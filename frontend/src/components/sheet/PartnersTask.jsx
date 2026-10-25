@@ -83,7 +83,7 @@ export default function PartnersTask({ sheet, act, busy, goTo }) {
   const blocked = sheet.current?.checker.overall === "fail";
   return (
     <section data-testid="task-ask" className="space-y-6">
-      <TaskHeader step={3} title="Ask each partner" lead="Create a private link for each partner and share it yourself.">
+      <TaskHeader step={3} title="Invite" lead="Create a private link for each partner and share it yourself.">
         <Button variant="outline" onClick={() => goTo("decide")} data-testid="ask-next-button">Go to decide</Button>
       </TaskHeader>
       {blocked && (
@@ -93,7 +93,7 @@ export default function PartnersTask({ sheet, act, busy, goTo }) {
         </div>
       )}
       {!sheet.current ? (
-        <p data-testid="ask-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Prepare a draft first.</p>
+        <p data-testid="ask-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Make a draft first.</p>
       ) : (
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {partners.map((p) => <PartnerCard key={p.partner_id} p={p} act={act} busy={busy} demoPassword={demoPassword} blocked={blocked} />)}

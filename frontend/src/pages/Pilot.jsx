@@ -26,7 +26,7 @@ export function PilotOffer({ notice }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => { api.get("/billing/access").then((r) => setAccess(r.data)).catch((e) => setError(errText(e))); }, []);
-  if (access && (access.active || !access.required)) return <Navigate to={user?.firm_id ? "/project" : "/reviews"} replace />;
+  if (access && (access.active || !access.required)) return <Navigate to={user?.firm_id ? "/projects" : "/reviews"} replace />;
   const start = async () => {
     setBusy(true); setError("");
     try { const { data } = await api.post("/billing/checkout", { origin_url: window.location.origin }); window.location.href = data.checkout_url; }
@@ -81,7 +81,7 @@ export function PaymentSuccess() {
           <>
             <p className="text-xl font-semibold text-slate-900">Pilot access active</p>
             <p className="text-sm text-slate-600">Test payment complete. No money was charged.</p>
-            <Button asChild className="h-11 w-full" data-testid="payment-open-workspace"><Link to="/project">Open workspace</Link></Button>
+            <Button asChild className="h-11 w-full" data-testid="payment-open-workspace"><Link to="/projects">Open workspace</Link></Button>
           </>
         )}
         {state.phase === "pending" && (
@@ -101,7 +101,7 @@ export function PaymentSuccess() {
             <p className="text-sm text-red-700">{state.msg}</p>
             <div className="flex justify-center gap-2">
               <Button asChild variant="outline" data-testid="payment-back-to-pilot"><Link to="/pilot">Back to pilot</Link></Button>
-              <Button asChild data-testid="payment-error-open-workspace"><Link to="/project">Open workspace</Link></Button>
+              <Button asChild data-testid="payment-error-open-workspace"><Link to="/projects">Open workspace</Link></Button>
             </div>
           </>
         )}

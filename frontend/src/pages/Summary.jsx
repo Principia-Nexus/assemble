@@ -89,7 +89,7 @@ export default function Summary() {
   return (
     <div className="min-h-screen bg-slate-100 print:bg-white">
       <div className="no-print mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
-        <Button variant="ghost" size="sm" asChild data-testid="summary-back-link"><Link to="/project"><ArrowLeft className="h-4 w-4" /> Back to sheet</Link></Button>
+        <Button variant="ghost" size="sm" asChild data-testid="summary-back-link"><Link to=".." relative="path"><ArrowLeft className="h-4 w-4" /> Back to sheet</Link></Button>
         <Button size="sm" onClick={() => window.print()} data-testid="summary-print-button"><Printer className="h-4 w-4" /> Print</Button>
       </div>
       <article data-testid="summary-document" className="mx-auto max-w-4xl space-y-6 bg-white p-8 shadow-sm print:max-w-none print:p-0 print:shadow-none sm:p-12">

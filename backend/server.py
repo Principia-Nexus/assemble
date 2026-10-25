@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
-from core import db, client
+from core import db, client, PROJECT_CTX
 import auth_routes
 import project_routes
 import review_routes
@@ -16,6 +16,7 @@ import billing_routes
 app = FastAPI(title="Assemble")
 app.include_router(auth_routes.router)
 app.include_router(project_routes.router)
+app.include_router(project_routes.projects_router)
 app.include_router(review_routes.router)
 app.include_router(extract_routes.router)
 app.include_router(billing_routes.router)
@@ -28,6 +29,7 @@ async def root():
 
 @app.middleware("http")
 async def origin_guard(request: Request, call_next):
+    PROJECT_CTX.set((request.headers.get("x-project-id") or "").strip()[:40] or None)
     if request.method in ("POST", "PUT", "PATCH", "DELETE") and request.url.path.startswith("/api"):
         origin = request.headers.get("origin")
         host = request.headers.get("x-forwarded-host") or request.headers.get("host")
@@ -51,7 +53,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 async def startup():
     await db.users.create_index([("email", 1), ("sandbox_id", 1)], unique=True)
     await db.users.create_index("user_id", unique=True)
-    await db.projects.create_index("firm_id", unique=True)
+    idx = await db.projects.index_information()
+    if idx.get("firm_id_1", {}).get("unique"):
+        await db.projects.drop_index("firm_id_1")
+    await db.projects.create_index([("firm_id", 1), ("position", 1), ("created_at", 1)])
+    await db.projects.create_index([("firm_id", 1), ("create_key", 1)], unique=True,
+                                   partialFilterExpression={"create_key": {"$type": "string"}})
     await db.projects.create_index("project_id", unique=True)
     await db.versions.create_index("version_id", unique=True)
     await db.links.create_index("token", unique=True)

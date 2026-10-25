@@ -136,7 +136,7 @@ export default function Review() {
     const org = demo.accounts.find((a) => a.role === "Organizer");
     const { data: u } = await api.post("/auth/login", { email: org.email, password: demo.password, visitor_id: visitorId() });
     setUser(u);
-    navigate("/project");
+    navigate("/projects");
   };
 
   const s = data && STATUS[data.status];

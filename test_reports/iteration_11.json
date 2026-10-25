@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 11: tested the no-expiry $99 Stripe sandbox pilot, the email-first login redesign, billing security, the check-email throttle, demo and partner bypass, and the iteration 9 regressions. Backend: /app/tests/test_billing_pilot.py was updated (Origin header, no-expiry assertions, origin-mismatch, signed-webhook fulfilment, throttle) and passes 17/17; backend/tests passes 67/67. Frontend: ran a real hosted Stripe checkout with card 4242. With an Oregon address (no tax) the whole flow works: Pilot access active, no 'until' date, access {required:true, active:true, demo:false}, checkout again returns 409, access persists after sign-out and sign-in, and /pilot redirects to /project. Found 2 CRITICAL billing bugs. (1) Managed payments adds sales tax (Texas address: amount_total 10553 = 9900 + 653 tax), and fulfil() requires amount_total == 9900, so a genuinely paid customer never gets access: the page is stuck on 'still being confirmed' and the DB tx stays pending. (2) STRIPE_WEBHOOK_SECRET is EMPTY in backend/.env. Every real Stripe webhook returns 400 (48 x 400 in the logs), and anyone can forge a webhook by computing the HMAC with an empty key. My test did exactly this and activated an unpaid firm (session_id comes from the checkout response, firm_id from /api/auth/me).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "billing_routes.fulfil (status + webhook)", "issue": "Checks session.amount_total != 9900. Stripe managed_payments adds sales tax by billing address (TX: 653 cents), so amount_total=10553 and the paid session is silently rejected. The user paid but is never activated. Reproduced: session cs_test_a1whLvNWm2GTpfI79IFiXuVHAsNh8EvAZ53Q9QrBEy6ZxOaZbKod6pRZtH (status complete/paid, tx still pending, firm has no pilot_active). Fix: validate amount_subtotal == 9900 (or amount_total - total_details.amount_tax) and/or the line-item price id / lookup_key.", "priority": "CRITICAL"},
+      {"endpoint": "POST /api/stripe/webhook", "issue": "STRIPE_WEBHOOK_SECRET is an empty string in backend/.env. stripe.Webhook.construct_event accepts signatures HMAC'd with the empty key, so webhooks can be forged and give free pilot activation (proven by TestWebhookFulfil, which activates a firm without paying). Genuine Stripe deliveries to endpoint we_1UUJ8EDxAu06Mwvsc65tyVYb all fail with 400. Fix: put the real whsec_ for that endpoint into the env (roll the secret or recreate the endpoint), and fail fast at startup if it is empty or does not start with 'whsec_'.", "priority": "CRITICAL"}
+    ],
+    "minor": [
+      {"endpoint": "billing_routes LOOKUP_KEY", "issue": "Lookup key and metadata still say 'assemble_pilot_90d', a leftover from the 90-day model (not user-visible; the product name is correctly 'Assemble pilot')."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Paid checkout with a taxable address", "issue": "Because of the backend amount check, /payment/success shows 'Your payment is still being confirmed. Please don't pay again.' forever for a paid user, and Refresh status never resolves it.", "affected_selectors": ["[data-testid=payment-phase-pending]"]}
+    ],
+    "design_issues": [
+      {"screen": "Login (desktop >=768px)", "issues": ["The email input's 'sm:text-lg' is overridden by the shadcn Input's 'md:text-sm', so at 1920px the email text is 14px, smaller than at 390px (16px). Height (48px), centering and the 'Enter email' placeholder are correct. Use 'md:text-lg' or a '!' override."]}
+    ]
+  },
+  "test_report_links": ["/app/tests/test_billing_pilot.py", "/app/test_reports/pytest/pytest_billing_iter11.xml"],
+  "action_items": [
+    "CRITICAL: in fulfil(), validate the pre-tax amount (session.amount_subtotal == 9900) instead of amount_total, since managed_payments adds tax. Then re-run status for the stuck session cs_test_a1whLvNW... (firm_d9cf6655406c) to activate it.",
+    "CRITICAL: set a real STRIPE_WEBHOOK_SECRET (whsec_...) for webhook endpoint we_1UUJ8EDxAu06Mwvsc65tyVYb, and refuse to start or reject all webhooks if it is empty.",
+    "Minor: fix the login email font-size override on desktop (md:text-sm beats sm:text-lg).",
+    "Minor: rename LOOKUP_KEY 'assemble_pilot_90d' if desired (needs the Stripe price lookup_key updated too)."
+  ],
+  "critical_code_review_comments": [
+    "billing_routes.py line 13: WEBHOOK_SECRET = os.environ[...] fails fast only when the key is missing, not when it is empty. Add a non-empty/whsec_ check.",
+    "fulfil() compares amount_total to the list price. With managed_payments (merchant of record), tax and possible discounts change amount_total; compare amount_subtotal or verify line_items price == the lookup price.",
+    "Positives: the Origin check works (a mismatched origin returns 400, a spoofed Origin header gets 403 from the CSRF/CORS layer); Stripe calls run in the threadpool; idempotent fulfil (a replayed webhook still gives 1 paid tx); status ownership returns 404 for other users; the check-email throttle gives 429 on the 31st call."
+  ],
+  "updated_files": ["/app/tests/test_billing_pilot.py"],
+  "success_rate": {"backend": "17/17 billing + 67/67 backend/tests pass, but 2 critical billing defects were found outside test assertions", "frontend": "~90%: all requested UI checks pass; the paid-with-tax flow fails"},
+  "test_credentials": "Demo accounts from /app/memory/test_credentials.md (password synthetic-demo). UI-registered paid user: TEST_ui11b_1792904784@example.com / Passw0rd!x (active). Stuck paid-but-inactive user: TEST_ui11_1792904690@example.com / Passw0rd!x.",
+  "seed_data_creation": "TEST_pilot_* and TEST_ui11* users/firms plus their payment_transactions were created; email_checks was cleared before and after testing.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The billing tests are in /app/tests/test_billing_pilot.py. They need the Origin header and clear email_checks through a session fixture. TestWebhookFulfil signs with os.environ STRIPE_WEBHOOK_SECRET, so once the real secret is set it will still work, because it reads the same env. Add a test asserting that a webhook signed with an empty key returns 400. For Stripe UI checkout, use an Oregon address (100 SW Main St, Portland, OR 97204) for no tax, or a Texas address to reproduce the tax bug. The other Stripe tips from iteration_10 still apply.",
+  "rca of the issue": "Bug 1: Checkout uses managed_payments={'enabled': True}, so Stripe computes tax from the billing address. fulfil() rejects any session where amount_total != AMOUNT (9900), so taxed sessions are dropped silently and stay pending. Repro: register, then /pilot, then pay with 4242 and a Texas address; /payment/success stays pending. Mitigation: check amount_subtotal. Bug 2: STRIPE_WEBHOOK_SECRET= (empty) in backend/.env. construct_event computes HMAC-SHA256 with the key '', so attackers can sign arbitrary events, while real Stripe signatures (made with the real whsec) fail and return 400. Mitigation: configure the real secret and validate it at startup."
+}

@@ -378,7 +378,7 @@ async def upload_pdf(file: UploadFile = File(...), kind: str = Form(...), label:
 @router.get("/demo-content")
 async def demo_content(user=Depends(current_user)):
     p = await get_project(user)
-    if not p.get("synthetic"):
+    if not p.get("synthetic") or not p.get("fixture_id"):
         raise HTTPException(404, "Demo content is only available in the synthetic demo.")
     fx = await get_fixture(p.get("fixture_id") or DEFAULT_FIXTURE)
     start = p["intake"].get("start_date") or L.today_pacific().isoformat()
@@ -393,7 +393,7 @@ async def demo_content(user=Depends(current_user)):
 @router.get("/sample-pdf")
 async def sample_pdf(scanned: bool = False, user=Depends(current_user)):
     p = await get_project(user)
-    if not p.get("synthetic"):
+    if not p.get("synthetic") or not p.get("fixture_id"):
         raise HTTPException(404, "Sample documents are only available in the synthetic demo.")
     start = p["intake"].get("start_date") or L.today_pacific().isoformat()
     fx = await get_fixture(p.get("fixture_id") or DEFAULT_FIXTURE)

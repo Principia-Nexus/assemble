@@ -2,10 +2,10 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const STEPS = [
-  { key: "intake", title: "Check this job", short: "Check" },
-  { key: "draft", title: "Prepare a draft", short: "Draft" },
-  { key: "ask", title: "Ask each partner", short: "Ask" },
-  { key: "decide", title: "Decide next action", short: "Decide" },
+  { key: "intake", title: "Check", short: "Check" },
+  { key: "draft", title: "Draft", short: "Draft" },
+  { key: "ask", title: "Invite", short: "Invite" },
+  { key: "decide", title: "Decide", short: "Decide" },
 ];
 
 export function stepInfo(sheet) {

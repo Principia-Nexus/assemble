@@ -100,7 +100,7 @@ export default function Login() {
   const fits = (u) => {
     if (!next) return false;
     if (next.startsWith("/review/")) return true;
-    if (next.startsWith("/project") || next.startsWith("/summary")) return !!u?.firm_id;
+    if (next.startsWith("/project")) return !!u?.firm_id;
     if (next.startsWith("/reviews")) return !u?.firm_id;
     return true;
   };
@@ -150,7 +150,7 @@ export default function Login() {
         <form className="flex flex-col" data-testid="auth-form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
           <Label htmlFor="email" className="sr-only">Email</Label>
           <Input id="email" type="email" placeholder="Enter email" autoComplete="email" value={form.email} required data-testid="login-email-input"
-            className="h-12 text-center text-base placeholder:text-slate-400 sm:text-lg"
+            className="h-12 text-center text-base placeholder:text-slate-400 md:text-lg"
             onChange={(e) => { setForm({ ...form, email: e.target.value }); if (step !== "email") setStep("email"); }} />
           <Reveal show={step === "register"}>
             <p data-testid="register-notice" className="text-xs text-slate-500">No account yet for this email. Add your details to create one.</p>

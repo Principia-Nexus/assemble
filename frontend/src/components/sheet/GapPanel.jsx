@@ -29,6 +29,7 @@ export default function GapPanel({ gap, dirty }) {
           </tbody>
         </table>
       )}
+      {gap.weekly.length > 0 && <p data-testid="gap-availability-note" className="text-[11px] text-slate-500">Availability needs confirmation for this job.</p>}
       <div>
         <p className="text-xs font-semibold text-slate-700">Unknowns ({gap.unknowns.length})</p>
         {gap.unknowns.length === 0 ? null : (

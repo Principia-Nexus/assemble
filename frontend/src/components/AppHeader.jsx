@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
-import { History, Inbox } from "lucide-react";
+import { FolderOpen, History, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
+import { confirmLeave, setDirty } from "@/lib/dirty";
 
 export function Brand({ light = false, large = false }) {
   return (
-    <Link to="/" data-testid="brand-home-link" className={`font-semibold tracking-tight ${large ? "text-[31px] sm:text-[36px]" : "text-2xl sm:text-[28px]"} ${light ? "text-[#FFFFFF]" : "text-[#1A2838]"}`}>
+    <Link to="/" data-testid="brand-home-link" className={`font-semibold tracking-tight ${large ? "text-5xl sm:text-6xl lg:text-7xl" : "text-2xl sm:text-[28px]"} ${light ? "text-[#FFFFFF]" : "text-[#1A2838]"}`}>
       Assemble
     </Link>
   );
@@ -24,6 +25,11 @@ export default function AppHeader({ onHistory }) {
           {onHistory && (
             <Button variant="ghost" size="sm" onClick={onHistory} data-testid="history-drawer-trigger">
               <History className="h-4 w-4" /> <span className="hidden sm:inline">History</span>
+            </Button>
+          )}
+          {user?.firm_id && (
+            <Button variant="ghost" size="sm" asChild data-testid="header-projects-link">
+              <Link to="/projects" onClick={(e) => { if (!confirmLeave()) e.preventDefault(); else setDirty(false); }}><FolderOpen className="h-4 w-4" /> <span className="hidden sm:inline">Projects</span></Link>
             </Button>
           )}
           <Button variant="ghost" size="sm" asChild data-testid="header-my-reviews-link">

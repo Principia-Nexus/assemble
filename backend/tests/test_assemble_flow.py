@@ -74,7 +74,8 @@ class TestAuth:
         r = s.post(f"{BASE_URL}/api/project", json={"name": "TEST job"})
         assert r.status_code == 200
         assert r.json()["sheet"]["intake"]["job_name"] == "TEST job"
-        assert s.post(f"{BASE_URL}/api/project", json={"name": "x"}).status_code == 409
+        assert s.post(f"{BASE_URL}/api/project", json={"name": "x"}).status_code == 200
+        assert len(s.get(f"{BASE_URL}/api/projects").json()["projects"]) == 2
         # login again + duplicate register
         r = requests.post(f"{BASE_URL}/api/auth/login", json={"email": email, "password": "password123"})
         assert r.status_code == 200

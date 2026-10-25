@@ -11,7 +11,7 @@ from core import db, current_user, now_iso
 router = APIRouter(prefix="/api")
 stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET"]
-LOOKUP_KEY = "assemble_pilot_90d"
+LOOKUP_KEY = "assemble_pilot"
 AMOUNT, CURRENCY = 9900, "usd"
 
 
@@ -35,7 +35,7 @@ async def fulfil(session):
     tx = await db.payment_transactions.find_one({"session_id": session["id"]})
     if not tx or tx.get("payment_status") == "paid":
         return
-    if session.get("payment_status") != "paid" or session.get("amount_total") != AMOUNT or session.get("currency") != CURRENCY \
+    if session.get("payment_status") != "paid" or session.get("amount_subtotal") != AMOUNT or session.get("currency") != CURRENCY \
             or (session.get("metadata") or {}).get("firm_id") != tx["firm_id"]:
         return
     res = await db.payment_transactions.update_one(
@@ -50,7 +50,16 @@ async def fulfil(session):
 
 @router.get("/billing/access")
 async def access(user=Depends(current_user)):
-    return await pilot_state(user)
+    s = await pilot_state(user)
+    if s["required"] and not s["active"]:
+        tx = await db.payment_transactions.find_one({"firm_id": user["firm_id"], "payment_status": "pending"}, sort=[("created_at", -1)])
+        if tx:
+            try:
+                await fulfil((await run_in_threadpool(stripe.checkout.Session.retrieve, tx["session_id"])).to_dict())
+                s = await pilot_state(user)
+            except stripe.error.StripeError:
+                pass
+    return s
 
 
 class CheckoutIn(BaseModel):
@@ -111,6 +120,8 @@ async def status(session_id: str, user=Depends(current_user)):
 
 @router.post("/stripe/webhook")
 async def webhook(request: Request):
+    if not WEBHOOK_SECRET.startswith("whsec_"):
+        raise HTTPException(503, "Webhook signing is not configured.")
     try:
         event = stripe.Webhook.construct_event(await request.body(), request.headers.get("stripe-signature", ""), WEBHOOK_SECRET)
     except (stripe.error.SignatureVerificationError, ValueError):

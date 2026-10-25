@@ -1,8 +1,10 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth, homeFor } from "@/context/AuthContext";
+import { setProjectId } from "@/lib/api";
 import Login from "@/pages/Login";
+import Projects from "@/pages/Projects";
 import AuthCallback from "@/pages/AuthCallback";
 import ProjectSheet from "@/pages/ProjectSheet";
 import Review from "@/pages/Review";
@@ -30,6 +32,13 @@ function Home() {
   return <Navigate to={user ? homeFor(user) : "/login"} replace />;
 }
 
+// Remounts the page per project so no state from one project can render into another.
+function Keyed({ Page }) {
+  const { projectId } = useParams();
+  setProjectId(projectId);
+  return <Page key={projectId} />;
+}
+
 function AppRouter() {
   const location = useLocation();
   if (location.hash?.includes("session_id=")) return <AuthCallback />;
@@ -37,9 +46,12 @@ function AppRouter() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/project" element={<Protected><ProjectSheet /></Protected>} />
+      <Route path="/projects" element={<Protected><Projects /></Protected>} />
+      <Route path="/projects/:projectId" element={<Protected><Keyed Page={ProjectSheet} /></Protected>} />
+      <Route path="/projects/:projectId/summary" element={<Protected><Keyed Page={Summary} /></Protected>} />
+      <Route path="/project" element={<Navigate to="/projects" replace />} />
+      <Route path="/summary" element={<Navigate to="/projects" replace />} />
       <Route path="/reviews" element={<Protected><MyReviews /></Protected>} />
-      <Route path="/summary" element={<Protected><Summary /></Protected>} />
       <Route path="/pilot" element={<Protected><PilotOffer /></Protected>} />
       <Route path="/payment/success" element={<Protected><PaymentSuccess /></Protected>} />
       <Route path="/payment/cancel" element={<Protected><PaymentCancel /></Protected>} />

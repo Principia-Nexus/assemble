@@ -49,4 +49,4 @@ export function AuthProvider({ children }) {
 
 export const useAuth = () => useContext(AuthCtx);
 
-export const homeFor = (u) => (u?.firm_id ? "/project" : "/reviews");
+export const homeFor = (u) => (u?.firm_id ? "/projects" : "/reviews");

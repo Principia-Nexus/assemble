@@ -5,18 +5,22 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from pymongo import ReturnDocument
+from pymongo.errors import DuplicateKeyError
 
 import logic as L
-from core import db, now_iso, new_id, current_user, log_event, STALE_MSG
-from demo import reset_sandbox
+from core import db, now_iso, new_id, current_user, log_event, STALE_MSG, PROJECT_CTX
+from demo import reset_project
 from state import partner_statuses, link_public
 from billing_routes import require_pilot
 
 router = APIRouter(prefix="/api/project")
+projects_router = APIRouter(prefix="/api/projects")
 
 
 class CreateIn(BaseModel):
     name: str
+    customer: Optional[str] = None
+    request_key: Optional[str] = None
 
 
 class RevIn(BaseModel):
@@ -70,10 +74,15 @@ class CustomerChangeIn(BaseModel):
 async def get_project(user, required=True):
     if not user.get("firm_id"):
         raise HTTPException(403, "This account is a partner account with no organizer firm. Open the review links shared with you.")
-    p = await db.projects.find_one({"firm_id": user["firm_id"]}, {"_id": 0})
+    await require_pilot(user)
+    q, pid = {"firm_id": user["firm_id"]}, PROJECT_CTX.get()
+    if pid:
+        q["project_id"] = pid
+    p = await db.projects.find_one(q, {"_id": 0}, sort=[("position", 1), ("created_at", 1)])
+    if pid and not p:
+        raise HTTPException(404, "Project not found for your business.")
     if required and not p:
         raise HTTPException(404, "No job yet. Create one to start.")
-    await require_pilot(user)
     return p
 
 
@@ -103,7 +112,8 @@ def bad(errors):
 async def sheet(project_id):
     p = await db.projects.find_one({"project_id": project_id}, {"_id": 0})
     cur, pre = await get_version(p.get("current_version_id")), await get_version(p.get("preview_version_id"))
-    out = {"project": {k: p.get(k) for k in ("project_id", "name", "rev", "synthetic", "sandbox_id", "created_at")},
+    out = {"project": {k: p.get(k) for k in ("project_id", "name", "rev", "synthetic", "sandbox_id", "created_at",
+                                             "fixture_id", "example_key")},
            "intake": p["intake"], "gap": L.gap_analysis(p["intake"]), "current": None, "preview": None}
     jc = p["intake"].get("job_conditions") or []
     if cur:
@@ -132,22 +142,61 @@ async def read_project(user=Depends(current_user)):
     return {"sheet": await sheet(p["project_id"]) if p else None}
 
 
-@router.post("")
+async def project_status(p):
+    cur = await get_version(p.get("current_version_id"))
+    if cur and any(s["status"] in ("awaiting", "link_not_shared", "needs_rereview") for s in await partner_statuses(p, cur)):
+        return "Awaiting partner review"
+    if not p["intake"].get("sites") or L.gap_analysis(p["intake"])["unknowns"]:
+        return "Needs information"
+    return "Draft"
+
+
+@projects_router.get("")
+async def list_projects(user=Depends(current_user)):
+    PROJECT_CTX.set(None)
+    await get_project(user, required=False)
+    rows = await db.projects.find({"firm_id": user["firm_id"]}, {"_id": 0}).sort([("position", 1), ("created_at", 1)]).to_list(200)
+    return {"projects": [{"project_id": p["project_id"], "name": p["name"], "customer": p["intake"].get("customer_name"),
+                          "synthetic": bool(p.get("synthetic")), "status": await project_status(p),
+                          "updated_at": p.get("updated_at") or p["created_at"]} for p in rows]}
+
+
+@projects_router.post("")
 async def create_project(body: CreateIn, user=Depends(current_user)):
-    if await get_project(user, required=False):
-        raise HTTPException(409, "Your firm already has a job. Assemble works on one job at a time.")
-    name = body.name.strip()
+    PROJECT_CTX.set(None)
+    await get_project(user, required=False)
+    name, customer = body.name.strip(), (body.customer or "").strip() or None
     if not name or len(name) > 200:
-        bad("Give the job a name (up to 200 characters).")
+        bad("Give the project a name (up to 200 characters).")
+    if customer and len(customer) > 200:
+        bad("Customer name is too long (up to 200 characters).")
+    key = (body.request_key or "").strip()[:80] or None
+    if key:
+        dup = await db.projects.find_one({"firm_id": user["firm_id"], "create_key": key}, {"_id": 0, "project_id": 1})
+        if dup:
+            return {"project_id": dup["project_id"]}
     pid = new_id("prj")
-    intake = {"job_name": name, "customer_name": None, "scope_summary": None, "start_date": None, "weeks": None,
+    intake = {"job_name": name, "customer_name": customer, "scope_summary": None, "start_date": None, "weeks": None,
               "budget_ceiling_cents": None, "own_capacity": [], "own_cost_per_site_cents": None,
-              "sites": [], "partners": []}
-    await db.projects.insert_one({"project_id": pid, "firm_id": user["firm_id"], "sandbox_id": user.get("sandbox_id"),
-                                  "synthetic": False, "name": name, "rev": 0, "version_counter": 0, "intake": intake,
-                                  "current_version_id": None, "preview_version_id": None, "created_at": now_iso()})
-    await log_event(pid, org(user), "project", f"Job created: {name}")
-    return {"sheet": await sheet(pid)}
+              "sites": [], "partners": [], "job_conditions": []}
+    doc = {"project_id": pid, "firm_id": user["firm_id"], "sandbox_id": user.get("sandbox_id"), "synthetic": False,
+           "name": name, "rev": 0, "version_counter": 0, "intake": intake, "current_version_id": None,
+           "preview_version_id": None, "position": 1000, "created_at": now_iso(), "updated_at": now_iso()}
+    if key:
+        doc["create_key"] = key
+    try:
+        await db.projects.insert_one(doc)
+    except DuplicateKeyError:
+        dup = await db.projects.find_one({"firm_id": user["firm_id"], "create_key": key}, {"_id": 0, "project_id": 1})
+        return {"project_id": dup["project_id"]}
+    await log_event(pid, org(user), "project", f"Project created: {name}")
+    return {"project_id": pid}
+
+
+@router.post("")
+async def create_project_compat(body: CreateIn, user=Depends(current_user)):
+    r = await create_project(body, user)
+    return {"project_id": r["project_id"], "sheet": await sheet(r["project_id"])}
 
 
 @router.put("/intake")
@@ -177,9 +226,9 @@ async def make_draft(body: DraftIn, user=Depends(current_user)):
     it = p["intake"]
     errors = []
     if not it.get("weeks"):
-        errors.append("Number of weeks is unknown. Add it in Check this job first.")
+        errors.append("Number of weeks is unknown. Add it in Check first.")
     if not it.get("sites"):
-        errors.append("Add at least one site in Check this job first.")
+        errors.append("Add at least one site in Check first.")
     known = {x["partner_id"] for x in it["partners"]}
     if any(x not in known for x in body.partner_ids):
         errors.append("One of the chosen partners is no longer in the job details. Reload and choose again.")
@@ -380,7 +429,7 @@ async def create_link(body: LinkIn, user=Depends(current_user)):
     partner = next((x for x in p["intake"]["partners"] if x["partner_id"] == body.partner_id), None) or \
         next(x for x in cur["partners"] if x["partner_id"] == body.partner_id)
     if not partner.get("email"):
-        bad(f"Add a contact email for {partner['name']} in Check this job first. The link only opens for that email.")
+        bad(f"Add a contact email for {partner['name']} in Check first. The link only opens for that email.")
     existing = await db.links.find_one({"project_id": p["project_id"], "partner_id": body.partner_id, "revoked": False},
                                        {"_id": 0})
     if existing:
@@ -468,6 +517,8 @@ async def history(user=Depends(current_user)):
 async def demo_reset(user=Depends(current_user)):
     if not user.get("sandbox_id") or user.get("demo_key") != "organizer":
         raise HTTPException(403, "Only the demo organizer can reset a demo copy.")
-    await reset_sandbox(user["sandbox_id"], user)
     p = await get_project(user)
+    if not p.get("synthetic") or p.get("sandbox_id") != user["sandbox_id"]:
+        raise HTTPException(400, "Only a synthetic example can be reset.")
+    await reset_project(p, user)
     return {"sheet": await sheet(p["project_id"])}
