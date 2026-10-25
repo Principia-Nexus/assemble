@@ -119,3 +119,5 @@
 ## 2026-06 — Dots animation desktop-only (static logo on phones/touch); scattered hold lengthened to ~1.4s, field spans full viewport edge to edge.
 
 ## 2026-06 — Dots: deferred init (no strict-mode double start), capped frame clock (no skipping), dot layout cached in localStorage (init 300ms→33ms on return), whole animation ~1s slower.
+
+## 2026-06 — Dots timing knobs: TUNING {fadeIn, scatter, flight, spread} at top of frontend/src/lib/dotsEngine.js.

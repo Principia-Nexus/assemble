@@ -1,6 +1,14 @@
 /* eslint-disable */
 import GLYPHS from "./dotsGlyphs.json";
 
+// ---- Animation feel: edit these (seconds) ----
+const TUNING = {
+  fadeIn: 0.6,   // how long the dots take to appear on the page
+  scatter: 1.6,  // how long they sit spread out before flying in
+  flight: 1.85,  // how long each dot takes to fly to the logo (lower = faster)
+  spread: 0.5,   // 0 = every letter fills at once; higher = letters fill left to right over this long
+};
+
 const FILTERS = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" id="assemble-dot-filters">
   <filter id="soft-cap" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
     <feComponentTransfer>
@@ -77,11 +85,11 @@ const PASS_BEHIND = 0.05, PASS_SOFT = 10;
 // Timeline (seconds). See NOTES.md for the table.
 const T = {
   emergeEnd: 0.2,       // last dot starts fading in
-  emergeDur: 0.6,
-  convStart: 1.6,      // first dot leaves the ring (end of wind-up)
-  sweep: 0.5,           // left-to-right release stagger across the word
+  emergeDur: TUNING.fadeIn,
+  convStart: TUNING.scatter,      // first dot leaves the ring (end of wind-up)
+  sweep: TUNING.spread,
   jitter: 0.04,
-  flight: 1.85,          // + up to 0.1 random
+  flight: TUNING.flight,
   duration: 0,          // set below: exact logo + HOLD
 };
 const LOOP_FADE = 0.45, LOOP_BLANK = 0.35;  // live playback only: fade the logo out, then fade the opening ring back in
@@ -505,7 +513,7 @@ function render(t) {
 // in so a single opaque dot is never lightened. #ink-from-mask stamps it as ink.
 const ops = [];
 // x reached by the written word at time t (the sweep's landing front), design px
-const writtenTo = (t) => WORD_X0 + (WORD_X1 - WORD_X0) * (t - T.convStart - T.flight) / (0.94 * T.sweep);
+const writtenTo = (t) => WORD_X0 + (WORD_X1 - WORD_X0) * (t - T.convStart - T.flight) / Math.max(1e-3, 0.94 * T.sweep);
 function drawLoose(t, a, e, f, W, H) {
   ops.length = 0;
   const front = writtenTo(t) - 8;
