@@ -585,6 +585,9 @@ async def apply_readings(body: ApplyIn, user=Depends(current_user)):
     recalc = "No candidate yet, so nothing was recalculated."
     p2 = await db.projects.find_one({"project_id": p["project_id"]}, {"_id": 0})
     cur = await db.versions.find_one({"version_id": p2.get("current_version_id")}, {"_id": 0}) if p2.get("current_version_id") else None
+    if cur and all(f["scope"] == "job_condition" for f in chosen):
+        recalc = "Job-wide conditions don't change any partner's terms, so the plan was not recalculated."
+        cur = None
     if cur:
         owners = [x for x in L.partner_owners(cur) if x in {q["partner_id"] for q in it["partners"]}]
         try:

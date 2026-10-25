@@ -6,7 +6,7 @@ import { api, errText } from "@/lib/api";
 import { fmtTime } from "@/lib/format";
 
 // Recipient and message are built on the server; the organizer previews and deliberately sends.
-export default function EmailInvite({ p, act, busy, id }) {
+export default function EmailInvite({ p, act, busy, id, onCopy }) {
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState("");
@@ -44,7 +44,11 @@ export default function EmailInvite({ p, act, busy, id }) {
           {error && <p role="alert" data-testid="email-invite-error" className="text-sm text-red-700">{error}</p>}
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} data-testid="email-invite-cancel">Cancel</Button>
-            <Button disabled={!preview?.sendable || sending} onClick={send} data-testid="email-invite-send">{sending ? "Sending…" : "Send email"}</Button>
+            {preview && !preview.sendable ? (
+              <Button onClick={() => { onCopy(); setOpen(false); }} data-testid="email-invite-copy">Copy link instead</Button>
+            ) : (
+              <Button disabled={!preview?.sendable || sending} onClick={send} data-testid="email-invite-send">{sending ? "Sending…" : "Send email"}</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

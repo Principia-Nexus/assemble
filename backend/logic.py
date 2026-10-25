@@ -281,9 +281,9 @@ def gap_analysis(it):
             unknowns.append(f"Your crew capacity, week {i + 1}: unknown")
     for s in it.get("sites") or []:
         if s.get("deadline_week") is None:
-            unknowns.append(f"{s['site_id']} deadline: unknown")
+            unknowns.append(f"{s.get('name') or s['site_id']} deadline: unknown")
         if not s.get("scope"):
-            unknowns.append(f"{s['site_id']} scope: unknown")
+            unknowns.append(f"{s.get('name') or s['site_id']} scope: unknown")
     fields = [("email", "contact email"), ("price_per_site_cents", "price per site"), ("max_sites", "quoted site limit"),
               ("payer", "payer"), ("advance_pct", "advance"), ("balance_terms", "balance terms"),
               ("valid_until", "validity date")]
@@ -523,10 +523,15 @@ def _site_view(v, sid):
             "deadline_end": week_range(v.get("start_date"), s.get("deadline_week"))[1]}
 
 
+def _day(iso):
+    d = date.fromisoformat(iso)
+    return f"{d:%b} {d.day}, {d.year}"
+
+
 def _terms_summary(t):
     if not t:
         return None
-    return {"sites": [f"{s.get('name') or s['site_id']} (week {s['week']}{', from ' + s['week_start'] if s.get('week_start') else ''})"
+    return {"sites": [f"{s.get('name') or s['site_id']} (week {s['week']}{', week of ' + _day(s['week_start']) if s.get('week_start') else ''})"
                       for s in t["sites"]],
             "price_total_cents": t["price_total_cents"], "advance_cents": t["advance_cents"],
             "balance_cents": t["balance_cents"], "payer": t["payer"], "conditions": t["conditions"],

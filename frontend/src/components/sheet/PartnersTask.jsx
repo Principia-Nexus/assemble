@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { TaskHeader } from "./Stepper";
 import EmailInvite from "./EmailInvite";
 
-function PartnerCard({ p, act, busy, demoPassword, blocked }) {
+function PartnerCard({ p, email, act, busy, demoPassword, blocked }) {
   const { setUser } = useAuth();
   const navigate = useNavigate();
   const id = slug(p.partner_id);
@@ -36,7 +36,7 @@ function PartnerCard({ p, act, busy, demoPassword, blocked }) {
             {p.status !== "no_link" && <StatusPill testId={`partner-card-status-${id}`} tone={s.tone} label={s.label} />}
           </div>
           <p className="text-xs text-slate-600">{p.terms.sites.map((x) => `${x.name || x.site_id} (${x.week_start ? `week of ${fmtDate(x.week_start)}` : `wk ${x.week}`})`).join(" · ")}</p>
-          <p className="text-xs text-slate-500">Advance {money(p.terms.advance_cents)} · balance {money(p.terms.balance_cents)} · to <span data-testid={`partner-card-recipient-${id}`} className="break-all font-mono text-slate-700">{p.link?.invite_email || p.terms.email || "no email yet"}</span></p>
+          <p className="text-xs text-slate-500">Advance {money(p.terms.advance_cents)} · balance {money(p.terms.balance_cents)} · to <span data-testid={`partner-card-recipient-${id}`} className="break-all font-mono text-slate-700">{p.link?.invite_email || email || "no email yet"}</span></p>
         </div>
         <span className="font-mono text-base font-semibold">{money(p.terms.price_total_cents)}</span>
       </div>
@@ -47,7 +47,7 @@ function PartnerCard({ p, act, busy, demoPassword, blocked }) {
           </Button>
         ) : (
           <>
-            <EmailInvite p={p} act={act} busy={busy} id={id} />
+            <EmailInvite p={p} act={act} busy={busy} id={id} onCopy={copy} />
             <Button size="sm" variant="outline" onClick={copy} aria-label={`Copy review link for ${p.name}`} data-testid={`partner-card-copy-link-${id}`}><Copy className="h-4 w-4" /> Copy link</Button>
             {!p.link.shared_at && !p.response && (
               <Button size="sm" variant="ghost" disabled={busy} onClick={() => act("post", `/project/links/${p.link.token}/shared`, {}, "Marked as shared")} data-testid={`partner-card-mark-shared-${id}`}>
@@ -92,7 +92,7 @@ export default function PartnersTask({ sheet, act, busy, goTo }) {
         <p data-testid="ask-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Make a draft first.</p>
       ) : (
         <div className="stagger space-y-3">
-          {partners.map((p) => <PartnerCard key={p.partner_id} p={p} act={act} busy={busy} demoPassword={demoPassword} blocked={blocked} />)}
+          {partners.map((p) => <PartnerCard key={p.partner_id} p={p} email={sheet.current.version.partners.find((x) => x.partner_id === p.partner_id)?.email} act={act} busy={busy} demoPassword={demoPassword} blocked={blocked} />)}
         </div>
       )}
     </section>

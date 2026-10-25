@@ -69,8 +69,27 @@
 - OCR for scanned PDFs (currently refused with a clear message).
 - Optional: email delivery of review links (organizers share them manually by design).
 
+## Billing + sign-in round (2026-10-25)
+- Email-first login (big centered "Enter email"; known email -> password; new email -> name/firm/password); Google sign-in kept. Uniform 16px spacing; larger logo.
+- $99 one-time Stripe SANDBOX checkout -> server-verified activation (firms.pilot_active). No expiry/renewal (user decision). Tax-safe check (amount_subtotal). Webhook returns 503 until a real whsec_ secret exists; activation verified on success page and /billing/access via Checkout Session retrieve. Open-redirect fix; check-email throttle 30/10min/IP.
+
+## Projects round (2026-10-25)
+- /projects list (name, customer, factual status, last edited) + New project dialog (request_key dedupe). /projects/:id workspace, /projects/:id/summary; /project,/summary redirect.
+- Server picks project via X-Project-Id header (PROJECT_CTX contextvar) and always re-checks firm ownership (404 otherwise).
+- Demo sandbox seeds 3 examples once: canonical 12-branch, Six-store (Willow Retail), Warehouse (Northbank, Harbor quote missing -> Needs information). "Reset this example" resets only the open example in place.
+- Project bar (back arrow + switcher) removed per user; header has Projects link; unsaved-edit guard on navigation.
+
+## Core workflow round (2026-10-25)
+- Site facts match by id or name; new names get stable ids (e.g. NORTH-STORE); date deadlines -> week numbers; re-apply doesn't duplicate. Gap panel says shortages can't be checked with 0 sites.
+- Review page shows job-wide conditions (resolved/unresolved, source); labeled inputs; specific submit labels.
+- Amendment diff explains "why" each partner must review (term_reasons) and shows site names + dates.
+- Clutter removed: Task X of 4, duplicate titles, Go-to buttons, Next eyebrow; specific action labels (Check draft, Request review, Export summary); step persisted per project.
+- Invite rows full width, recipient visible, no raw URL; Email invitation (Emergent managed Resend, preview + deliberate Send; .test/.example blocked; copy-link fallback). Verified to delivered@resend.dev only; real team-inbox test pending.
+- Summary: site names + week-of dates, "Print / save PDF".
+
 ## Backlog
-- Workspace re-layout (contextual right panel per step)
-- Extraction consistency eval (6 cases x 3 runs)
-- Field-adjacent validation errors
-- Publish + live acceptance run
+- Real email delivery test to a team inbox (user to supply)
+- Side AI editor (deferred)
+- Publish + live acceptance run (needs user approval)
+- Collapse long intake detail for returning users; shadcn date pickers
+- Extraction consistency eval
