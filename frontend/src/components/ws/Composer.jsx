@@ -7,7 +7,7 @@ function Receipt({ batch, onUndo, onShow, undone }) {
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-2 rounded-lg border border-[#E2E8F0] bg-white px-2.5 py-1.5 text-xs text-[#1A2838]" data-testid={`receipt-${batch.batch_id}`}>
       <span className="min-w-0 flex-1">Saved privately · {batch.touched.length} item{batch.touched.length === 1 ? "" : "s"}</span>
-      <button type="button" className="font-medium text-[#215273] hover:underline" onClick={() => onShow(batch)} data-testid="receipt-show-changes">Show changes</button>
+      <button type="button" className="font-medium text-[#215273] hover:underline" onClick={() => onShow(batch)} data-testid="receipt-show-changes">Highlight changes</button>
       <button type="button" className="font-medium text-[#A93A3A] hover:underline disabled:opacity-50" disabled={undone} onClick={() => onUndo(batch)} data-testid="receipt-undo">{undone ? "Undone" : "Undo"}</button>
     </div>
   );
@@ -16,7 +16,7 @@ function Receipt({ batch, onUndo, onShow, undone }) {
 const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo, onShow, onAdd, suggestions, onTrayChange }, ref) {
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   const [undone, setUndone] = useState({});
@@ -50,7 +50,7 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
   };
   const addPhoto = async (file) => {
     if (!file) return;
-    setBusy(true);
+    setPhotoBusy(true);
     const fd = new FormData();
     fd.append("file", file);
     try {
@@ -60,39 +60,59 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
       else note(`Photo ${ph.name} (${ph.photo_id}) — visible: ${ph.observations.map((o) => `${o.text}${o.region ? ` [${o.region}]` : ""}`).join("; ") || "nothing specific"}.${ph.readable_text.length ? ` Readable text: ${ph.readable_text.join("; ")}.` : ""}${ph.unknown.length ? ` Unknown from the photo: ${ph.unknown.join("; ")}.` : ""}`);
       if (ph.status === "read") setText(`Use the observations from photo ${ph.photo_id} in the scope.`);
     } catch (e) { note(errText(e), "error"); }
-    setBusy(false);
+    setPhotoBusy(false);
   };
   useImperativeHandle(ref, () => ({ openMenu: () => setMenu(true), focus: () => input.current?.focus(), close: () => setOpen(false), isOpen: () => open }));
+  const [runs, setRuns] = useState([]);
+  const cb = useRef({});
+  cb.current = { onSheet, onAdopt };
 
-  useEffect(() => { api.get("/project/assistant").then((r) => setMsgs(r.data.messages)).catch(() => {}); }, []);
+  useEffect(() => { api.get("/project/assistant").then((r) => { setMsgs(r.data.messages); setRuns(r.data.active_runs || []); if (r.data.active_runs?.length) setOpen(true); }).catch(() => {}); }, []);
   useEffect(() => { onTrayChange?.(open); }, [open, onTrayChange]);
-  useEffect(() => { if (open) end.current?.scrollIntoView({ block: "end" }); }, [msgs, open, busy]);
+  useEffect(() => { if (open) end.current?.scrollIntoView({ block: "end", behavior: "smooth" }); }, [msgs, open, runs]);
+  useEffect(() => {
+    if (!runs.length) return undefined;
+    const t = setInterval(async () => {
+      for (const r of runs) {
+        try {
+          const { data } = await api.get(`/project/assistant/runs/${r.run_id}`);
+          const st = data.run.status;
+          if (["queued", "working", "committing"].includes(st)) { if (st !== r.status) setRuns((rs) => rs.map((x) => (x.run_id === r.run_id ? data.run : x))); continue; }
+          if (!data.reply && (r.polls || 0) < 4) { setRuns((rs) => rs.map((x) => (x.run_id === r.run_id ? { ...x, polls: (x.polls || 0) + 1 } : x))); continue; }
+          setRuns((rs) => rs.filter((x) => x.run_id !== r.run_id));
+          if (data.reply) setMsgs((m) => (m.some((x) => x.msg_id === data.reply.msg_id) ? m : [...m, data.reply]));
+          if (data.sheet) cb.current.onSheet(data.sheet);
+          if (data.reply?.batch) cb.current.onAdopt(data.reply.batch);
+        } catch { setRuns((rs) => rs.filter((x) => x.run_id !== r.run_id)); }
+      }
+    }, 1200);
+    return () => clearInterval(t);
+  }, [runs]);
 
   const send = async (raw) => {
     const message = (raw ?? text).trim();
-    if (!message || busy) return;
-    setBusy(true);
+    if (!message) return;
+    if (!raw) setText("");
     setOpen(true);
     setMsgs((m) => [...m, { msg_id: `local-${Date.now()}`, role: "user", text: message }]);
     try {
-      const { data } = await api.post("/project/assistant", { message, rev: sheet.project.rev, utterance_id: raw ? null : utterance });
+      const { data } = await api.post("/project/assistant", { message, rev: sheet.project.rev, utterance_id: raw ? null : utterance, async_run: true });
       setUtterance(null);
-      setMsgs((m) => [...m, data.reply]);
-      setText("");
-      if (data.sheet) onSheet(data.sheet);
-      if (data.reply.batch) onAdopt(data.reply.batch);
+      setRuns((rs) => [...rs, data.run]);
     } catch (e) {
+      if (!raw) setText((t) => t || message);
       setMsgs((m) => [...m, { msg_id: `err-${Date.now()}`, role: "assistant", mode: "error", text: errText(e) }]);
-    } finally {
-      setBusy(false);
-      input.current?.focus();
     }
+    input.current?.focus();
+  };
+  const stop = async (r) => {
+    try { await api.post(`/project/assistant/runs/${r.run_id}/cancel`); } catch (e) { note(errText(e), "error"); }
   };
   const undo = async (b) => { const r = await onUndo(b.batch_id); if (r.ok) setUndone((u) => ({ ...u, [b.batch_id]: true })); };
 
   return (
-    <div className="relative z-20 flex shrink-0 flex-col items-center px-3 pb-3 pt-2 sm:px-6 sm:pb-4" data-testid="composer-dock">
-      <div className="w-full max-w-[760px]">
+    <div className="flex flex-col items-center px-3 pb-3 pt-2 sm:px-6 sm:pb-4" data-testid="composer-dock">
+      <div className="pointer-events-auto w-full max-w-[760px]">
         {open && (
           <div className="ws-tray-in mb-2 flex max-h-[40vh] flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF]/95 shadow-[0_8px_30px_-12px_rgba(26,40,56,.3)] backdrop-blur" data-testid="conversation-tray">
             <div className="flex items-center border-b border-[#F1F5F9] px-3 py-1.5">
@@ -109,7 +129,12 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
                   </div>
                 </div>
               ))}
-              {busy && <p className="flex items-center gap-2 text-xs text-[#64748B]" data-testid="assistant-working"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Reading the project…</p>}
+              {runs.map((r) => (
+                <p key={r.run_id} className="flex items-center gap-2 text-xs text-[#64748B]" data-testid={`assistant-run-${r.status}`}>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> {r.status === "queued" ? "Waiting for the previous request…" : r.status === "committing" ? "Saving…" : "Reading the project…"}
+                  {r.status !== "committing" && <button type="button" onClick={() => stop(r)} className="ml-1 rounded-full border border-[#E2E8F0] bg-white px-2 py-0.5 text-[11px] font-medium text-[#A93A3A] transition-colors hover:bg-[#FBEFEF]" data-testid="assistant-run-stop">Stop</button>}
+                </p>
+              ))}
               <div ref={end} />
             </div>
           </div>
@@ -135,7 +160,7 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
             </DropdownMenuContent>
           </DropdownMenu>
           <button type="button" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#64748B] hover:bg-[#F1F5F9]" onClick={() => onAdd("source")} aria-label="Attach a document" data-testid="composer-attach-button"><Paperclip className="h-4 w-4" /></button>
-          <button type="button" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#64748B] hover:bg-[#F1F5F9]" onClick={() => photo.current?.click()} aria-label="Add a photo" data-testid="composer-photo-button"><Camera className="h-4 w-4" /></button>
+          <button type="button" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#64748B] hover:bg-[#F1F5F9]" disabled={photoBusy} onClick={() => photo.current?.click()} aria-label="Add a photo" data-testid="composer-photo-button">{photoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}</button>
           <input ref={photo} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => { addPhoto(e.target.files[0]); e.target.value = ""; }} data-testid="composer-photo-input" />
           <button type="button" onClick={record} disabled={voice === "transcribing"} aria-label={voice === "recording" ? "Stop recording" : "Speak"} data-testid="composer-mic-button"
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${voice === "recording" ? "bg-red-600 text-white" : "text-[#64748B] hover:bg-[#F1F5F9]"}`}>
@@ -145,8 +170,8 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
           <textarea id="composer-input" ref={input} rows={1} value={text} onChange={(e) => setText(e.target.value)} placeholder="Ask or describe a change…"
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
             className="order-first max-h-40 min-h-[36px] basis-full resize-none sm:order-none sm:basis-auto sm:flex-1 bg-transparent px-1 py-2 text-[14px] text-[#1A2838] outline-none placeholder:text-[#94A3B8] [field-sizing:content]" data-testid="composer-input" />
-          <button type="submit" disabled={!text.trim() || busy} aria-label="Send" className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1A2838] text-white transition-[background-color,transform] hover:bg-[#2F4A66] active:scale-95 disabled:bg-[#CBD5E1]" data-testid="composer-send-button">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+          <button type="submit" disabled={!text.trim()} aria-label="Send" className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1A2838] text-white transition-[background-color,transform] hover:bg-[#2F4A66] active:scale-95 disabled:bg-[#CBD5E1]" data-testid="composer-send-button">
+            <ArrowUp className="h-4 w-4" />
           </button>
         </form>
       </div>

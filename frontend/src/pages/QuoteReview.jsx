@@ -42,9 +42,50 @@ function Verify({ token, intro, onSession }) {
   );
 }
 
-function Respond({ token, q, session, onDone }) {
+function Ask({ token, session, canDraft, onUseDraft }) {
+  const [msgs, setMsgs] = useState([]);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const send = async (draft) => {
+    const m = text.trim();
+    if (!m || busy) return;
+    setText("");
+    setBusy(true);
+    setMsgs((x) => [...x, { role: "user", text: m }]);
+    try {
+      const { data } = await api.post(`/quote/${token}/ask`, { message: m, draft_change: draft }, { headers: { "X-Quote-Session": session } });
+      setMsgs((x) => [...x, { role: "assistant", text: data.answer, draft: data.change_request }]);
+    } catch (e) { setMsgs((x) => [...x, { role: "assistant", text: errList(e).join(" ") }]); setText(m); }
+    setBusy(false);
+  };
+  return (
+    <section className="no-print space-y-2 rounded-md border border-slate-200 p-4" data-testid="quote-ask">
+      <p className="text-sm font-semibold text-[#1A2838]">Questions about this quote</p>
+      {msgs.map((m, i) => (
+        <div key={i} className={m.role === "user" ? "text-right" : ""} data-testid={`quote-ask-${m.role}`}>
+          <p className={`inline-block max-w-[90%] whitespace-pre-wrap rounded-lg px-3 py-1.5 text-left text-sm ${m.role === "user" ? "bg-[#1A2838] text-white" : "bg-slate-100 text-slate-800"}`}>{m.text}</p>
+          {m.draft && (
+            <div className="mt-1 rounded-md border border-dashed border-slate-300 bg-white p-2 text-sm" data-testid="quote-ask-draft">
+              <p className="whitespace-pre-wrap">{m.draft}</p>
+              <Button size="sm" variant="outline" className="mt-2" onClick={() => onUseDraft(m.draft)} data-testid="quote-ask-use-draft">Review and send as change request</Button>
+            </div>
+          )}
+        </div>
+      ))}
+      {busy && <p className="text-xs text-slate-500" data-testid="quote-ask-working">Reading the quote…</p>}
+      <form onSubmit={(e) => { e.preventDefault(); send(false); }} className="flex gap-2">
+        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Ask about scope, price, timing…" aria-label="Question" data-testid="quote-ask-input" />
+        <Button type="submit" disabled={!text.trim() || busy} data-testid="quote-ask-send">Ask</Button>
+        {canDraft && <Button type="button" variant="outline" disabled={!text.trim() || busy} onClick={() => send(true)} data-testid="quote-ask-draft-button">Draft change</Button>}
+      </form>
+    </section>
+  );
+}
+
+function Respond({ token, q, session, onDone, preset, onPresetUsed }) {
   const [action, setAction] = useState(null);
   const [f, setF] = useState({ signer_name: "", authority: "", note: "", intent: false });
+  useEffect(() => { if (preset) { setAction("request_changes"); setF((x) => ({ ...x, note: preset })); onPresetUsed(); } }, [preset, onPresetUsed]);
   const [err, setErr] = useState("");
   const key = useRef(newKey());
   const submit = async (e) => {
@@ -85,6 +126,8 @@ export default function QuoteReview() {
   const [error, setError] = useState("");
   const [session, setSession] = useState(() => sessionStorage.getItem(`qs_${token}`));
   const [q, setQ] = useState(null);
+  const [preset, setPreset] = useState(null);
+  const clearPreset = useCallback(() => setPreset(null), []);
   useEffect(() => { api.get(`/quote/${token}`).then((r) => setIntro(r.data)).catch((e) => setError(errList(e).join(" "))); }, [token]);
   const load = useCallback(() => {
     if (!session) return;
@@ -125,7 +168,8 @@ export default function QuoteReview() {
             {s.terms && <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Terms</p><p className="mt-1 whitespace-pre-wrap text-sm">{s.terms}</p></div>}
             <p className="font-mono text-[11px] text-slate-400">Version {s.number} · {q.digest}</p>
             {(q.responses || []).map((r) => <p key={r.receipt_id} className="rounded bg-slate-50 px-3 py-2 text-xs" data-testid="quote-receipt">{r.signer_name} ({r.email}) {r.action.replace("_", " ")} {r.version} at {new Date(r.at).toLocaleString()}. Receipt {r.receipt_id}.</p>)}
-            {["issued", "changes_requested"].includes(q.state) && <Respond token={token} q={q} session={session} onDone={load} />}
+            {["issued", "changes_requested"].includes(q.state) && <Respond token={token} q={q} session={session} onDone={load} preset={preset} onPresetUsed={clearPreset} />}
+            <Ask token={token} session={session} canDraft={q.state === "issued"} onUseDraft={setPreset} />
           </article>
         )}
       </main>

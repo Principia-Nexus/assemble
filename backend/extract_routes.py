@@ -10,12 +10,13 @@ from pydantic import BaseModel
 from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 
 import logic as L
+import rule_packs as RP
 from core import db, now, now_iso, new_id, current_user, log_event, STALE_MSG, as_aware
 from project_routes import get_project, claim_rev, generate_candidate, org
 from storage import APP_NAME, get_object, pdf_text, put_object
 from pdf_sample import make_pdf
 from fixtures import DEFAULT_FIXTURE, documents, get_fixture, pdf_pages
-from ocr import ocr_pdf, scanned_pdf
+from ocr import MAX_OCR_PAGES, ocr_pages, scanned_pdf
 
 router = APIRouter(prefix="/api/project")
 MAX_PDF = 10 * 1024 * 1024
@@ -79,6 +80,20 @@ class ApplyIn(BaseModel):
     fact_ids: List[str]
 
 
+def source_packs(src):
+    return [x for x in RP.select(src.get("kind"), src.get("label"), (src.get("text") or "")[:4000], "pdf page" if src.get("manifest") else "")
+            if x["id"] != "runs"]
+
+
+def coverage_note(src):
+    man = src.get("manifest") or []
+    gaps = [f"page {m['page']} ({m['status']})" for m in man if m["status"] not in ("readable",)]
+    if not gaps:
+        return ""
+    return ("PAGE COVERAGE: only some pages were read. Not fully read: " + ", ".join(gaps[:60])
+            + ". Never state or imply the whole document was reviewed; list facts that may sit on those pages as unknown.\n")
+
+
 def build_prompt(src, it):
     ctx = {
         "document_kind": KINDS.get(src["kind"]), "document_label": src["label"], "document_date": src.get("source_date"),
@@ -86,11 +101,13 @@ def build_prompt(src, it):
         "known_site_ids": [s["site_id"] for s in it.get("sites") or []],
         "known_partner_names": [p["name"] for p in it.get("partners") or []],
     }
-    return (f"CONTEXT (from the organizer, trusted):\n{json.dumps(ctx)}\n\nReturn JSON exactly in this shape:\n"
+    return (RP.prompt_block(source_packs(src)) + "\n\n"
+            f"CONTEXT (from the organizer, trusted):\n{json.dumps(ctx)}\n\nReturn JSON exactly in this shape:\n"
             f"{SCHEMA % ', '.join(FIELDS)}\n\n"
             "Lines like [Page 2] were inserted by the app to mark PDF pages; never quote them in excerpts.\n"
             + ("This text was recognized from a scanned image and may contain recognition errors; "
-               "report [unreadable] parts as unknown.\n" if src.get("ocr") else "") + "\n"
+               "report [unreadable] parts as unknown.\n" if src.get("ocr") else "")
+            + coverage_note(src) + "\n"
             f"<document>\n{src['text']}\n</document>")
 
 
@@ -277,7 +294,7 @@ async def run_extraction(src, p, user):
         await db.facts.insert_many([dict(f) for f in facts])
     await db.sources.update_one({"source_id": src["source_id"]}, {"$set": {
         "status": "read", "error": None, "read_at": now_iso(), "fact_count": len(facts),
-        "reader": {"model": MODEL[1], "prompt_version": PROMPT_VERSION}, **lists}})
+        "reader": {"model": MODEL[1], "prompt_version": PROMPT_VERSION, "packs": [RP.tag(x) for x in source_packs(src)]}, **lists}})
     await log_event(p["project_id"], org(user), "extract",
                     f"Read {KINDS.get(src['kind'])} \"{src['label']}\": {len(facts)} proposed fact(s). Nothing applied yet.",
                     details=[f"Ignored instruction in document: {x}" for x in lists["ignored_instructions"]])
@@ -376,6 +393,61 @@ async def add_source(body: SourceIn, user=Depends(current_user)):
     return await create_source(p, user, body.kind, label, body.text, sdate, body.filename)
 
 
+MAX_TEXT = 40000
+SHEET_RE = re.compile(r"^\s*(?:SHEET\s*(?:NO\.?|#)?\s*:?\s*)?([A-Z]{1,3}-?\d{1,3}(?:\.\d{1,2})?)\s*$", re.M)
+
+
+def _chars(t):
+    return len(re.sub(r"\[unreadable\]|\s", "", t or ""))
+
+
+def _sheet(t):
+    m = SHEET_RE.findall((t or "")[-400:])
+    return m[-1] if m else None
+
+
+async def read_pages(data, raw):
+    """Page-by-page reading record: method, characters, printed sheet and status for every PDF page."""
+    texts = re.split(r"\[Page \d+\]\n", raw)[1:]
+    man = [{"page": i + 1, "method": "text" if _chars(t) >= 20 else None, "chars": _chars(t), "sheet": _sheet(t),
+            "status": "readable" if _chars(t) >= 20 else "pending", "note": None} for i, t in enumerate(texts)]
+    low = [m["page"] - 1 for m in man if m["status"] == "pending"]
+    todo, skipped = low[:MAX_OCR_PAGES], low[MAX_OCR_PAGES:]
+    if todo:
+        try:
+            got = await ocr_pages(data, todo)
+        except Exception as ex:  # noqa: BLE001
+            got, why = {}, ("text recognition timed out" if isinstance(ex, TimeoutError) else "text recognition failed")
+            for i in todo:
+                man[i].update(status="unreadable", method="ocr", note=why)
+        for n, t in got.items():
+            texts[n - 1], c = t, _chars(t)
+            man[n - 1].update(method="ocr", chars=c, sheet=_sheet(t),
+                              status="readable" if c >= 20 and "[unreadable]" not in t else "partial" if c else "unreadable")
+        for i in todo:
+            if man[i]["status"] == "pending":
+                man[i].update(method="ocr", status="unreadable", note="no text recognized")
+    for i in skipped:
+        man[i].update(status="uninspected", note=f"over the {MAX_OCR_PAGES}-page recognition limit")
+    parts, starts, pos = [], [], 0
+    for m in man:
+        if m["status"] not in ("readable", "partial"):
+            continue
+        chunk = f"[Page {m['page']}]\n{texts[m['page'] - 1].strip()}\n\n"
+        if pos + len(chunk) > MAX_TEXT:
+            m.update(status="uninspected", note="over the 40,000-character reading limit")
+            continue
+        starts.append(pos)
+        parts.append(chunk)
+        pos += len(chunk)
+    return "".join(parts), starts, man
+
+
+def coverage(man):
+    c = {k: sum(m["status"] == k for m in man) for k in ("readable", "partial", "unreadable", "uninspected")}
+    return {**c, "total": len(man)}
+
+
 @router.post("/sources/upload")
 async def upload_pdf(file: UploadFile = File(...), kind: str = Form(...), label: str = Form(""),
                      source_date: str = Form(""), user=Depends(current_user)):
@@ -390,24 +462,15 @@ async def upload_pdf(file: UploadFile = File(...), kind: str = Form(...), label:
     if e:
         raise HTTPException(422, e)
     try:
-        text, page_starts, pages = await asyncio.to_thread(pdf_text, data)
+        raw, _, _ = await asyncio.to_thread(pdf_text, data)
     except Exception as ex:  # noqa: BLE001
         raise HTTPException(422, [f'Could not open "{name}" ({str(ex)[:120]}). Nothing was saved or read.']) from ex
-    body_chars = len(re.sub(r"\[Page \d+\]|\s", "", text))
-    extra = {}
-    if body_chars < 20:
-        try:
-            text, page_starts, pages = await ocr_pdf(data)
-        except TimeoutError as ex:
-            raise HTTPException(504, [f'Text recognition for "{name}" timed out. Nothing was saved; try again.']) from ex
-        except Exception as ex:  # noqa: BLE001
-            raise HTTPException(422, [f'Could not recognize text in "{name}" ({str(ex)[:140]}). Nothing was saved or read.']) from ex
-        if len(re.sub(r"\[Page \d+\]|\[unreadable\]|\s", "", text)) < 20:
-            raise HTTPException(422, [f'No readable text could be recognized in "{name}", so nothing was read. '
-                                      "Try a clearer scan or paste the text."])
-        extra = {"ocr": True}
-    if len(text) > 40000:
-        raise HTTPException(422, [f'"{name}" has too much text ({len(text)} characters, limit 40,000). Paste the relevant part instead.'])
+    text, page_starts, manifest = await read_pages(data, raw)
+    cov = coverage(manifest)
+    if not cov["readable"] and not cov["partial"]:
+        raise HTTPException(422, [f'No readable text could be recognized in "{name}", so nothing was read. '
+                                  "Try a clearer scan or paste the text."])
+    extra = {"manifest": manifest, "coverage": cov, **({"ocr": True} if any(m["method"] == "ocr" for m in manifest) else {})}
     path = f"{APP_NAME}/{p['project_id']}/{new_id('pdf')}.pdf"
     try:
         stored = await asyncio.to_thread(put_object, path, data, "application/pdf")
@@ -418,7 +481,7 @@ async def upload_pdf(file: UploadFile = File(...), kind: str = Form(...), label:
                                "original_filename": name, "content_type": "application/pdf", "size": len(data),
                                "is_deleted": False, "created_at": now_iso()})
     return await create_source(p, user, kind, label, text, sdate, name,
-                               {"file_id": file_id, "page_starts": page_starts, "page_count": pages, **extra})
+                               {"file_id": file_id, "page_starts": page_starts, "page_count": len(manifest), **extra})
 
 
 @router.get("/demo-content")

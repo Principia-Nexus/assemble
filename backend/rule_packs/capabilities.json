@@ -1,0 +1,176 @@
+{
+  "file_version": "2026-10-25.1",
+  "source": "Appendix 1 capability contracts §11-25; Appendix 2 ingestion, voice/photo, pricebook and output sections",
+  "packs": [
+    {
+      "id": "readability", "version": "1.0.0", "title": "Readability and page coverage", "source": "A1 §11, concrete reading failures; A2 ingestion and exact fallback",
+      "applies_when": {"keywords": ["pdf", "page", "pages", "sheet", "drawing", "drawings", "scan", "scanned", "table", "csv", "xlsx", "spreadsheet", "attachment", "document", "read", "unreadable", "blurry", "blurred"]},
+      "required_context": ["source page manifest"], "allowed_modes": ["explain", "intake", "question", "compose"],
+      "guidance": [
+        "Cite claims by PDF page (and printed sheet when shown). Pages marked uninspected were not read; never say the whole set was reviewed.",
+        "Distinguish readable, partial, unreadable, uninspected and unsupported content. Missing, uninspected and zero differ.",
+        "Table values need their headings, units and footnotes; without them, withhold dependent conclusions.",
+        "When content stays unreadable, ask for exactly the missing part, e.g. 'I can read the scope notes, but not the quantity table on quote.pdf page 2. Please paste it with units and footnotes.'",
+        "A user's typed reply is attributed user input, never recovered extraction."
+      ],
+      "checks": ["page coverage recorded per source", "uninspected pages listed"], "fallback": "Ask for the specific unreadable region.",
+      "eval_cases": [{"input": "The panel table on page 4 of the drawing set is blurry", "expect_packs": ["readability"]}]
+    },
+    {
+      "id": "source-authority", "version": "1.0.0", "title": "Source authority and revisions", "source": "A1 §12",
+      "applies_when": {"keywords": ["revision", "rev", "addendum", "supersede", "supersedes", "superseded", "final", "latest", "reissued", "issued for"]},
+      "required_context": ["source dates and issuers"], "allowed_modes": ["explain", "intake", "question"],
+      "guidance": [
+        "Upload order, the word FINAL, or a newer-looking file establishes no authority.",
+        "Apply precedence only inside an evidenced governing clause; keep both values and flag the conflict otherwise.",
+        "Do not silently merge superseded clauses; keep complete replacement instructions."
+      ],
+      "checks": ["conflicts preserved"], "fallback": "Report the conflict as a question for the organizer.",
+      "eval_cases": [{"input": "Addendum 2 supersedes the electrical sheet", "expect_packs": ["source-authority"]}]
+    },
+    {
+      "id": "cross-references", "version": "1.0.0", "title": "Cross-references and identifiers", "source": "A1 §13",
+      "applies_when": {"keywords": ["see sheet", "detail", "reference", "references", "tag", "keyed note", "identifier", "panel", "schedule"]},
+      "required_context": [], "allowed_modes": ["explain", "intake", "question"],
+      "guidance": [
+        "Keep literal identifiers exactly: punctuation, suffixes and leading zeros (S01 is not S1).",
+        "Normalization only proposes matches; a reference proves neither installation nor sequence.",
+        "Duplicate identifiers block only the affected association."
+      ],
+      "checks": ["identifiers copied verbatim"], "fallback": "Mark the reference ambiguous or missing.",
+      "eval_cases": []
+    },
+    {
+      "id": "scope-structure", "version": "1.0.0", "title": "Scope structure, interfaces and workspace composition", "source": "A1 §14, §24, §25",
+      "applies_when": {"keywords": ["group", "groups", "organize", "organise", "split", "merge", "scope", "package", "packages", "task", "tasks", "milestone", "handoff", "interface", "furnish", "install"]},
+      "required_context": ["work items"], "allowed_modes": ["compose", "explain", "question"],
+      "guidance": [
+        "Keep furnish / install / connect / program / test / train / closeout and exclusions distinct.",
+        "Every obligation survives restructuring with a destination or a visible unresolved condition.",
+        "Specification divisions do not assign firms; containment does not establish sequence; reorganizing never transfers consent.",
+        "Missing interface ownership becomes a question, not an automatic assignment.",
+        "Use a few readable groups of fixed item types; never generate a duplicate plan."
+      ],
+      "checks": ["split/merge keeps notes and site ids"], "fallback": "Propose groups as suggestions in notes.",
+      "eval_cases": [{"input": "Organize this job into scope groups", "expect_packs": ["scope-structure"]}]
+    },
+    {
+      "id": "roles", "version": "1.0.0", "title": "Roles and qualifications", "source": "A1 §15",
+      "applies_when": {"keywords": ["engineer", "eor", "license", "licensed", "qualified", "qualification", "inspector", "designer", "certified", "permit", "ahj"]},
+      "required_context": [], "allowed_modes": ["explain", "question"],
+      "guidance": [
+        "Record proposed roles separately from evidenced appointments; never award a 'qualified' badge.",
+        "Software access, license matches and commercial responses confer no professional authority.",
+        "AI never supplies professional or engineering approval."
+      ],
+      "checks": [], "fallback": "State that the role is unevidenced.", "eval_cases": []
+    },
+    {
+      "id": "quote-coverage", "version": "1.0.0", "title": "Quote coverage and comparison", "source": "A1 §16",
+      "applies_when": {"keywords": ["quote", "quotes", "compare", "comparison", "cheapest", "exclusion", "exclusions", "inclusion", "inclusions", "bid", "bids", "coverage", "excluded", "included"]},
+      "required_context": ["partner quotes"], "allowed_modes": ["explain", "compose", "question"],
+      "guidance": [
+        "Map each requirement to included, excluded, conditional, unstated, conflicting or unreadable.",
+        "Preserve negation even under a 'complete installation' headline.",
+        "Compare only explicit common scope and price bases; the cheapest stated price proves no suitability.",
+        "Missing requirements mean completeness is unassessed; potential overlap is not an automatic credit."
+      ],
+      "checks": [], "fallback": "List unassessed coverage as open conditions.", "eval_cases": [{"input": "compare the quotes and list exclusions", "expect_packs": ["quote-coverage"]}]
+    },
+    {
+      "id": "quantities", "version": "1.0.0", "title": "Quantities and units", "source": "A1 §17; A2 roofing acceptance case",
+      "applies_when": {"keywords": ["quantity", "quantities", "count", "how many", "sq ft", "ft²", "square feet", "squares", "linear feet", "lf", "units", "measure", "measured", "measurement", "area"]},
+      "required_context": [], "allowed_modes": ["explain", "compose", "question"],
+      "guidance": [
+        "Keep raw value, unit, basis and whether it is measured, estimated or supplied.",
+        "Compute only from supported operands with compatible units; show conversions (1 roofing square = 100 ft² of roof surface, before any waste).",
+        "Never count OCR hits or schedule types as inventory, measure from pixels or unscaled photos, invent waste factors, or treat dashes as zero.",
+        "Footprint area is not roof surface area."
+      ],
+      "checks": ["1200 ft² surface -> 12 squares before waste"], "fallback": "Ask whether the figure is measured or estimated and its unit.",
+      "eval_cases": [{"input": "roof is 1,200 sq ft, how many squares", "expect_packs": ["quantities", "roofing"]}]
+    },
+    {
+      "id": "schedule", "version": "1.0.0", "title": "Optional schedules", "source": "A1 §18; A2 optional dates",
+      "applies_when": {"keywords": ["schedule", "date", "dates", "week", "weeks", "when", "duration", "deadline", "start", "finish", "calendar", "provisional"]},
+      "required_context": [], "allowed_modes": ["explain", "compose", "revise", "question"],
+      "guidance": [
+        "Undated work stays valid; dates are never a prerequisite.",
+        "Distinguish customer target, deadline, quoted availability, estimate and computed finish; mark invented dates provisional.",
+        "Review, procurement and testing remain explicit activities; a duration never supplies approval or resource feasibility."
+      ],
+      "checks": ["no prerequisite cycles"], "fallback": "Keep the item unscheduled.", "eval_cases": []
+    },
+    {
+      "id": "capacity", "version": "1.0.0", "title": "Capacity", "source": "A1 §19",
+      "applies_when": {"keywords": ["capacity", "crew", "crews", "available", "availability", "overbooked", "load", "assign", "assignment", "assignments", "firms", "draft", "plan", "forward"]},
+      "required_context": ["firm capacity by week"], "allowed_modes": ["explain", "revise", "question"],
+      "guidance": [
+        "Keep capability claims, dated availability, resource limits and consent separate; one firm need not equal one crew.",
+        "Unknown outside obligations stay unknown; the crew-week checker applies only to its stated assumptions.",
+        "Free calendar gaps or firm count never reserve resources."
+      ],
+      "checks": [], "fallback": "Report capacity as unassessed.", "eval_cases": []
+    },
+    {
+      "id": "commercial", "version": "1.0.0", "title": "Commercial arithmetic and pricebooks", "source": "A1 §20; A2 pricebooks, suppliers and arithmetic",
+      "applies_when": {"keywords": ["price", "prices", "pricing", "cost", "costs", "markup", "margin", "tax", "total", "budget", "allowance", "payment", "retainage", "advance", "$", "usd", "invoice", "supplier", "pricebook"]},
+      "required_context": [], "allowed_modes": ["explain", "compose", "revise", "question"],
+      "guidance": [
+        "Ask whether a figure is internal cost or customer selling price, and its unit, date and tax/freight basis.",
+        "Markup u on cost C gives C×(1+u); target margin m gives C/(1−m) with 0≤m<1. Example: $1,000 cost, 25% markup = $1,250; 25% margin = $1,333.33.",
+        "Missing tax, fees, quantity or disposal keep the total unresolved; never call a partial subtotal all-in.",
+        "Budget headroom is neither profit nor cash. Firm prices are not customer prices until the seller authorizes them.",
+        "Keep labor burden, discounts and margin out of anything the customer sees."
+      ],
+      "checks": ["decimal arithmetic in software", "unknown amounts never become zero"], "fallback": "Show the supported subtotal and list what is missing.",
+      "eval_cases": [{"input": "add 25% markup to $1000 cost", "expect_packs": ["commercial"]}]
+    },
+    {
+      "id": "questions", "version": "1.0.0", "title": "Questions and conditions", "source": "A1 §21",
+      "applies_when": {"keywords": ["open", "unknown", "unknowns", "missing", "question", "questions", "rfi", "clarify", "unclear", "condition", "conditions", "still open"]},
+      "required_context": [], "allowed_modes": ["explain", "compose", "question"],
+      "guidance": [
+        "Create purpose-specific questions with the affected conclusion and who can answer.",
+        "Deduplicate shared causes; an answer is not automatically a resolution; acknowledgments do not replace evidence.",
+        "RFI or clarification drafts stay unsent."
+      ],
+      "checks": [], "fallback": "Record a condition item.", "eval_cases": [{"input": "What's still open?", "expect_packs": ["questions"]}]
+    },
+    {
+      "id": "acceptance", "version": "1.0.0", "title": "Reviews and customer acceptance", "source": "A1 §22; A2 outputs and boundaries",
+      "applies_when": {"keywords": ["accept", "accepted", "acceptance", "customer", "approve", "approved", "sign", "signed", "offer", "review", "confirm", "confirmed"]},
+      "required_context": ["quote state", "firm responses"], "allowed_modes": ["explain", "question"],
+      "guidance": [
+        "Firm commercial responses, technical dispositions and customer quote acceptance are separate records.",
+        "Only the authorized customer accepts an exact issued version; expiry blocks new acceptance but does not undo an accepted one.",
+        "Acceptance is not payment, scheduling, permit, engineering approval or permission to mobilize.",
+        "A new draft never rewrites accepted history."
+      ],
+      "checks": [], "fallback": "Explain the current recorded state only.", "eval_cases": []
+    },
+    {
+      "id": "change-impact", "version": "1.0.0", "title": "Change impact", "source": "A1 §23",
+      "applies_when": {"keywords": ["change", "changes", "changed", "amend", "amendment", "revise", "impact", "affected", "update"]},
+      "required_context": ["baseline and draft versions"], "allowed_modes": ["explain", "revise", "question"],
+      "guidance": [
+        "Compare immutable versions and name exactly which firms need a fresh response; unrelated changes do not invalidate everything.",
+        "Source changes prepare a review or customer amendment; they never rewrite an accepted customer snapshot.",
+        "Undo never revives withdrawn, expired or invalidated responses."
+      ],
+      "checks": [], "fallback": "Say impact assessment is incomplete.", "eval_cases": []
+    },
+    {
+      "id": "voice-photo", "version": "1.0.0", "title": "Voice, photos and video", "source": "A2 voice, photos and video",
+      "applies_when": {"keywords": ["photo", "photos", "picture", "image", "voice", "recording", "said", "video", "transcript"]},
+      "required_context": [], "allowed_modes": ["explain", "compose", "question"],
+      "guidance": [
+        "Transcripts are fallible testimony; confirm ambiguous numbers ('fifteen or fifty?'), negation, currency and relative dates.",
+        "Photos support located observations and literal label text only; they cannot establish dimensions, hidden damage, cause or safety.",
+        "Never ask anyone to climb roofs, open energized equipment or do destructive investigation.",
+        "Sampled video frames are not continuous inspection."
+      ],
+      "checks": [], "fallback": "Ask the user to type the value.", "eval_cases": []
+    }
+  ]
+}

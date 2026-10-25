@@ -22,7 +22,7 @@ export default function ReportView({ sheet, items, pkgs, conds }) {
   const work = items.filter((i) => i.kind !== "group");
   const aiRuns = items.filter((i) => i.kind === "ai_task");
   return (
-    <div className="h-full overflow-auto px-4 py-6 sm:px-6" data-testid="report-view">
+    <div className="h-full overflow-auto px-4 pb-40 pt-6 sm:px-6" data-testid="report-view">
       <article className="report-print mx-auto max-w-[820px] rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] px-6 py-6 sm:px-10">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -65,6 +65,7 @@ export default function ReportView({ sheet, items, pkgs, conds }) {
             : <p className="text-sm text-[#64748B]">None yet.</p>}
           {aiRuns.length > 0 && <p className="mt-2 text-xs text-[#64748B]">{aiRuns.length} AI run result{aiRuns.length === 1 ? "" : "s"} are model findings, not human decisions.</p>}
         </Part>
+        {sheet.rules && <p className="border-t border-[#E2E8F0] pt-3 font-mono text-[10.5px] text-[#94A3B8]" data-testid="report-rules">Checker {sheet.rules.checker} · rule packs {sheet.rules.packs.join(", ")}</p>}
       </article>
     </div>
   );

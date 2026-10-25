@@ -149,5 +149,9 @@ h1, h2, h3 { font-weight: 500; letter-spacing: -0.01em; }
 .ws-panel-in { animation: ws-panel-in .2s ease-out; }
 .ws-tray-in { animation: ws-tray-in .2s ease-out; }
 .ws-card { animation: ws-tray-in .25s ease-out backwards; }
+.ws-view-in { animation: fade-in .2s ease-out; }
+.ws button { -webkit-tap-highlight-color: transparent; }
+.ws [role="tab"], .ws [data-testid="composer"] button { transition: background-color .15s ease, color .15s ease, transform .1s ease; }
+.ws [role="tab"]:active, .ws [data-testid="composer"] button:active:not(:disabled) { transform: scale(.96); }
 @media (prefers-reduced-motion: reduce) { .ws-panel-in, .ws-tray-in, .ws-card { animation: none; } }
 @media print { .ws { height: auto !important; overflow: visible !important; background: #fff; } .ws main, .ws main > div { overflow: visible !important; height: auto !important; } }

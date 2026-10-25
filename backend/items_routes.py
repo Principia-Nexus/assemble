@@ -264,6 +264,25 @@ async def post_ops(body: OpsIn, user=Depends(current_user)):
     return {"batch": batch, "items": items, "edges": edges, "rev": body.rev + 1}
 
 
+class LayoutIn(BaseModel):
+    id: str
+    x: float
+    y: float
+
+
+LAYOUT_ID = re.compile(r"^[A-Za-z0-9_:\-]{1,80}$")
+
+
+@router.put("/layout")
+async def save_layout(body: LayoutIn, user=Depends(current_user)):
+    """Card positions on the canvas: presentation only, so no revision bump."""
+    p = await get_project(user)
+    if not LAYOUT_ID.match(body.id) or abs(body.x) > 20000 or abs(body.y) > 20000:
+        bad("That position cannot be saved.")
+    await db.projects.update_one({"project_id": p["project_id"]}, {"$set": {f"layout.{body.id}": {"x": round(body.x), "y": round(body.y)}}})
+    return {"ok": True}
+
+
 @router.post("/items/undo")
 async def undo(body: UndoIn, user=Depends(current_user)):
     p = await get_project(user)

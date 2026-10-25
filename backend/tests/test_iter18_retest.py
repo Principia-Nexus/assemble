@@ -123,7 +123,7 @@ class TestQuoteValidity:
         assert r.status_code == 200 and r.json()["missing"] == [], r.text
         assert r.json()["quote"]["valid_until"].endswith("Z")
         pv = s.get(f"{BASE_URL}/api/project/quotes/{qid}/preview").json()
-        r = s.post(f"{BASE_URL}/api/project/quotes/{qid}/issue", json={"digest": pv["digest"]})
+        r = s.post(f"{BASE_URL}/api/project/quotes/{qid}/issue", json={"digest": pv["digest"], "override_reason": "Test: issuing before partner confirmation"})
         assert r.status_code == 200, r.text
         q, token = r.json()["quote"], r.json()["path"].split("/quote/")[1]
         sid = verify(token)

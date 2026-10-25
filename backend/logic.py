@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 OWN = "own"
+CHECKER_VERSION = "crew-week-checker-1"
 PT = ZoneInfo("America/Los_Angeles")
 MONEY_RE = re.compile(r"^-?\$?(\d{1,3}(,\d{3})+|\d+)(\.\d{1,2})?$")
 INT_RE = re.compile(r"^\d+$")

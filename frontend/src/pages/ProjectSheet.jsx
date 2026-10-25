@@ -77,11 +77,8 @@ export default function ProjectSheet() {
   const rev = sheet?.project.rev;
   const { items, edges, save, lastBatch, run, undo, adopt } = useItems(rev, load);
   const pid = sheet?.project.project_id;
-  useEffect(() => {
-    if (!pid || view) return;
-    setViewState(localStorage.getItem(`assemble_view_${pid}`) || (window.innerWidth < 720 ? "list" : "graph"));
-  }, [pid, view]);
-  const setView = (v) => { setViewState(v); localStorage.setItem(`assemble_view_${pid}`, v); };
+  useEffect(() => { if (pid && !view) setViewState("graph"); }, [pid, view]);
+  const setView = setViewState;
 
   const pkgs = useMemo(() => (sheet ? packages(sheet) : []), [sheet]);
   const conds = useMemo(() => (sheet ? conditions(sheet) : []), [sheet]);
@@ -142,7 +139,7 @@ export default function ProjectSheet() {
               <div className="flex rounded-md border border-slate-200 bg-slate-50 p-0.5" role="tablist" aria-label="Views">
                 {VIEWS.map((v) => (
                   <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => setView(v)} data-testid={`toolbar-view-${v}`}
-                    className={`rounded px-3 py-1 text-[13px] font-semibold capitalize transition-colors ${view === v ? "bg-[#1A2838] text-white" : "text-slate-600 hover:text-slate-900"}`}>{v}</button>
+                    className={`rounded px-3 py-1 text-[13px] font-semibold capitalize transition-colors ${view === v ? "bg-[#1A2838] text-white" : "text-slate-600 hover:text-slate-900"}`}>{v === "week" ? "calendar" : v}</button>
                 ))}
               </div>
               <label className="order-last flex h-8 w-full items-center sm:order-none sm:w-[200px] gap-2 rounded-md border border-slate-200 bg-white px-2.5">
@@ -152,7 +149,7 @@ export default function ProjectSheet() {
               </label>
               {lastBatch && (
                 <Button size="sm" variant={showChanges ? "default" : "outline"} className="h-8" aria-pressed={showChanges} onClick={() => setShowChanges(!showChanges)} data-testid="toolbar-show-changes">
-                  <Eye className="h-3.5 w-3.5" /> Show changes
+                  <Eye className="h-3.5 w-3.5" /> Highlight changes
                 </Button>
               )}
               <DropdownMenu>
@@ -172,9 +169,9 @@ export default function ProjectSheet() {
           </div>
           {q && conds.length > 0 && <p className="mx-auto max-w-[1440px] px-4 pb-2 sm:px-6 text-xs text-amber-800" data-testid="filter-conditions-note">{conds.length} open condition{conds.length === 1 ? "" : "s"} in this project</p>}
         </div>
-        <div className="flex min-h-0 flex-1">
-          <main className="min-w-0 flex-1" data-testid={`view-${view}`}>
-            {view === "graph" && <GraphView {...viewProps} edges={edges} focus={hot.size ? hot : null} />}
+        <div className="relative flex min-h-0 flex-1">
+          <main key={view} className="ws-view-in min-w-0 flex-1" data-testid={`view-${view}`}>
+            {view === "graph" && <GraphView {...viewProps} edges={edges} focus={hot.size ? hot : null} run={runOps} layout={sheet.project.layout} />}
             {view === "list" && <ListView {...viewProps} run={runOps} />}
             {view === "week" && <WeekView {...viewProps} />}
             {view === "report" && <ReportView {...viewProps} />}
@@ -184,8 +181,10 @@ export default function ProjectSheet() {
               <Inspector target={target} sheet={sheet} items={items} edges={edges} run={run} onClose={() => setSelectedId(null)} openTool={setTool} />
             </div>
           )}
+          <div className="no-print pointer-events-none absolute bottom-0 left-0 z-20" style={{ right: target && !narrow ? 360 : 0 }}>
+            <Composer ref={composer} sheet={sheet} onSheet={setSheet} onAdopt={(b) => adopt(b)} onUndo={doUndo} onShow={showBatch} onAdd={onAdd} suggestions={suggestions} />
+          </div>
         </div>
-        <div className="no-print"><Composer ref={composer} sheet={sheet} onSheet={setSheet} onAdopt={(b) => adopt(b)} onUndo={doUndo} onShow={showBatch} onAdd={onAdd} suggestions={suggestions} /></div>
       </div>
       <ToolSheet tool={tool} onClose={() => setTool(null)} onTool={setTool} sheet={sheet} act={act} busy={busy} user={user} />
       <HistoryDrawer open={historyOpen} onOpenChange={setHistoryOpen} rev={sheet.project.rev} />

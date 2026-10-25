@@ -102,7 +102,7 @@ def make_issued(s, price=90000, amend_of=None):
     assert r.status_code == 200, r.text
     assert r.json()["missing"] == []
     pv = s.get(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/preview").json()
-    r = s.post(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/issue", json={"digest": pv["digest"]})
+    r = s.post(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/issue", json={"digest": pv["digest"], "override_reason": "Test: issuing before partner confirmation"})
     assert r.status_code == 200, r.text
     return r.json()["quote"], r.json()["path"].split("/quote/")[1]
 
@@ -122,7 +122,7 @@ class TestQuote:
         s.put(f"{BASE_URL}/api/project/quotes/{q['quote_id']}", json={"fields": {**FIELDS, "valid_until": future(), "price_cents": None}})
         pv = s.get(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/preview").json()
         assert any("price" in m for m in pv["missing"])
-        r = s.post(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/issue", json={"digest": pv["digest"]})
+        r = s.post(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/issue", json={"digest": pv["digest"], "override_reason": "Test: issuing before partner confirmation"})
         assert r.status_code == 422
         s.put(f"{BASE_URL}/api/project/quotes/{q['quote_id']}", json={"fields": {"price_cents": 500}})
         r = s.post(f"{BASE_URL}/api/project/quotes/{q['quote_id']}/issue", json={"digest": "wrongdigest"})

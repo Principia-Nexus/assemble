@@ -8,6 +8,7 @@ from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
 import logic as L
+import rule_packs as RP
 import mailer
 from core import db, now_iso, new_id, current_user, log_event, STALE_MSG, PROJECT_CTX
 from demo import reset_project
@@ -114,7 +115,7 @@ async def sheet(project_id):
     p = await db.projects.find_one({"project_id": project_id}, {"_id": 0})
     cur, pre = await get_version(p.get("current_version_id")), await get_version(p.get("preview_version_id"))
     out = {"project": {k: p.get(k) for k in ("project_id", "name", "rev", "synthetic", "sandbox_id", "created_at",
-                                             "fixture_id", "example_key")},
+                                             "fixture_id", "example_key", "layout")},
            "intake": p["intake"], "gap": L.gap_analysis(p["intake"]), "current": None, "preview": None}
     jc = p["intake"].get("job_conditions") or []
     if cur:
@@ -127,6 +128,7 @@ async def sheet(project_id):
             for x in d["partners"]:
                 x["current_status"] = st.get(x["partner_id"])
         out["preview"] = {"version": pre, "checker": L.check({**pre, "job_conditions": jc}), "diff": d}
+    out["rules"] = {"checker": L.CHECKER_VERSION, "packs": sorted(set(RP.FILES.values()))}
     out["links_count"] = await db.links.count_documents({"project_id": project_id})
     out["change_requests"] = await db.change_requests.find({"project_id": project_id}, {"_id": 0}).sort(
         "created_at", -1).to_list(100)

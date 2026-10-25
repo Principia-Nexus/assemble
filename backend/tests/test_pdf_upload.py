@@ -70,11 +70,11 @@ class TestRejections:
         assert n_sources(ctx["org"]) == before
 
     # Scanned PDF over 8 pages -> 422 before any LLM call
-    def test_scanned_over_8_pages_422(self, ctx):
+    def test_scanned_blank_9_pages_422(self, ctx):
         before = n_sources(ctx["org"])
         r = upload(ctx["org"], make_pdf([[] for _ in range(9)]), "scan9.pdf")
         assert r.status_code == 422, r.text
-        assert "up to 8" in r.text
+        assert "No readable text" in r.text
         assert n_sources(ctx["org"]) == before
 
     def test_not_pdf_422(self, ctx):
