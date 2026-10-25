@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth, homeFor } from "@/context/AuthContext";
 import { setProjectId } from "@/lib/api";
 import Login from "@/pages/Login";
+import { dropBootDots } from "@/components/LogoDots";
 import Projects from "@/pages/Projects";
 import AuthCallback from "@/pages/AuthCallback";
 import ProjectSheet from "@/pages/ProjectSheet";
@@ -28,8 +29,9 @@ function Protected({ children }) {
 
 function Home() {
   const { user } = useAuth();
-  if (user === null) return <Loading />;
-  return <Navigate to={user ? homeFor(user) : "/login"} replace />;
+  if (!user) return <Login />;
+  dropBootDots();
+  return <Navigate to={homeFor(user)} replace />;
 }
 
 // Remounts the page per project so no state from one project can render into another.

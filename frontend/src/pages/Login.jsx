@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, errText } from "@/lib/api";
 import { useAuth, homeFor } from "@/context/AuthContext";
-import { LogoDots } from "@/components/LogoDots";
+import { LogoDots, dropBootDots } from "@/components/LogoDots";
 
 function GoogleButton({ next }) {
   const go = () => {
@@ -106,7 +106,7 @@ export default function Login() {
   };
   const dest = (u) => (fits(u) ? next : homeFor(u));
 
-  if (user) return <Navigate to={dest(user)} replace />;
+  if (user) { dropBootDots(); return <Navigate to={dest(user)} replace />; }
 
   const submit = () => {
     if (step === "signin") return run(() => login(form.email, form.password));

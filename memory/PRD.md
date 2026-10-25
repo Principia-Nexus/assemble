@@ -121,3 +121,5 @@
 ## 2026-06 — Dots: deferred init (no strict-mode double start), capped frame clock (no skipping), dot layout cached in localStorage (init 300ms→33ms on return), whole animation ~1s slower.
 
 ## 2026-06 — Dots timing knobs: TUNING {fadeIn, scatter, flight, spread} at top of frontend/src/lib/dotsEngine.js.
+
+## 2026-06 — No blank screen at launch: index.html paints static boot dots (#boot-dots) instantly on / and /login (desktop), cross-fades into live engine; "/" renders Login directly instead of a Loading screen.

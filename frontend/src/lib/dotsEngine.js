@@ -649,6 +649,7 @@ if (reduce) render(T.duration); else play();
 const onResize = () => { if (!raf) render(lastT); };
 window.addEventListener('resize', onResize);
 return {
+  fadeMs: reduce ? 0 : Math.round(1000 * TUNING.fadeIn),
   replay: () => { if (!reduce && !playing()) play(); },
   redraw: onResize,
   destroy: () => { cancelAnimationFrame(raf); raf = 0; window.removeEventListener('resize', onResize); },

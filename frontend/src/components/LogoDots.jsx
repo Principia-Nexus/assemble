@@ -1,7 +1,18 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { createDots } from "@/lib/dotsEngine";
 
 const isMobile = () => window.matchMedia("(max-width: 767px), (pointer: coarse)").matches;
+
+// Static dots painted by index.html before the app loads; faded out once the live dots take over.
+const releaseBoot = (ms) => {
+  const b = document.getElementById("boot-dots");
+  if (!b) return;
+  b.id = "";
+  b.style.transition = `opacity ${ms}ms linear`;
+  b.style.opacity = "0";
+  setTimeout(() => b.parentNode?.removeChild(b), ms + 50);
+};
 
 const StaticLogo = () => (
   <h1 data-testid="logo-static" className="text-[58px] font-semibold leading-none tracking-tight text-[#1A2838]">Assemble</h1>
@@ -22,14 +33,15 @@ const DotsLogo = () => {
     // Deferred so the page paints first and a strict-mode remount never builds it twice.
     const id = setTimeout(() => {
       engine.current = createDots(canvas.current, target);
+      releaseBoot(engine.current.fadeMs);
       ro.observe(slot.current);
-    }, 450);
+    }, 0);
     return () => { clearTimeout(id); ro.disconnect(); engine.current?.destroy(); engine.current = null; };
   }, []);
 
   return (
     <>
-      <canvas ref={canvas} aria-hidden="true" data-testid="logo-dots-canvas" className="pointer-events-none fixed inset-0 z-0 h-screen w-screen" />
+      {createPortal(<canvas ref={canvas} aria-hidden="true" data-testid="logo-dots-canvas" className="pointer-events-none fixed inset-0 z-0 h-screen w-screen" />, document.body)}
       <h1
         ref={slot}
         onMouseEnter={() => engine.current?.replay()}
@@ -43,3 +55,5 @@ const DotsLogo = () => {
 };
 
 export const LogoDots = () => (isMobile() ? <StaticLogo /> : <DotsLogo />);
+
+export const dropBootDots = () => releaseBoot(0);
