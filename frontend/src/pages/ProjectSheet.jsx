@@ -134,7 +134,7 @@ export default function ProjectSheet() {
           <div className="mx-auto flex max-w-[1440px] flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 data-testid="project-title" className="break-words text-[26px] font-bold leading-tight tracking-tight text-slate-900">{sheet.intake.job_name || sheet.project.name}</h1>
+                <h1 data-testid="project-title" className="break-words text-[22px] font-bold sm:text-[26px] leading-tight tracking-tight text-slate-900">{sheet.intake.job_name || sheet.project.name}</h1>
                 {sheet.project.synthetic && <SynthBadge />}
                 {state && <span data-testid="state-chip" className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${sheet.preview ? "border border-dashed border-amber-400 bg-amber-50 text-amber-900" : "bg-[#E4EFF6] text-[#215273]"}`}>{state}</span>}
                 {saveText && <span data-testid="save-state" aria-live="polite" className={`text-xs ${save === "failed" ? "text-red-700" : "text-slate-500"}`}>{saveText}</span>}
@@ -187,7 +187,7 @@ export default function ProjectSheet() {
           </main>
           {target && (
             <div className={narrow ? "fixed inset-0 z-40" : "no-print shrink-0"}>
-              <Inspector target={target} sheet={sheet} items={items} edges={edges} run={runOps} onClose={() => setSelectedId(null)} openTool={setTool} />
+              <Inspector target={target} sheet={sheet} items={items} edges={edges} run={run} onClose={() => setSelectedId(null)} openTool={setTool} />
             </div>
           )}
         </div>

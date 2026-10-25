@@ -55,7 +55,7 @@ function Draft({ q, onSaved }) {
       {errors.length > 0 && <ul role="alert" className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800" data-testid="quote-errors">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
       <div className="flex flex-wrap gap-2">
         <Button onClick={save} data-testid="quote-save-preview">Save and preview</Button>
-        <Button variant="outline" onClick={async () => { await api.delete(`/project/quotes/${q.quote_id}`); onSaved(null, true); }} data-testid="quote-discard">Discard draft</Button>
+        <Button variant="outline" onClick={async () => { try { await api.delete(`/project/quotes/${q.quote_id}`); onSaved(null, true); } catch (e) { setErrors(errList(e)); onSaved(null, true); } }} data-testid="quote-discard">Discard draft</Button>
       </div>
       {preview && (
         <div className="rounded-md border border-slate-200 bg-white p-4" data-testid="quote-preview">
@@ -80,10 +80,10 @@ function Issued({ q, onChange }) {
         <p className="font-semibold">{q.number}{q.kind === "amendment" ? ` · amends ${q.baseline_number}` : ""} · {usd(s.price_cents)}</p>
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold" data-testid={`quote-state-${q.number}`}>{STATE[q.state]}</span>
       </div>
-      <p className="mt-1 text-xs text-slate-500">To {q.recipient} · issued {q.issued_at?.slice(0, 16).replace("T", " ")} · valid until {s.valid_until ? new Date(s.valid_until).toLocaleString() : ""}{q.sends?.length ? ` · emailed ${q.sends.length}×` : " · not sent"}</p>
+      <p className="mt-1 text-xs text-slate-500">To {q.recipient} · issued {new Date(q.issued_at).toLocaleString()} · valid until {s.valid_until ? new Date(s.valid_until).toLocaleString() : ""}{q.sends?.length ? ` · emailed ${q.sends.length}×` : " · not sent"}</p>
       {(q.responses || []).map((r) => (
         <p key={r.receipt_id} className="mt-2 rounded bg-slate-50 px-2 py-1 text-xs" data-testid={`quote-response-${r.receipt_id}`}>
-          {r.signer_name}{r.authority ? ` (${r.authority})` : ""} · {r.email} · {r.action.replace("_", " ")} {r.version} · {r.at.slice(0, 16).replace("T", " ")}{r.note ? ` — “${r.note}”` : ""}
+          {r.signer_name}{r.authority ? ` (${r.authority})` : ""} · {r.email} · {r.action.replace("_", " ")} {r.version} · {new Date(r.at).toLocaleString()}{r.note ? ` — “${r.note}”` : ""}
         </p>
       ))}
       <div className="mt-3 flex flex-wrap gap-2">

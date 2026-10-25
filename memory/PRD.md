@@ -125,3 +125,11 @@
 ## 2026-06 — No blank screen at launch: index.html paints static boot dots (#boot-dots) instantly on / and /login (desktop), cross-fades into live engine; "/" renders Login directly instead of a Loading screen.
 
 ## 2026-06 — Fixed logo drawn over form after layout change: once formed, canvas clears and an in-page SVG wordmark (same glyphs) takes over. Removed "No account yet..." register notice.
+
+## 2026-10-25 — "One AI workspace → accepted quote" brief (stages 1–3)
+User overrides: keep original Assemble colours/fonts and AppHeader top bar; no left rail; view switch + controls top-right of project bar; bottom chat bar; no "by assistant", no sparkle.
+- Stage 1 workspace (frontend/src/pages/ProjectSheet.jsx, components/ws/*): Graph (frames, cards, explicit relationship lines, zoom/fit, Space-drag), List (inline edit), Week (dated/provisional/unscheduled), Report (print), filter, Show changes, one inspector, ToolSheet for old Check/Draft/Invite/Decide editors + Customer quote. Backend items_routes.py: typed items (group/task/milestone/ai_task/condition) + edges, validated rev-guarded batches with inverse → Undo; acyclic prerequisites; restore only via undo. Assistant compose mode writes through same path (receipt Undo/Show changes).
+- Stage 2 customer quote (quote_routes.py, QuotePanel.jsx, /quote/:token QuoteReview.jsx): draft → preview digest → issue immutable snapshot → copy link / email (Resend) → customer 6-digit emailed code (synthetic .test shows code on screen) → accept (name+intent) / decline / request changes, one guarded transition, idempotent key, expiry server-time (UTC Z), replacement supersedes, amendment keeps accepted baseline.
+- Stage 3 inputs (media_routes.py): Whisper voice → transcript placed in composer for review (utterance id attributed, no-speech filtered); Claude sonnet-5-5 photo observations with regions/unknowns, stored in object storage.
+- Tests: iteration_17/18 reports; backend 21/21 new + 95 regression pass.
+Not done / backlog: rule packs as versioned files, bounded AI-run cancel/queue states, source manifest for multi-sheet PDFs, partner-support prerequisites on quotes, customer-facing assistant, AI-off parity audit at 200% zoom, published-build verification.

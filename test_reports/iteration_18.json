@@ -1,0 +1,57 @@
+{
+  "summary": "Iteration 18 retest of the iteration-17 fixes. Backend: 21/21 pytest tests pass (the 10 iteration-17 tests plus 11 new ones in test_iter18_retest.py). Client restore ops and client-supplied edge objects are now rejected. Writes are scoped by project. valid_until is stored in UTC as Z and the expiry guard returns 409. Invalid customer emails are rejected with 422. Silence and noise audio return 422 'No speech was recognized'; real speech still transcribes. Frontend: every requested item was verified in the UI. These were the mobile 390px composer and overflow menu, the toast offset, the rejected loop op, inspector relationship wording, List/Report 'no sites assigned', the Week start date and subtitle, graph edges, quote lifecycle across timezones, the mic no-speech message, and assistant compose with Undo. No critical or major issues were found. A few low-priority polish items remain.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "DELETE /api/project/quotes/{id} (QuotePanel Discard draft)", "issue": "The frontend onClick has no try/catch, so a 422 (e.g. the draft was already issued in another tab) becomes an unhandled promise rejection with no user feedback."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Workspace desktop (toasts)", "issues": ["Toasts now sit below the AppHeader (top 76px > header bottom 65px) and no longer cover Sign out. While visible, they cover the workspace toolbar's right end (Filter / overflow '...' button at y~76) and the top of an open Customer quote sheet's intro text. Consider a bottom-right position, or offsetting further when a sheet or inspector is open."]},
+      {"screen": "Inspector loop rejection", "issues": ["The prerequisite-loop error shows twice: once as a red toast and once as inline inspector-errors. The inline message alone is enough."]},
+      {"screen": "Quote time display", "issues": ["The organizer Issued card shows 'issued' as a raw UTC slice with no zone label, while 'valid until' is shown in local time. The customer receipt shows UTC with a label. Use one convention throughout."]},
+      {"screen": "Mobile 390px workspace", "issues": ["The workspace header block (title, badge, status, view tabs, filter) is about 210px tall. Together with the AppHeader, suggestions and composer, only about 380px of the 844px screen is left for content. Consider collapsing the filter or status line on mobile.", "Report view on mobile: the 'Print / PDF' button squeezes the title and pushes the SYNTHETIC badge onto its own line."]}
+    ]
+  },
+  "verified_working": [
+    "POST /items/ops: op=restore from client rejected 422 'cannot restore', both for a new injected item and for overwriting an existing one. Existing items stay unchanged.",
+    "POST /items/ops: link with a client 'edge' object is ignored (422). A client-chosen edge_id is not honoured on a normal link. Delete followed by Undo restores the item via the server-side inverse.",
+    "Cross-sandbox isolation: a second visitor cannot see or update another sandbox's items (422).",
+    "valid_until '2026-12-01T09:30:00-05:00' is stored as '2026-12-01T14:30:00Z'. Values with milliseconds and a Z suffix are normalized. Invalid dates get 422.",
+    "UI (America/New_York context): datetime-local 17:30 is stored as 22:30:00Z and reloads as 17:30. The customer page in NY shows 'Valid until 12/15/2026, 12:30:00 PM' for 17:30Z.",
+    "Expiry: a quote valid 45s ahead was issued, verified and accepted after expiry: 409 'expired', state=expired.",
+    "Invalid emails 'not-an-email', 'a@b' and 'x y@z.com' get 422 'not a valid address'. An email with uppercase and spaces is normalized to lowercase. In the UI, the error shows in quote-errors.",
+    "Transcribe: silence WAV and tone+noise WAV return 422 'No speech was recognized'. A TTS speech mp3 still transcribes ('lobby'). In the UI, the fake mic shows the error in the conversation tray and the composer stays empty.",
+    "Mobile 390: textarea is full width (352px) on its own row at y=746. Add, attach, camera and mic sit on the row below at y=789, with send on the right. scrollWidth is 390 on Graph, List, Week and Report. Guided tour is in the overflow menu (overflow-tour), and the inline demo-tour-open is hidden.",
+    "A rejected loop op shows an inline error, and the header save-state is absent, so 'Not saved' no longer appears.",
+    "Inspector shows 'Pull permits must finish before this' (incoming) and 'This must finish before Final walkthrough' (outgoing).",
+    "List and Report show '<Firm> · no sites assigned' and '<Firm> — no sites assigned'. The List section is titled 'Firms and sites' when there is no plan.",
+    "Week view opens at 2026-11-09 (the earliest dated item, not the job start of 2026-10-26). Subtitles show 'target' or nothing, never a literal 'date'.",
+    "Graph prerequisite arrows run from card right edges to the next card's left edge for side-by-side cards.",
+    "Quote lifecycle in the UI: draft, Save and preview, Issue Q1, Copy link (clipboard), customer code, verify, Accept, receipt. Reload shows Accepted with the receipt.",
+    "Assistant compose 'Add a task called Order lift rental due 2026-11-03' creates the task with a receipt. Undo removes it, and it stays removed after reload."
+  ],
+  "test_report_links": ["/app/backend/tests/test_iter18_retest.py", "/app/backend/tests/test_iter17_workspace_quote_media.py", "/app/test_reports/pytest/iter18.xml"],
+  "action_items": [
+    "LOW: Wrap QuotePanel 'Discard draft' in try/catch and surface errList.",
+    "LOW: Avoid the toast overlapping the workspace toolbar overflow button or open sheets (e.g. use position bottom-right, or a larger offset when a panel is open).",
+    "LOW: Drop the duplicate toast for inspector validation errors when they are shown inline.",
+    "LOW: Use one time-zone convention for issued_at, valid_until and the receipt time.",
+    "LOW: Compact the mobile workspace header and the Report title row."
+  ],
+  "critical_code_review_comments": [
+    "items_routes.apply_ops: restore and edge-object paths are now gated on inverse_of, and inverses come only from server-stored batches. Writes filter by project_id. Correct.",
+    "items_routes.undo: the 'already undone' check runs before apply_ops and is not atomic. Two concurrent undos are still serialized by the claim_rev rev guard, so one gets 409. Acceptable.",
+    "media_routes.transcribe: the no_speech filter requires all segments > 0.6. Fine. Consider also checking avg_logprob, which catches the common hallucinations ('Thank you', 'You').",
+    "quote_routes.clean: valid_until is normalized to Z. utc() treats naive legacy values as UTC, which is consistent."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter18_retest.py"],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "100% of requested checks (only low-priority design polish open)"},
+  "seed_data_creation": "Only per-visitor demo sandboxes (TEST_-prefixed items and quotes created through the API and UI). No shared data was modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run `cd /app/backend && pytest tests/test_iter18_retest.py tests/test_iter17_workspace_quote_media.py` (about 60s; includes a 50s expiry sleep and media LLM calls). pytest.ini adds xdist. Only one draft quote is allowed per project, so the tests reuse an existing draft. After demo login, projects are listed at /projects; click project-row-12-branch-lighting-retrofit. In-page API calls need the X-Project-Id header (project id from the URL). Use toolbar-view-{graph,list,week,report} to switch views. The customer quote flow is quote-send-code, then quote-synthetic-code, then quote-code-input, quote-verify-button, quote-accept, quote-signer-name, quote-intent and quote-respond-submit. Use browser.new_context(timezone_id=...) for timezone checks. Screenshots are captured only from the default page. Do not test the login dots animation."
+}

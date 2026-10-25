@@ -30,7 +30,7 @@ export default function ReportView({ sheet, items, pkgs, conds }) {
             <p className="mt-1 text-sm text-[#64748B]">{[it.customer_name, it.start_date && `starts ${it.start_date}`, it.weeks && `${it.weeks} weeks`].filter(Boolean).join(" · ")}</p>
             <p className="mt-1 text-xs text-[#64748B]" data-testid="report-status">{statusSentence(sheet)}</p>
           </div>
-          <Button size="sm" variant="outline" className="no-print bg-white" onClick={() => window.print()} data-testid="report-print-button"><Printer className="h-4 w-4" /> Print / PDF</Button>
+          <Button size="sm" variant="outline" className="no-print bg-white" onClick={() => window.print()} aria-label="Print or save as PDF" data-testid="report-print-button"><Printer className="h-4 w-4" /><span className="hidden sm:inline">Print / PDF</span></Button>
         </div>
         <Part title="Scope coverage" testId="report-coverage">
           {pkgs.length ? (
