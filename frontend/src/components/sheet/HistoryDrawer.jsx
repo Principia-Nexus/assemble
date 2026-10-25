@@ -29,7 +29,7 @@ export default function HistoryDrawer({ open, onOpenChange, rev }) {
               {data.events.map((e) => (
                 <li key={e.event_id} data-testid="history-event" className="relative">
                   <span className="absolute -left-[25px] top-1.5 h-2 w-2 rounded-full bg-slate-400" />
-                  <p className="font-mono text-[10px] uppercase tracking-wider text-slate-500">
+                  <p className="font-mono text-[10px] text-slate-500">
                     {fmtTime(e.at)} · <span className={e.actor_kind === "partner" ? "text-amber-700" : "text-slate-700"}>{e.actor_kind}</span> · {e.actor_name}
                   </p>
                   <p className="mt-0.5 text-sm text-slate-800">{e.summary}</p>

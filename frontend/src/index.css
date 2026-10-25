@@ -50,7 +50,7 @@
 }
 
 .eyebrow {
-    @apply text-[11px] font-mono font-semibold uppercase tracking-[0.14em] text-slate-500;
+    @apply text-xs font-mono font-semibold text-slate-500;
 }
 
 .sheet-paper {

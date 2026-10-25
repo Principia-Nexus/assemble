@@ -35,7 +35,7 @@ export default function DiffView({ diff }) {
       {diff.sites.length > 0 && (
         <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
           <table className="w-full min-w-[480px] text-xs">
-            <thead><tr className="text-left font-mono text-[10px] uppercase tracking-wider text-slate-500"><th className="p-2">Site</th><th className="p-2">Before</th><th className="p-2">After</th></tr></thead>
+            <thead><tr className="text-left font-mono text-[10px] text-slate-500"><th className="p-2">Site</th><th className="p-2">Before</th><th className="p-2">After</th></tr></thead>
             <tbody>
               {diff.sites.map((s) => (
                 <tr key={s.site_id} className="border-t border-slate-100" data-testid={`amend-diff-site-${s.site_id}`}>

@@ -77,7 +77,7 @@ export default function DemoTour({ sheet, act, busy, goTo, onClose }) {
   return (
     <aside data-testid="demo-tour" className="no-print fixed inset-x-3 bottom-3 z-40 rounded-md border border-slate-900 bg-white shadow-2xl sm:left-auto sm:right-5 sm:w-96">
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2">
-        <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+        <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold text-slate-600">
           <Sparkles className="h-3.5 w-3.5" /> Guided tour · step {idx + 1} of {tour.length}{min ? ` · ${step.title}` : ""}
         </p>
         <div className="flex">

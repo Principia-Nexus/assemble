@@ -24,7 +24,7 @@ function Terms({ t }) {
     <div className="rounded-md border border-slate-200 bg-white">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[420px] text-sm">
-          <thead><tr className="text-left font-mono text-[10px] uppercase tracking-wider text-slate-500"><th className="p-3">Site</th><th className="p-3">Week</th><th className="p-3">Dates</th><th className="p-3">Scope</th></tr></thead>
+          <thead><tr className="text-left font-mono text-[10px] text-slate-500"><th className="p-3">Site</th><th className="p-3">Week</th><th className="p-3">Dates</th><th className="p-3">Scope</th></tr></thead>
           <tbody>
             {t.sites.map((s) => (
               <tr key={s.site_id} className="border-t border-slate-100" data-testid={`review-site-${s.site_id}`}>

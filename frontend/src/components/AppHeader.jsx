@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 
 export function Brand({ light = false }) {
   return (
-    <Link to="/" data-testid="brand-home-link" className={`text-2xl font-medium tracking-tight sm:text-[28px] ${light ? "text-[#FFFFFF]" : "text-[#0E5E8C]"}`}>
+    <Link to="/" data-testid="brand-home-link" className={`text-2xl font-bold tracking-tight sm:text-[28px] ${light ? "text-[#FFFFFF]" : "text-[#0E5E8C]"}`}>
       Assemble
     </Link>
   );
@@ -30,7 +30,7 @@ export default function AppHeader({ onHistory }) {
             <Link to="/reviews"><Inbox className="h-4 w-4" /> <span className="hidden sm:inline">My reviews</span></Link>
           </Button>
           <Button variant="outline" size="sm" onClick={logout} data-testid="header-logout-button"
-            className="rounded-none border-[#0E5E8C] bg-transparent font-mono text-[11px] uppercase tracking-[0.16em] text-[#0E5E8C] hover:bg-[#0E5E8C] hover:text-[#FFFFFF]">
+            className="rounded-none border-2 border-[#0E5E8C] bg-transparent text-sm font-semibold text-[#0E5E8C] hover:bg-[#0E5E8C] hover:text-[#FFFFFF]">
             Sign out
           </Button>
         </div>

@@ -25,7 +25,7 @@ export default function ScheduleGrid({ version, checker, testPrefix }) {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[420px] text-sm">
           <thead>
-            <tr className="font-mono text-[10px] uppercase tracking-wider text-slate-500">
+            <tr className="font-mono text-[10px] text-slate-500">
               <th className="px-4 py-2 text-left font-semibold">Site</th>
               {Array.from({ length: weeks }).map((_, i) => (
                 <th key={i} className="px-2 py-2 text-left font-semibold">Week {i + 1}<span className="block normal-case tracking-normal text-slate-400">{weekStart(i + 1) ? fmtDate(weekStart(i + 1)) : "date unknown"}</span></th>

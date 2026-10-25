@@ -21,7 +21,7 @@ function Editor({ v, rows, setRows, adj, setAdj }) {
     <div className="space-y-4">
       <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
         <table className="w-full min-w-[480px] text-xs">
-          <thead><tr className="text-left font-mono text-[10px] uppercase tracking-wider text-slate-500"><th className="p-2">Site</th><th className="p-2">Scope owner</th><th className="p-2">Week</th><th className="p-2">Due by week</th></tr></thead>
+          <thead><tr className="text-left font-mono text-[10px] text-slate-500"><th className="p-2">Site</th><th className="p-2">Scope owner</th><th className="p-2">Week</th><th className="p-2">Due by week</th></tr></thead>
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.site_id} className="border-t border-slate-100">

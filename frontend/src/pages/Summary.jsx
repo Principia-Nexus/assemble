@@ -12,7 +12,7 @@ const ACTION = { confirm: "Confirmed proposed terms", request_change: "Requested
 function Section({ title, children, testId }) {
   return (
     <section data-testid={testId} className="break-inside-avoid border-t border-slate-300 pt-5">
-      <h2 className="mb-3 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">{title}</h2>
+      <h2 className="mb-3 font-mono text-xs font-semibold text-slate-600">{title}</h2>
       {children}
     </section>
   );
@@ -31,7 +31,7 @@ function Contributions({ cur }) {
       ))}
     </ul>
     <table className="hidden w-full text-sm sm:table print:table">
-      <thead><tr className="text-left font-mono text-[10px] uppercase text-slate-500"><th className="py-1">Crew</th><th>Sites (week)</th><th>Total</th><th>Advance / balance</th><th>Status</th></tr></thead>
+      <thead><tr className="text-left font-mono text-[11px] text-slate-500"><th className="py-1">Crew</th><th>Sites (week)</th><th>Total</th><th>Advance / balance</th><th>Status</th></tr></thead>
       <tbody>
         {cur.partners.map((p) => (
           <tr key={p.partner_id} className="border-t border-slate-200 align-top">
@@ -92,7 +92,7 @@ export default function Summary() {
       </div>
       <article data-testid="summary-document" className="mx-auto max-w-4xl space-y-6 bg-white p-8 shadow-sm print:max-w-none print:p-0 print:shadow-none sm:p-12">
         <header className="space-y-1">
-          <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Assemble · organizer summary · not for partners</p>
+          <p className="flex items-center gap-2 font-mono text-[10px] text-slate-500">Assemble · organizer summary · not for partners</p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">{it.job_name || sheet.project.name}</h1>
           <p className="text-sm text-slate-600">Customer: {it.customer_name || "Unknown"} · Starts {fmtDate(it.start_date)} · {it.weeks ?? "?"} weeks · Ceiling {money(it.budget_ceiling_cents)}</p>
           <p data-testid="summary-date" className="text-xs text-slate-500">Prepared {fmtTime(printedAt, true)}{cur ? ` · current plan v${cur.version.number}` : ""}{sheet.preview ? ` · amendment preview v${sheet.preview.version.number} open (not included)` : ""}</p>

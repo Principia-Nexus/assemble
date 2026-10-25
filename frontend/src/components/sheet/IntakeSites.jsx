@@ -25,7 +25,7 @@ export default function IntakeSites({ form, setForm, weeks }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-sm">
             <thead>
-              <tr className="text-left font-mono text-[10px] uppercase tracking-wider text-slate-500">
+              <tr className="text-left font-mono text-[10px] text-slate-500">
                 <th className="pb-2 pr-2 font-semibold">ID</th><th className="pb-2 pr-2 font-semibold">Name</th>
                 <th className="pb-2 pr-2 font-semibold">Due by week{weeks ? ` (1–${weeks})` : ""}</th><th className="pb-2 pr-2 font-semibold">Scope</th><th />
               </tr>

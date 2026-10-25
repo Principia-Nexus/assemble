@@ -16,7 +16,7 @@ export default function GapPanel({ gap, dirty }) {
       </dl>
       {gap.weekly.length > 0 && (
         <table className="w-full text-xs">
-          <thead><tr className="text-left font-mono text-[10px] uppercase tracking-wider text-slate-500"><th>Week</th><th>Due</th><th>Known capacity</th><th>Short</th></tr></thead>
+          <thead><tr className="text-left font-mono text-[10px] text-slate-500"><th>Week</th><th>Due</th><th>Known capacity</th><th>Short</th></tr></thead>
           <tbody>
             {gap.weekly.map((w) => (
               <tr key={w.week} className="border-t border-slate-100" data-testid={`gap-week-${w.week}`}>
