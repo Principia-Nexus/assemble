@@ -7,6 +7,7 @@ import { KIND_LABEL, STATUS_OPTIONS, statusText } from "./useItems";
 import { firmName } from "./derive";
 import { respText } from "./Cards";
 
+const REL = { prerequisite: "must finish before", uses_input: "is input to", produces_output: "produces output for", relates_to: "relates to" };
 const sel = "h-9 w-full rounded-md border border-[#E2E8F0] bg-white px-2 text-sm text-[#1A2838] focus:outline-none focus:ring-2 focus:ring-[#215273]";
 const Lbl = ({ children, htmlFor }) => <label htmlFor={htmlFor} className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{children}</label>;
 
@@ -83,7 +84,7 @@ function ItemForm({ it, sheet, items, edges, run }) {
           <ul className="space-y-1">
             {mine.map((e) => (
               <li key={e.edge_id} className="flex items-center gap-2 text-[12.5px] text-[#1A2838]" data-testid={`inspector-edge-${e.edge_id}`}>
-                <span className="min-w-0 flex-1 truncate">{e.from_id === it.item_id ? `${e.kind.replace("_", " ")} → ${title(e.to_id)}` : `${title(e.from_id)} → ${e.kind.replace("_", " ")}`}{e.proposed && <span className="ml-1 text-[#B4690E]">(proposed)</span>}</span>
+                <span className="min-w-0 flex-1 truncate">{e.from_id === it.item_id ? `This ${REL[e.kind]} ${title(e.to_id)}` : `${title(e.from_id)} ${REL[e.kind]} this`}{e.proposed && <span className="ml-1 text-[#B4690E]">(proposed)</span>}</span>
                 {e.proposed && <button type="button" className="text-xs text-[#215273] hover:underline" onClick={() => run([{ op: "unlink", edge_id: e.edge_id }, { op: "link", from_id: e.from_id, to_id: e.to_id, kind: e.kind, proposed: false }], "Accepted relationship")} data-testid={`inspector-edge-accept-${e.edge_id}`}>Keep</button>}
                 <button type="button" className="text-xs text-[#A93A3A] hover:underline" onClick={() => run([{ op: "unlink", edge_id: e.edge_id }], "Removed relationship")} data-testid={`inspector-edge-remove-${e.edge_id}`}>Remove</button>
               </li>

@@ -25,7 +25,7 @@ export function useItems(rev, onChanged) {
   }, [onChanged]);
 
   const fail = useCallback(async (e) => {
-    setSave("failed");
+    setSave(e.response?.status === 422 ? "idle" : "failed");
     if (e.response?.status === 409) await onChanged();
     return { ok: false, errors: errList(e) };
   }, [onChanged]);

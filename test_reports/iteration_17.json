@@ -1,0 +1,67 @@
+{
+  "summary": "Iteration 17: tested AI-composed workspace (Graph/List/Week/Report, filter, Add menu, inspector, relationships, assistant compose + receipt Undo/Show changes), customer quote lifecycle (draft->issue->copy link->customer code verify->accept/decline, amendment keeps baseline), voice (Whisper via composer mic with fake device) and photo (Claude vision via composer camera), and mobile 390px. New backend suite 10/10 pass; full regression 105/105 pass. Found and FIXED one crash: Report view threw 'p.conditions.map is not a function' (partner.conditions is a string in fixtures). Found one HIGH backend validation hole: client-supplied 'restore' op in POST /api/project/items/ops bypasses all validation and upserts by bare item_id.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/project/items/ops (op=restore)", "issue": "Client can send {op:'restore', doc:{...}} and the raw doc is written with NO validation (verified: kind='bogus_kind', status='hacked', firm_id='unknown_firm', due_date='not-a-date', arbitrary item_id/created_by all persisted, 200). Write uses replace_one({'item_id': ...}) without project_id filter, so a known foreign item_id would be overwritten (cross-project write). Bogus kind will also break frontend (STATUS_OPTIONS[kind].map). Fix: only allow 'restore' (and edge_id reuse) when inverse_of is set (undo path), or re-validate via clean_fields + KINDS; add project_id to replace_one filters.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "PUT /api/project/quotes/{id} valid_until", "issue": "Frontend sends naive datetime-local (user's local time); backend treats naive as UTC and customer page shows '... UTC'. A PT user entering 17:00 gets 17:00 UTC. Convert to ISO with offset on the client (new Date(v).toISOString())."},
+      {"endpoint": "POST /api/project/transcribe", "issue": "Whisper returned 'You' for non-speech audio (fake mic tone) — classic hallucination. Consider verbose_json + no_speech_prob / min-duration filter to return 'No speech was recognized'."},
+      {"endpoint": "PUT /api/project/quotes/{id}", "issue": "customer_email only checked for '@' (missing() ), no format validation."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ReportView", "issue": "Runtime crash 'p.conditions.map is not a function' when opening Report (partner.conditions is a string). FIXED by tester with Array.isArray guard.", "selector": "[data-testid='toolbar-view-report']", "priority": "HIGH (fixed)"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Mobile 390px composer", "issues": ["Composer textarea is squeezed into a ~100px column to the right of Add/attach/camera/mic buttons; placeholder 'Ask or describe a change...' wraps to 3 lines and typed text wraps word-per-line. Put the textarea on its own full-width row above the action buttons on narrow screens."]},
+      {"screen": "Mobile 390px workspace header", "issues": ["Overflow '...' button wraps onto its own row below Filter/Guided tour; title bar consumes ~310px of 844px height. Put overflow inline with view switch or the filter row."]},
+      {"screen": "Toasts (sonner top-right)", "issues": ["Toasts overlap AppHeader 'My reviews'/'Sign out' buttons; offset below the 52px header."]},
+      {"screen": "Graph prerequisite edges", "issues": ["Edge line from Task Two to Task One passes through the Task One card and terminates at the group title, not at the card edge."]},
+      {"screen": "Workspace save-state", "issues": ["After a rejected change (loop error), header shows red 'Not saved' although nothing is pending; error is already shown in inspector + toast."]},
+      {"screen": "Inspector relationships", "issues": ["Incoming prerequisite reads 'TEST Task Two → prerequisite' — unclear; use 'TEST Task Two must finish before this'."]},
+      {"screen": "List/Report firm rows", "issues": ["Firms with no sites show a dangling '·' (List) or '—' (Report Scope coverage) with nothing after; show 'no sites assigned'."]},
+      {"screen": "Week view", "issues": ["Item subtitle shows literal 'date' when date_kind is unset. Week view starts at job start (2026-10-26) and does not jump to earliest dated item."]},
+      {"screen": "Header", "issues": ["'Guided tour' button uses a sparkle icon; user asked for no sparkle in composer — confirm this is acceptable in the header."]}
+    ]
+  },
+  "passed_flows": [
+    "Login demo organizer -> project-row-12-branch-lighting-retrofit; AppHeader 'Assemble | Brightline Electrical | History | Projects | My reviews | Sign out', SYNTHETIC badge, status-sentence, 4 view toggles, toolbar-search, header-overflow; no left rail (workspace-project-rail absent)",
+    "Graph: Firms and sites frame with 6 card-plan-* cards, Open conditions frame; zoom in 1.1 / out 0.9 / fit 1.0",
+    "Add menu -> group (inspector opens, rename on blur saves) -> task with parent group + due date; second task with prerequisite; reverse prerequisite rejected with loop error in inspector-errors; Escape closes inspector",
+    "List view inline rename + done checkbox persist; Week view dated task on week-day-2026-11-04 via week-next, undated in week-unscheduled; Report sections coverage/quotes/conditions/responses/work render (after fix)",
+    "Filter narrows cards 11->2, filter-conditions-note '3 open conditions in this project' stays visible incl. no-match",
+    "Composer: Shift+Enter newline; Enter sends; tray opens; assistant created 4 groups/9 items; receipt with Show changes and Undo; Undo removed all, receipt shows 'Undone'; no 'by assistant' label",
+    "All Add menu items open the right tool sheets (details/source/check/review/quote)",
+    "Quote: missing price listed in quote-missing, no issue button; price 900 -> preview $900.00 -> issue Q1 -> copy link; customer fresh context: synthetic code shown, wrong code -> quote-verify-error, right code -> document $900.00; accept without name -> 'Type your full name.'; with name+intent -> Accepted + receipt; reload keeps Accepted",
+    "Organizer shows 'Draft an amendment'; Q2 amendment ($1,200) shows 'Your accepted Q1 stays in force'; customer declines -> Q2 Declined, Q1 stays Accepted",
+    "Camera button upload -> observations note in tray + composer prefilled with 'Use the observations from photo ...' (not sent)",
+    "Mic button (fake device) -> recording -> stop -> transcript placed in input, voice-review-note shown, not auto-sent",
+    "Mobile 390: List default on fresh visit, scrollWidth==clientWidth (no overflow), inspector full-screen 390x844 with 'Back' which closes it"
+  ],
+  "test_report_links": ["/app/backend/tests/test_iter17_workspace_quote_media.py", "/app/test_reports/pytest/iter17.xml", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "HIGH: Lock down op=restore in apply_ops (only from undo/inverse_of path or validate fully) and scope item/edge replace_one filters by project_id",
+    "Fix mobile composer layout (full-width textarea on narrow screens) and mobile header overflow wrap",
+    "Send valid_until with timezone offset from QuotePanel",
+    "Offset toasts below AppHeader; fix 'Not saved' state after rejected ops; clarify incoming relationship text; remove dangling separators in List/Report; hide 'date' label in Week when date_kind unset",
+    "Optional: filter Whisper no-speech hallucinations; delete unused ProjectRail.jsx"
+  ],
+  "critical_code_review_comments": [
+    "items_routes.apply_ops: 'restore' and client-provided edge objects are trusted; inverse ops should be server-only. replace_one/update_one keyed only by item_id/edge_id (no project_id) — tenant isolation relies on id secrecy.",
+    "quote_routes.respond: expiry guard compares snapshot.valid_until string to now().isoformat()[:16]; works for naive 'YYYY-MM-DDTHH:MM' but brittle if offsets are added — compare parsed datetimes or store a normalized UTC field.",
+    "quote_routes.missing(): datetime.fromisoformat(...).replace(tzinfo=utc) discards a real offset if one is supplied (should be astimezone or only set tzinfo when naive).",
+    "ReportView assumed partner.conditions is an array; fixture data has strings — normalize at the data layer.",
+    "ProjectRail.jsx is dead code after rail removal."
+  ],
+  "updated_files": ["/app/frontend/src/components/ws/ReportView.jsx", "/app/backend/tests/test_iter17_workspace_quote_media.py"],
+  "success_rate": {"backend": "100% of tests (115/115 incl. regression); 1 HIGH validation hole found by probe", "frontend": "~95% (1 crash fixed; design issues remain)"},
+  "test_credentials": "organizer@demo.assemble.test / synthetic-demo via signin-demo-organizer-button (per visitor_id sandbox)",
+  "seed_data_creation": "Only per-visitor demo sandboxes (TEST_ prefixed items/quotes); one injected item 'itm_injected' in a throwaway sandbox from the restore probe.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "App env date is Oct 2026 (job starts 2026-10-26), so use due dates around Nov 2026 for Week tests. Each fresh browser context = new sandbox. Quote link via clipboard (grant clipboard-read). Mic works in Playwright after grant_permissions(['microphone']) (fake device -> Whisper returns 'You'). Retest: restore-op hole (/tmp/t17_restore.py reproduces), mobile composer layout, ReportView fix.",
+  "rca of the issue": "Report crash: ReportView line 46 called p.conditions.map but fixtures store partner.conditions as a string or null; non-empty string passes ?.length check then .map throws. Restore hole: apply_ops treats op=restore as trusted inverse data, but post_ops passes user ops straight through; repro: POST /api/project/items/ops {rev, ops:[{op:'restore', doc:{item_id:'x', project_id:<own>, kind:'bogus'}}]} -> 200 and persisted."
+}

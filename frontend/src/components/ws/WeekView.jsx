@@ -12,7 +12,7 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export default function WeekView({ sheet, items, onSelect, selectedId, filter }) {
   const start = sheet.intake.start_date;
   const firstDated = items.map((i) => i.due_date || i.start_date).filter(Boolean).sort()[0];
-  const [week, setWeek] = useState(() => monday(start || firstDated || iso(new Date())));
+  const [week, setWeek] = useState(() => monday(firstDated || start || iso(new Date())));
   const days = DAYS.map((_, i) => addDays(week, i));
   const dated = items.filter((i) => (i.due_date || i.start_date) && filter(i));
   const undated = items.filter((i) => i.kind !== "group" && !i.due_date && !i.start_date && filter(i));
@@ -50,7 +50,7 @@ export default function WeekView({ sheet, items, onSelect, selectedId, filter })
               {on(d).map((it) => (
                 <button key={it.item_id} type="button" onClick={() => onSelect(it.item_id)} data-testid={`week-item-${it.item_id}-${d}`}
                   className={`mb-1 block w-full rounded-lg border border-[#E2E8F0] bg-white px-2 py-1 text-left text-[12px] leading-snug text-[#1A2838] hover:border-[#215273] ${selectedId === it.item_id ? "ring-2 ring-[#215273]" : ""}`}>
-                  {it.title}<span className="block text-[10px] text-[#64748B]">{it.date_kind || "date"}{it.firm_id ? ` · ${firmName(sheet, it.firm_id)}` : ""}</span>
+                  {it.title}<span className="block text-[10px] text-[#64748B]">{[it.date_kind, it.firm_id && firmName(sheet, it.firm_id)].filter(Boolean).join(" · ")}</span>
                 </button>
               ))}
             </div>

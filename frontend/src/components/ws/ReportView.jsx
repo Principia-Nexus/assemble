@@ -35,7 +35,7 @@ export default function ReportView({ sheet, items, pkgs, conds }) {
         <Part title="Scope coverage" testId="report-coverage">
           {pkgs.length ? (
             <ul className="space-y-1 text-sm text-[#1A2838]">
-              {pkgs.map((p) => <li key={p.id}><span className="font-medium">{p.title}</span> — {p.sites.map((s) => s.name || s.site_id).join(", ")}</li>)}
+              {pkgs.map((p) => <li key={p.id}><span className="font-medium">{p.title}</span> — {p.sites.length ? p.sites.map((s) => s.name || s.site_id).join(", ") : "no sites assigned"}</li>)}
             </ul>
           ) : <p className="text-sm text-[#64748B]">No plan drafted yet. {(it.sites || []).length} sites recorded.</p>}
           {ch && <p className="mt-2 text-xs text-[#64748B]">Checker ({pre ? `private draft v${pre.version.number}` : `selected v${cur.version.number}`}): {ch.overall}. Total {usd(ch.total_cents)}{it.budget_ceiling_cents ? ` against a ${usd(it.budget_ceiling_cents)} ceiling` : ""}. Internal planning totals, not a customer price.</p>}
@@ -43,7 +43,7 @@ export default function ReportView({ sheet, items, pkgs, conds }) {
         <Part title="Quotes and terms" testId="report-quotes">
           {(it.partners || []).length ? (
             <ul className="space-y-1 text-sm text-[#1A2838]">
-              {it.partners.map((p) => <li key={p.partner_id}><span className="font-medium">{p.name}</span> — {usd(p.price_per_site_cents)} per site{p.valid_until ? `, valid until ${p.valid_until}` : ""}{p.conditions?.length ? `; conditions: ${p.conditions.map((c) => c.text || c).join("; ")}` : ""}</li>)}
+              {it.partners.map((p) => <li key={p.partner_id}><span className="font-medium">{p.name}</span> — {usd(p.price_per_site_cents)} per site{p.valid_until ? `, valid until ${p.valid_until}` : ""}{p.conditions?.length ? `; conditions: ${Array.isArray(p.conditions) ? p.conditions.map((c) => c.text || c).join("; ") : p.conditions}` : ""}</li>)}
             </ul>
           ) : <p className="text-sm text-[#64748B]">No firm quotes recorded.</p>}
         </Part>

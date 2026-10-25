@@ -1,6 +1,7 @@
 """Customer quotes: private draft -> immutable issued snapshot -> one guarded customer decision; amendments keep the baseline."""
 import hashlib
 import json
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
@@ -52,6 +53,18 @@ def now():
     return datetime.now(timezone.utc)
 
 
+def utc(s):
+    d = datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+    return d.replace(tzinfo=timezone.utc) if d.tzinfo is None else d.astimezone(timezone.utc)
+
+
+def stamp(d):
+    return d.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
 def digest(snap):
     return hashlib.sha256(json.dumps(snap, sort_keys=True, default=str).encode()).hexdigest()[:24]
 
@@ -79,9 +92,13 @@ def clean(raw, errors):
             v = v or None
             if v:
                 try:
-                    datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+                    v = stamp(utc(v))
                 except ValueError:
                     errors.append("Valid-until must be a date and time.")
+        elif k == "customer_email":
+            v = (str(v or "").strip().lower() or None)
+            if v and not EMAIL_RE.match(v):
+                errors.append("Customer email is not a valid address.")
         elif k == "currency":
             v = (v or "USD").upper()[:3]
         else:
@@ -111,7 +128,7 @@ def missing(q):
     vu = q.get("valid_until")
     if not vu:
         m.append("valid-until date")
-    elif datetime.fromisoformat(vu.replace("Z", "+00:00")).replace(tzinfo=timezone.utc) <= now():
+    elif utc(vu) <= now():
         m.append("a valid-until date in the future")
     return m
 
@@ -131,7 +148,7 @@ def view(q, include_private=True):
 async def refresh_expiry(q):
     s = q.get("snapshot") or {}
     vu = s.get("valid_until")
-    if q["state"] in OPEN and vu and datetime.fromisoformat(vu.replace("Z", "+00:00")).replace(tzinfo=timezone.utc) <= now():
+    if q["state"] in OPEN and vu and utc(vu) <= now():
         r = await db.quotes.find_one_and_update({"quote_id": q["quote_id"], "state": {"$in": list(OPEN)}},
                                                 {"$set": {"state": "expired", "expired_at": now_iso()}}, return_document=ReturnDocument.AFTER)
         return r or await db.quotes.find_one({"quote_id": q["quote_id"]})
@@ -380,7 +397,7 @@ async def respond(token: str, body: RespondIn, request: Request):
     receipt = {"receipt_id": new_id("rcp"), "key": key, **payload, "email": sess["email"], "verified_at": sess["verified_at"],
                "at": now_iso(), "version": q["number"], "total_cents": q["snapshot"]["price_cents"], "policy": "quote-acceptance-1"}
     r = await db.quotes.find_one_and_update(
-        {"quote_id": q["quote_id"], "state": {"$in": allowed}, "digest": body.digest, "snapshot.valid_until": {"$gt": now().isoformat()[:16]}},
+        {"quote_id": q["quote_id"], "state": {"$in": allowed}, "digest": body.digest, "snapshot.valid_until": {"$gt": stamp(now())}},
         {"$set": {"state": new_state, f"{new_state}_at": receipt["at"]}, "$push": {"responses": receipt}}, return_document=ReturnDocument.AFTER)
     if not r:
         cur = await by_token(token)

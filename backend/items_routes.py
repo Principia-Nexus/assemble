@@ -156,7 +156,7 @@ async def apply_ops(p, user, rev, ops, summary, origin="organizer", inverse_of=N
             cur = by_id.get(iid)
             if kind_op == "restore":
                 doc = op.get("doc") or {}
-                if not doc.get("item_id") or doc.get("project_id") != pid:
+                if not inverse_of or not doc.get("item_id") or doc.get("project_id") != pid or doc.get("kind") not in KINDS:
                     errors.append(f"{label}: cannot restore that item.")
                     continue
                 by_id[doc["item_id"]] = {**doc, "deleted": False}
@@ -190,7 +190,7 @@ async def apply_ops(p, user, rev, ops, summary, origin="organizer", inverse_of=N
                 writes.append(("delete", snapshot))
                 inverse.append({"op": "restore", "doc": snapshot})
         elif kind_op == "link":
-            e = op.get("edge") or op
+            e = (op.get("edge") if inverse_of else None) or op
             a, b, k = resolve(e.get("from_id")), resolve(e.get("to_id")), e.get("kind")
             if k not in EDGE_KINDS or a not in by_id or b not in by_id or a == b:
                 errors.append(f"{label}: a relationship needs two different existing items and a supported kind.")
@@ -233,13 +233,13 @@ async def apply_ops(p, user, rev, ops, summary, origin="organizer", inverse_of=N
     await claim_rev(p, rev, {"updated_at": now})
     for w, d in writes:
         if w == "upsert":
-            await db.items.replace_one({"item_id": d["item_id"]}, {**public(d), "deleted": False}, upsert=True)
+            await db.items.replace_one({"item_id": d["item_id"], "project_id": pid}, {**public(d), "project_id": pid, "deleted": False}, upsert=True)
         elif w == "delete":
-            await db.items.update_one({"item_id": d["item_id"]}, {"$set": {"deleted": True, "updated_at": now}})
+            await db.items.update_one({"item_id": d["item_id"], "project_id": pid}, {"$set": {"deleted": True, "updated_at": now}})
         elif w == "edge_add":
-            await db.item_edges.replace_one({"edge_id": d["edge_id"]}, {**public(d), "deleted": False}, upsert=True)
+            await db.item_edges.replace_one({"edge_id": d["edge_id"], "project_id": pid}, {**public(d), "project_id": pid, "deleted": False}, upsert=True)
         else:
-            await db.item_edges.update_one({"edge_id": d["edge_id"]}, {"$set": {"deleted": True}})
+            await db.item_edges.update_one({"edge_id": d["edge_id"], "project_id": pid}, {"$set": {"deleted": True}})
     touched = sorted({d.get("item_id") or d.get("from_id") for _, d in writes if d.get("item_id") or d.get("from_id")})
     batch = {"batch_id": new_id("bat"), "project_id": pid, "actor": user["name"], "origin": origin,
              "summary": (summary or f"{len(writes)} change{'s' if len(writes) != 1 else ''}")[:300],

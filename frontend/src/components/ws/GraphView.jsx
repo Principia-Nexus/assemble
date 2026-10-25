@@ -24,9 +24,16 @@ function Edges({ edges, refs, contentRef, zoom, tick, focus }) {
     setLines(edges.map((e) => {
       const a = refs.current[e.from_id]?.getBoundingClientRect(), b = refs.current[e.to_id]?.getBoundingClientRect();
       if (!a || !b) return null;
-      const x1 = (a.left + a.width / 2 - box.left) / zoom, y1 = (a.bottom - box.top) / zoom;
-      const x2 = (b.left + b.width / 2 - box.left) / zoom, y2 = (b.top - box.top) / zoom;
-      return { ...e, d: `M${x1},${y1} C${x1},${y1 + 40} ${x2},${y2 - 40} ${x2},${y2 - 6}` };
+      const X = (v) => (v - box.left) / zoom, Y = (v) => (v - box.top) / zoom;
+      const side = b.left >= a.right - 4 || b.right <= a.left + 4;
+      if (side) {
+        const rtl = b.right <= a.left + 4;
+        const x1 = X(rtl ? a.left : a.right), y1 = Y(a.top + a.height / 2), x2 = X(rtl ? b.right : b.left), y2 = Y(b.top + b.height / 2), dx = rtl ? -30 : 30;
+        return { ...e, d: `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2 - dx / 5},${y2}` };
+      }
+      const down = b.top >= a.bottom;
+      const x1 = X(a.left + a.width / 2), y1 = Y(down ? a.bottom : a.top), x2 = X(b.left + b.width / 2), y2 = Y(down ? b.top : b.bottom), dy = down ? 40 : -40;
+      return { ...e, d: `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2 - dy / 7}` };
     }).filter(Boolean));
   }, [edges, refs, contentRef, zoom, tick]);
   return (

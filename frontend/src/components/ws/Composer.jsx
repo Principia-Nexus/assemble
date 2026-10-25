@@ -123,7 +123,7 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
           </div>
         )}
         {utterance && <p className="mb-1 text-center text-[11.5px] text-[#64748B]" data-testid="voice-review-note">From your voice. Check the text before sending; nothing changes until you send.</p>}
-        <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex items-end gap-1.5 rounded-[22px] border border-[#CBD5E1] bg-[#FFFFFF] p-1.5 shadow-[0_6px_24px_-10px_rgba(26,40,56,.35)] focus-within:border-[#215273]" data-testid="composer">
+        <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex flex-wrap items-end gap-1.5 sm:flex-nowrap rounded-[22px] border border-[#CBD5E1] bg-[#FFFFFF] p-1.5 shadow-[0_6px_24px_-10px_rgba(26,40,56,.35)] focus-within:border-[#215273]" data-testid="composer">
           <DropdownMenu open={menu} onOpenChange={setMenu}>
             <DropdownMenuTrigger asChild>
               <button type="button" className="flex h-9 shrink-0 items-center gap-1 rounded-full px-3 text-[13px] font-medium text-[#1A2838] hover:bg-[#F1F5F9]" data-testid="composer-add-button"><Plus className="h-4 w-4" /> Add</button>
@@ -155,8 +155,8 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
           <label htmlFor="composer-input" className="sr-only">Ask or describe a change</label>
           <textarea id="composer-input" ref={input} rows={1} value={text} onChange={(e) => setText(e.target.value)} placeholder="Ask or describe a change…"
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            className="max-h-40 min-h-[36px] flex-1 resize-none bg-transparent px-1 py-2 text-[14px] text-[#1A2838] outline-none placeholder:text-[#94A3B8] [field-sizing:content]" data-testid="composer-input" />
-          <button type="submit" disabled={!text.trim() || busy} aria-label="Send" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1A2838] text-white transition-[background-color,transform] hover:bg-[#2F4A66] active:scale-95 disabled:bg-[#CBD5E1]" data-testid="composer-send-button">
+            className="order-first max-h-40 min-h-[36px] basis-full resize-none sm:order-none sm:basis-auto sm:flex-1 bg-transparent px-1 py-2 text-[14px] text-[#1A2838] outline-none placeholder:text-[#94A3B8] [field-sizing:content]" data-testid="composer-input" />
+          <button type="submit" disabled={!text.trim() || busy} aria-label="Send" className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1A2838] text-white transition-[background-color,transform] hover:bg-[#2F4A66] active:scale-95 disabled:bg-[#CBD5E1]" data-testid="composer-send-button">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
           </button>
         </form>

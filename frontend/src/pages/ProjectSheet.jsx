@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
-import { Eye, MoreHorizontal, Search, Sparkles } from "lucide-react";
+import { Eye, MoreHorizontal, Search } from "lucide-react";
 import { SynthBadge } from "@/components/StatusPill";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -148,7 +148,7 @@ export default function ProjectSheet() {
                     className={`rounded px-3 py-1 text-[13px] font-semibold capitalize transition-colors ${view === v ? "bg-[#1A2838] text-white" : "text-slate-600 hover:text-slate-900"}`}>{v}</button>
                 ))}
               </div>
-              <label className="flex h-8 w-[200px] items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5">
+              <label className="order-last flex h-8 w-full items-center sm:order-none sm:w-[200px] gap-2 rounded-md border border-slate-200 bg-white px-2.5">
                 <Search className="h-3.5 w-3.5 text-slate-500" /><span className="sr-only">Search this project</span>
                 <input ref={search} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setQ("")} placeholder="Filter" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none" data-testid="toolbar-search" />
                 {q && <button type="button" onClick={() => setQ("")} className="text-[11px] text-[#215273]" data-testid="toolbar-search-clear">Clear</button>}
@@ -158,7 +158,7 @@ export default function ProjectSheet() {
                   <Eye className="h-3.5 w-3.5" /> Show changes
                 </Button>
               )}
-              {isCanon && <Button size="sm" variant="ghost" className="h-8" onClick={() => setTourOpen(true)} data-testid="demo-tour-open"><Sparkles className="h-3.5 w-3.5" /> Guided tour</Button>}
+              {isCanon && <Button size="sm" variant="ghost" className="hidden h-8 sm:inline-flex" onClick={() => setTourOpen(true)} data-testid="demo-tour-open">Guided tour</Button>}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="icon" variant="outline" className="h-8 w-8" aria-label="More" data-testid="header-overflow"><MoreHorizontal className="h-4 w-4" /></Button>
@@ -169,6 +169,7 @@ export default function ProjectSheet() {
                   <DropdownMenuItem onSelect={() => setTool("review")} data-testid="overflow-review">Prepare review</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setTool("decide")} data-testid="overflow-decide">Decide on changes</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setTool("quote")} data-testid="overflow-quote">Customer quote</DropdownMenuItem>
+                  {isCanon && <DropdownMenuItem className="sm:hidden" onSelect={() => setTourOpen(true)} data-testid="overflow-tour">Guided tour</DropdownMenuItem>}
                   <DropdownMenuItem onSelect={() => { setView("report"); setTimeout(() => window.print(), 300); }} data-testid="overflow-print">Print report</DropdownMenuItem>
                   {sheet.project.synthetic && user?.demo_key === "organizer" && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setResetOpen(true)} data-testid="demo-reset-button">Reset this example</DropdownMenuItem></>}
                 </DropdownMenuContent>

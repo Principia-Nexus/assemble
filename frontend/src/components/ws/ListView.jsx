@@ -56,11 +56,11 @@ export default function ListView({ sheet, items, pkgs, conds, run, onSelect, sel
     <div className="h-full overflow-auto px-4 py-5 sm:px-6" data-testid="list-view">
       <div className="mx-auto max-w-[1000px]">
         {pkgs.length > 0 && (
-          <Section title={sheet.preview ? "Plan · private draft" : "Plan"} count={`${pkgs.length}`} testId="list-plan">
+          <Section title={sheet.preview ? "Plan · private draft" : sheet.current ? "Plan" : "Firms and sites"} count={`${pkgs.length}`} testId="list-plan">
             {pkgs.filter(filter).map((p) => (
               <button key={p.id} type="button" onClick={() => onSelect(p.id)} data-testid={`list-row-${p.id}`}
                 className={`grid w-full grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-[#F1F5F9] px-3 py-2 text-left text-[13px] hover:bg-[#F1F5F9] ${selectedId === p.id ? "bg-[#E4EFF6]" : ""}`}>
-                <span className="font-medium text-[#1A2838]">{p.title} <span className="font-normal text-[#64748B]">· {p.sites.map((s) => s.site_id).join(", ")}</span></span>
+                <span className="font-medium text-[#1A2838]">{p.title} <span className="font-normal text-[#64748B]">· {p.sites.length ? p.sites.map((s) => s.site_id).join(", ") : "no sites assigned"}</span></span>
                 <span className="text-xs text-[#B4690E]">{respText(p.response) || ""}</span>
               </button>
             ))}

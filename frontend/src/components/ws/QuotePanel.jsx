@@ -14,11 +14,12 @@ const F = [["customer_name", "Customer"], ["customer_email", "Customer email"], 
 const lines = (v) => (v || []).join("\n");
 
 function Draft({ q, onSaved }) {
-  const [f, setF] = useState({ ...q, price: q.price_cents != null ? q.price_cents / 100 : "", inc: lines(q.inclusions), exc: lines(q.exclusions), cond: lines(q.conditions) });
+  const local = (v) => { if (!v) return ""; const d = new Date(v); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
+  const [f, setF] = useState({ ...q, valid_until: local(q.valid_until), price: q.price_cents != null ? q.price_cents / 100 : "", inc: lines(q.inclusions), exc: lines(q.exclusions), cond: lines(q.conditions) });
   const [preview, setPreview] = useState(null);
   const [errors, setErrors] = useState([]);
   const save = async () => {
-    const fields = { ...Object.fromEntries(F.map(([k]) => [k, f[k] || null])), scope: f.scope || null, terms: f.terms || null, valid_until: f.valid_until || null,
+    const fields = { ...Object.fromEntries(F.map(([k]) => [k, f[k] || null])), scope: f.scope || null, terms: f.terms || null, valid_until: f.valid_until ? new Date(f.valid_until).toISOString() : null,
       price_cents: f.price === "" ? null : Math.round(Number(f.price) * 100), inclusions: f.inc.split("\n"), exclusions: f.exc.split("\n"), conditions: f.cond.split("\n") };
     try {
       const { data } = await api.put(`/project/quotes/${q.quote_id}`, { fields });
@@ -79,7 +80,7 @@ function Issued({ q, onChange }) {
         <p className="font-semibold">{q.number}{q.kind === "amendment" ? ` · amends ${q.baseline_number}` : ""} · {usd(s.price_cents)}</p>
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold" data-testid={`quote-state-${q.number}`}>{STATE[q.state]}</span>
       </div>
-      <p className="mt-1 text-xs text-slate-500">To {q.recipient} · issued {q.issued_at?.slice(0, 16).replace("T", " ")} · valid until {s.valid_until?.replace("T", " ")}{q.sends?.length ? ` · emailed ${q.sends.length}×` : " · not sent"}</p>
+      <p className="mt-1 text-xs text-slate-500">To {q.recipient} · issued {q.issued_at?.slice(0, 16).replace("T", " ")} · valid until {s.valid_until ? new Date(s.valid_until).toLocaleString() : ""}{q.sends?.length ? ` · emailed ${q.sends.length}×` : " · not sent"}</p>
       {(q.responses || []).map((r) => (
         <p key={r.receipt_id} className="mt-2 rounded bg-slate-50 px-2 py-1 text-xs" data-testid={`quote-response-${r.receipt_id}`}>
           {r.signer_name}{r.authority ? ` (${r.authority})` : ""} · {r.email} · {r.action.replace("_", " ")} {r.version} · {r.at.slice(0, 16).replace("T", " ")}{r.note ? ` — “${r.note}”` : ""}

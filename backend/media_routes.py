@@ -44,10 +44,13 @@ async def transcribe(file: UploadFile = File(...), user=Depends(current_user)):
     buf.name = "speech." + {"audio/mp4": "mp4", "audio/mpeg": "mp3", "audio/wav": "wav", "audio/x-wav": "wav", "audio/m4a": "m4a"}.get(ctype, "webm")
     stt = OpenAISpeechToText(api_key=os.environ["EMERGENT_LLM_KEY"])
     try:
-        r = await asyncio.wait_for(stt.transcribe(file=buf, model="whisper-1", response_format="json"), timeout=90)
+        r = await asyncio.wait_for(stt.transcribe(file=buf, model="whisper-1", response_format="verbose_json"), timeout=90)
     except Exception:
         raise HTTPException(502, "Transcription failed. Nothing was changed; type the message instead.")
     text = (getattr(r, "text", "") or "").strip()
+    segs = [s if isinstance(s, dict) else getattr(s, "__dict__", {}) for s in (getattr(r, "segments", None) or [])]
+    if segs and all((s.get("no_speech_prob") or 0) > 0.6 for s in segs):
+        text = ""
     if not text:
         raise HTTPException(422, ["No speech was recognized. Try again closer to the microphone."])
     tid = new_id("utt")

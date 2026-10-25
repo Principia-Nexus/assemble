@@ -116,7 +116,7 @@ export default function QuoteReview() {
               <div><dt className="text-xs text-slate-500">Site</dt><dd>{s.site}</dd></div>
               <div><dt className="text-xs text-slate-500">Timing</dt><dd>{s.timing}</dd></div>
               <div><dt className="text-xs text-slate-500">Payment</dt><dd>{s.payment_terms}</dd></div>
-              <div><dt className="text-xs text-slate-500">Valid until</dt><dd>{s.valid_until?.replace("T", " ")} UTC</dd></div>
+              <div><dt className="text-xs text-slate-500">Valid until</dt><dd>{s.valid_until ? new Date(s.valid_until).toLocaleString() : ""}</dd></div>
             </dl>
             <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Scope</p><p className="mt-1 whitespace-pre-wrap text-sm">{s.scope}</p></div>
             <List title="Included" items={s.inclusions} testId="quote-inclusions-view" />
