@@ -82,6 +82,19 @@ async def register(body: RegisterIn, response: Response):
     return public_user(user)
 
 
+class EmailIn(BaseModel):
+    email: str
+
+
+@router.post("/check-email")
+async def check_email(body: EmailIn, request: Request):
+    email = body.email.strip().lower()
+    if not EMAIL_RE.match(email):
+        raise HTTPException(422, "Enter a valid email address.")
+    u = await db.users.find_one({"email": email}, {"_id": 0, "user_id": 1})
+    return {"exists": bool(u)}
+
+
 @router.post("/login")
 async def login(body: LoginIn, request: Request, response: Response):
     email = body.email.strip().lower()

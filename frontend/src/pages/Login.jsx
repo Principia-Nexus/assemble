@@ -4,7 +4,6 @@ import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, errText } from "@/lib/api";
 import { useAuth, homeFor } from "@/context/AuthContext";
 import { Brand } from "@/components/AppHeader";
@@ -77,6 +76,14 @@ function DemoAccounts({ onUse, busy }) {
   );
 }
 
+function Reveal({ show, children }) {
+  return (
+    <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${show ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} aria-hidden={!show} inert={show ? undefined : ""}>
+      <div className="space-y-4 overflow-hidden px-px pb-px">{children}</div>
+    </div>
+  );
+}
+
 export default function Login() {
   const { user, login, register } = useAuth();
   const [params] = useSearchParams();
@@ -85,7 +92,7 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "", name: "", firm_name: "" });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState("signin");
+  const [step, setStep] = useState("email");
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const fits = (u) => {
@@ -98,6 +105,17 @@ export default function Login() {
   const dest = (u) => (fits(u) ? next : homeFor(u));
 
   if (user) return <Navigate to={dest(user)} replace />;
+
+  const submit = () => {
+    if (step === "signin") return run(() => login(form.email, form.password));
+    if (step === "register") return run(() => register(form));
+    setBusy(true);
+    setError("");
+    api.post("/auth/check-email", { email: form.email })
+      .then((r) => setStep(r.data.exists ? "signin" : "register"))
+      .catch((e) => setError(errText(e)))
+      .finally(() => setBusy(false));
+  };
 
   const run = async (fn) => {
     setBusy(true);
@@ -123,35 +141,22 @@ export default function Login() {
             Sign in with the email the organizer invited to open your private review.
           </p>
         )}
-        {tab === "signin" && <DemoAccounts busy={busy} onUse={(email, pw) => run(() => login(email, pw))} />}
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="relative grid w-full grid-cols-2">
-            <span aria-hidden className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-sm bg-background shadow-sm transition-transform duration-300 ease-[cubic-bezier(.2,.7,.2,1)]"
-              style={{ transform: tab === "register" ? "translateX(100%)" : "translateX(0)" }} />
-            <TabsTrigger value="signin" className="relative z-10 data-[state=active]:bg-transparent data-[state=active]:shadow-none" data-testid="signin-tab">Sign in</TabsTrigger>
-            <TabsTrigger value="register" className="relative z-10 data-[state=active]:bg-transparent data-[state=active]:shadow-none" data-testid="register-tab">Create account</TabsTrigger>
-          </TabsList>
-          <TabsContent value="signin">
-            <form className="mt-4 space-y-4" onSubmit={(e) => { e.preventDefault(); run(() => login(form.email, form.password)); }}>
-              <Field id="email" label="Email" type="email" value={form.email} onChange={set("email")} required data-testid="login-email-input" />
-              <Field id="password" label="Password" type="password" value={form.password} onChange={set("password")} required data-testid="login-password-input" />
-              <Button type="submit" className="h-11 w-full" disabled={busy} data-testid="login-submit-button">
-                {busy ? "Signing in…" : "Sign in"}
-              </Button>
-            </form>
-          </TabsContent>
-          <TabsContent value="register">
-            <form className="mt-4 space-y-4" onSubmit={(e) => { e.preventDefault(); run(() => register(form)); }}>
-              <Field id="name" label="Your name" value={form.name} onChange={set("name")} required data-testid="register-name-input" />
-              <Field id="firm" label="Firm name" value={form.firm_name} onChange={set("firm_name")} required data-testid="register-firm-input" />
-              <Field id="remail" label="Email" type="email" value={form.email} onChange={set("email")} required data-testid="register-email-input" />
-              <Field id="rpassword" label="Password" type="password" value={form.password} onChange={set("password")} required data-testid="register-password-input" />
-              <Button type="submit" className="h-11 w-full" disabled={busy} data-testid="register-submit-button">
-                {busy ? "Creating…" : "Create account"}
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
+        {step === "email" && <DemoAccounts busy={busy} onUse={(email, pw) => run(() => login(email, pw))} />}
+        <form className="space-y-4" data-testid="auth-form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+          <Field id="email" label="Email" type="email" value={form.email} required data-testid="login-email-input"
+            onChange={(e) => { setForm({ ...form, email: e.target.value }); if (step !== "email") setStep("email"); }} />
+          <Reveal show={step === "register"}>
+            <Field id="name" label="Your name" value={form.name} onChange={set("name")} required={step === "register"} data-testid="register-name-input" />
+            <Field id="firm" label="Firm name" value={form.firm_name} onChange={set("firm_name")} required={step === "register"} data-testid="register-firm-input" />
+          </Reveal>
+          <Reveal show={step !== "email"}>
+            <Field id="password" label="Password" type="password" value={form.password} onChange={set("password")} required={step !== "email"} data-testid="login-password-input" />
+          </Reveal>
+          <Button type="submit" className="h-11 w-full" disabled={busy} data-testid="login-submit-button">
+            {busy ? "One moment…" : step === "email" ? "Continue" : step === "signin" ? "Sign in" : "Create account"}
+          </Button>
+          {step === "register" && <p data-testid="register-notice" className="text-center text-xs text-slate-500">No account yet for this email. Add your details to create one.</p>}
+        </form>
         {error && <p data-testid="signin-error" className="-mt-4 text-sm text-red-700">{error}</p>}
         <GoogleButton next={next} />
       </section>

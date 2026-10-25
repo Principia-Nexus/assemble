@@ -11,12 +11,14 @@ import auth_routes
 import project_routes
 import review_routes
 import extract_routes
+import billing_routes
 
 app = FastAPI(title="Assemble")
 app.include_router(auth_routes.router)
 app.include_router(project_routes.router)
 app.include_router(review_routes.router)
 app.include_router(extract_routes.router)
+app.include_router(billing_routes.router)
 
 
 @app.get("/api/")

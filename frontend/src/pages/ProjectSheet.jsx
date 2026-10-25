@@ -34,6 +34,7 @@ export default function ProjectSheet() {
       setSheet(data.sheet);
       setLoadError("");
     } catch (e) {
+      if (e.response?.status === 402) { window.location.replace("/pilot"); return; }
       setLoadError(errList(e).join(" "));
     }
   }, []);

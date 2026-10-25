@@ -10,6 +10,7 @@ import logic as L
 from core import db, now_iso, new_id, current_user, log_event, STALE_MSG
 from demo import reset_sandbox
 from state import partner_statuses, link_public
+from billing_routes import require_pilot
 
 router = APIRouter(prefix="/api/project")
 
@@ -72,6 +73,7 @@ async def get_project(user, required=True):
     p = await db.projects.find_one({"firm_id": user["firm_id"]}, {"_id": 0})
     if required and not p:
         raise HTTPException(404, "No job yet. Create one to start.")
+    await require_pilot(user)
     return p
 
 
