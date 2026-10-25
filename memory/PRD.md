@@ -123,3 +123,5 @@
 ## 2026-06 — Dots timing knobs: TUNING {fadeIn, scatter, flight, spread} at top of frontend/src/lib/dotsEngine.js.
 
 ## 2026-06 — No blank screen at launch: index.html paints static boot dots (#boot-dots) instantly on / and /login (desktop), cross-fades into live engine; "/" renders Login directly instead of a Loading screen.
+
+## 2026-06 — Fixed logo drawn over form after layout change: once formed, canvas clears and an in-page SVG wordmark (same glyphs) takes over. Removed "No account yet..." register notice.

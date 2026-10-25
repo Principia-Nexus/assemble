@@ -153,7 +153,6 @@ export default function Login() {
             className="h-12 text-center text-base placeholder:text-slate-400 md:text-lg"
             onChange={(e) => { setForm({ ...form, email: e.target.value }); if (step !== "email") setStep("email"); }} />
           <Reveal show={step === "register"}>
-            <p data-testid="register-notice" className="text-xs text-slate-500">No account yet for this email. Add your details to create one.</p>
             <Field id="name" label="Your name" value={form.name} onChange={set("name")} required={step === "register"} data-testid="register-name-input" />
             <Field id="firm" label="Firm name" value={form.firm_name} onChange={set("firm_name")} required={step === "register"} data-testid="register-firm-input" />
           </Reveal>

@@ -23,7 +23,7 @@ const FILTERS = `<svg width="0" height="0" style="position:absolute" aria-hidden
 </svg>`;
 
 // Dots swirl across the page and condense into the wordmark at getTarget() {x, cy, w} (CSS px).
-export function createDots(canvas, getTarget) {
+export function createDots(canvas, getTarget, onSettled) {
 if (!document.getElementById("assemble-dot-filters")) document.body.insertAdjacentHTML("beforeend", FILTERS);
 
 
@@ -639,14 +639,22 @@ let prev = null, tt = 0, raf = 0;
 function frame(now) {
   if (prev !== null) tt += Math.min(1 / 30, (now - prev) / 1000);
   prev = now;
+  if (tt >= LOGO_EXACT) { settle(); return; }
   render(tt);
-  raf = tt < T.duration ? requestAnimationFrame(frame) : 0;
+  raf = requestAnimationFrame(frame);
+}
+// Once the word is exact the page's own logo takes over, so it scrolls and reflows with the layout.
+function settle() {
+  raf = 0;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  onSettled(true);
 }
 const playing = () => raf !== 0;
-function play() { if (raf) return; prev = null; tt = 0; raf = requestAnimationFrame(frame); }
+function play() { if (raf) return; prev = null; tt = 0; onSettled(false); raf = requestAnimationFrame(frame); }
 const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-if (reduce) render(T.duration); else play();
-const onResize = () => { if (!raf) render(lastT); };
+if (reduce) settle(); else play();
+const onResize = () => {};
 window.addEventListener('resize', onResize);
 return {
   fadeMs: reduce ? 0 : Math.round(1000 * TUNING.fadeIn),

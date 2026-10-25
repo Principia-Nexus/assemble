@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import GLYPHS from "@/lib/dotsGlyphs.json";
 import { createPortal } from "react-dom";
 import { createDots } from "@/lib/dotsEngine";
 
@@ -14,6 +15,19 @@ const releaseBoot = (ms) => {
   setTimeout(() => b.parentNode?.removeChild(b), ms + 50);
 };
 
+const G = GLYPHS.glyphs;
+const X0 = Math.min(...G.map((g) => g.x + g.bounds[0])), X1 = Math.max(...G.map((g) => g.x + g.bounds[2]));
+const Y0 = Math.min(...G.map((g) => g.bounds[1])), Y1 = Math.max(...G.map((g) => g.bounds[3]));
+
+// The same wordmark the dots form, as a vector in the page.
+const WordSvg = ({ show }) => (
+  <svg viewBox={`${X0} ${-Y1} ${X1 - X0} ${Y1 - Y0}`} className={`absolute inset-0 h-full w-full ${show ? "" : "invisible"}`} aria-hidden="true" data-testid="logo-dots-final">
+    <g transform="scale(1,-1)" fill="#1a2937">
+      {G.map((g, i) => <path key={i} d={g.d} transform={`translate(${g.x},0)`} />)}
+    </g>
+  </svg>
+);
+
 const StaticLogo = () => (
   <h1 data-testid="logo-static" className="text-[58px] font-semibold leading-none tracking-tight text-[#1A2838]">Assemble</h1>
 );
@@ -23,6 +37,7 @@ const DotsLogo = () => {
   const canvas = useRef(null);
   const slot = useRef(null);
   const engine = useRef(null);
+  const [settled, setSettled] = useState(false);
 
   useEffect(() => {
     const target = () => {
@@ -32,7 +47,7 @@ const DotsLogo = () => {
     const ro = new ResizeObserver(() => engine.current?.redraw());
     // Deferred so the page paints first and a strict-mode remount never builds it twice.
     const id = setTimeout(() => {
-      engine.current = createDots(canvas.current, target);
+      engine.current = createDots(canvas.current, target, setSettled);
       releaseBoot(engine.current.fadeMs);
       ro.observe(slot.current);
     }, 0);
@@ -48,6 +63,7 @@ const DotsLogo = () => {
         data-testid="logo-dots-slot"
         className="relative z-10 aspect-[4061/748] w-[271px] cursor-default select-none lg:w-[325px]"
       >
+        <WordSvg show={settled} />
         <span className="sr-only">Assemble</span>
       </h1>
     </>
