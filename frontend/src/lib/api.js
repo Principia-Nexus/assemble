@@ -5,9 +5,16 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+const TAG = / ?\(Synthetic\)/g;
+const untag = (v) =>
+  typeof v === "string" ? v.replace(TAG, "")
+    : Array.isArray(v) ? v.map(untag)
+    : v && typeof v === "object" && v.constructor === Object ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, untag(x)]))
+    : v;
+
 let refreshing = null;
 api.interceptors.response.use(
-  (r) => r,
+  (r) => (r.config.url === "/auth/demo-accounts" ? r : { ...r, data: untag(r.data) }),
   async (err) => {
     const cfg = err.config || {};
     if (err.response?.status === 401 && !cfg._retry && !String(cfg.url).startsWith("/auth/")) {

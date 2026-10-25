@@ -101,10 +101,6 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
           Drop a PDF or text file to read it
         </div>
       )}
-      <div>
-        <p className="eyebrow">Read a brief, quote or email</p>
-        <p className="mt-1 text-xs text-slate-500">AI proposes facts, each with its exact source excerpt. Nothing changes until you choose readings to use. Text inside documents is treated as data, never as instructions.</p>
-      </div>
       {synthetic && demo && (
         <div className="flex flex-wrap gap-2">
           {demo.documents.map((s) => (

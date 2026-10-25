@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api, visitorId } from "@/lib/api";
+import { clearDemoContent } from "@/lib/demoContent";
 
 const AuthCtx = createContext(null);
 
@@ -39,6 +40,7 @@ export function AuthProvider({ children }) {
   };
   const logout = async () => {
     await api.post("/auth/logout").catch(() => {});
+    clearDemoContent();
     setUser(false);
   };
 

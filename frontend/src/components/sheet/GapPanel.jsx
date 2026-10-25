@@ -4,10 +4,7 @@ import { StatusPill } from "@/components/StatusPill";
 export default function GapPanel({ gap }) {
   return (
     <aside data-testid="gap-analysis-panel" className="h-fit space-y-5 rounded-md border border-slate-200 bg-white p-5 lg:sticky lg:top-20">
-      <div>
-        <p className="eyebrow">Provisional gap analysis</p>
-        <p className="mt-1 text-xs text-slate-500">From saved details only, before any partner signs up.</p>
-      </div>
+      <p className="eyebrow">Provisional gap analysis</p>
       <dl className="grid grid-cols-2 gap-3 text-sm">
         <div><dt className="text-xs text-slate-500">Sites</dt><dd data-testid="gap-site-count" className="font-mono font-semibold">{gap.site_count}</dd></div>
         <div><dt className="text-xs text-slate-500">Ceiling</dt><dd data-testid="gap-ceiling" className="font-mono font-semibold">{money(gap.budget_ceiling_cents)}</dd></div>
@@ -31,9 +28,7 @@ export default function GapPanel({ gap }) {
       )}
       <div>
         <p className="text-xs font-semibold text-slate-700">Unknowns ({gap.unknowns.length})</p>
-        {gap.unknowns.length === 0 ? (
-          <p data-testid="gap-unknowns-none" className="mt-1 text-xs text-emerald-700">Nothing marked unknown in the saved details.</p>
-        ) : (
+        {gap.unknowns.length === 0 ? null : (
           <ul data-testid="gap-unknowns-list" className="mt-2 max-h-64 space-y-1 overflow-y-auto text-xs">
             {gap.unknowns.map((u) => (
               <li key={u} className="flex items-start gap-2"><span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />{u}</li>

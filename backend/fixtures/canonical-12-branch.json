@@ -62,7 +62,7 @@
   "customer_change": {"note": "Customer asks to move S09 and S10 into week 1 (Synthetic)", "moves": [{"site_id": "S09", "new_week": "1"}, {"site_id": "S10", "new_week": "1"}]},
   "tour": [
     {"title": "Check this job", "task": "intake", "focus": "gap-analysis-panel",
-     "body": "Twelve synthetic branches over three weeks with a $180,000 ceiling. The gap analysis is provisional and shows anything unknown, before any partner signs up."},
+     "body": "Twelve branches over three weeks with a $180,000 ceiling. The gap analysis is provisional and shows anything unknown, before any partner signs up."},
     {"title": "Read a quote PDF", "task": "intake", "tab": "read", "focus": "read-sample-scanned-pdf-button",
      "body": "Load the scanned Redwood quote, then press Read document. Each proposed fact keeps its page, line and exact words. A \"2-man crew\" is never read as capacity, and nothing changes until you choose readings to use."},
     {"title": "The cheap plan fails", "task": "draft", "focus": "current-checker-panel", "action": {"type": "draft", "partner_ids": ["alder", "redwood"]},

@@ -4,7 +4,7 @@ import { RotateCcw, Sparkles } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { SyntheticTag, StatusPill } from "@/components/StatusPill";
+import { StatusPill } from "@/components/StatusPill";
 import { api, errList } from "@/lib/api";
 import { OVERALL } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
@@ -17,6 +17,7 @@ import PartnersTask from "@/components/sheet/PartnersTask";
 import DecideTask from "@/components/sheet/DecideTask";
 import HistoryDrawer from "@/components/sheet/HistoryDrawer";
 import DemoTour from "@/components/sheet/DemoTour";
+import { clearDemoContent } from "@/lib/demoContent";
 
 export default function ProjectSheet() {
   const { user } = useAuth();
@@ -71,7 +72,7 @@ export default function ProjectSheet() {
   if (loadError) return <div className="p-10 text-sm text-red-700" data-testid="sheet-load-error">{loadError}</div>;
   if (sheet === undefined) return <Loading label="Loading your job sheet" />;
 
-  const reset = () => act("post", "/project/demo-reset", {}, "Demo copy reset");
+  const reset = async () => { clearDemoContent(); await act("post", "/project/demo-reset", {}, "Demo copy reset"); };
 
   const props = { sheet, act, busy, goTo: setSelected, user };
   const overall = sheet?.current?.checker?.overall;
@@ -80,26 +81,23 @@ export default function ProjectSheet() {
     <div className="min-h-screen bg-slate-50">
       <AppHeader onHistory={sheet ? () => setHistoryOpen(true) : null} />
       {sheet?.project.synthetic && (
-        <div data-testid="synthetic-banner" className="no-print border-b border-amber-200 bg-amber-50">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
-            <p className="flex items-center gap-2 text-xs text-amber-900">
-              <SyntheticTag /> Synthetic demo data: 12 branch retrofits, $180,000 ceiling. Not profit, revenue or customer evidence.
-            </p>
+        <div data-testid="demo-toolbar" className="no-print">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-end gap-2 px-4 pt-3 sm:px-6">
             <div className="flex items-center gap-1">
-              <Button size="sm" variant="ghost" className="h-7 text-amber-900" onClick={() => setTourOpen(true)} data-testid="demo-tour-open">
+              <Button size="sm" variant="ghost" className="h-7" onClick={() => setTourOpen(true)} data-testid="demo-tour-open">
                 <Sparkles className="h-3.5 w-3.5" /> Guided tour
               </Button>
             {user?.demo_key === "organizer" && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button size="sm" variant="ghost" className="h-7 text-amber-900" disabled={busy} data-testid="demo-reset-button">
+                  <Button size="sm" variant="ghost" className="h-7" disabled={busy} data-testid="demo-reset-button">
                     <RotateCcw className="h-3.5 w-3.5" /> Reset my demo copy
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Reset your demo copy?</AlertDialogTitle>
-                    <AlertDialogDescription>Your synthetic job, links and responses return to the starting point. Other visitors are not affected.</AlertDialogDescription>
+                    <AlertDialogDescription>Your job, links and responses return to the starting point. Other visitors are not affected.</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel data-testid="demo-reset-cancel">Cancel</AlertDialogCancel>
@@ -119,7 +117,6 @@ export default function ProjectSheet() {
           <>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="eyebrow">Project sheet · {sheet.intake.customer_name || "Customer unknown"}</p>
                 <h1 data-testid="project-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
                   {sheet.intake.job_name || sheet.project.name}
                 </h1>

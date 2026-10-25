@@ -44,7 +44,7 @@ function CustomerChangeForm({ sheet, act, busy, onDone }) {
   return (
     <div data-testid="customer-change-form" className="space-y-3 rounded-md border border-slate-200 bg-white p-4">
       <div className="flex items-center justify-between"><p className="eyebrow">Log a customer change request</p>
-        {demo?.customer_change && <Button size="sm" variant="ghost" onClick={sample} data-testid="customer-change-sample-button">Fill synthetic sample</Button>}</div>
+        {demo?.customer_change && <Button size="sm" variant="ghost" onClick={sample} data-testid="customer-change-sample-button">Fill sample</Button>}</div>
       <Textarea rows={2} placeholder="What did the customer ask for?" value={note} onChange={(e) => setNote(e.target.value)} data-testid="customer-change-note-input" />
       {moves.map((m, i) => (
         <div key={i} className="flex items-center gap-2 text-sm">

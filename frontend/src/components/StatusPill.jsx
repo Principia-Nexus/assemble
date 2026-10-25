@@ -18,11 +18,3 @@ export function StatusPill({ tone = "unknown", label, testId, className }) {
     </span>
   );
 }
-
-export function SyntheticTag({ className }) {
-  return (
-    <span className={cn("inline-flex items-center rounded-sm border border-amber-300 bg-amber-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-800", className)}>
-      Synthetic
-    </span>
-  );
-}

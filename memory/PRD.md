@@ -36,6 +36,12 @@
 - 9-step guided demo tour (Show me / Do it for me, minimize).
 - Demo data moved to MongoDB: fixtures/*.json -> `fixtures` collection; seed_fixtures.py for any DB; /api/project/demo-content serves documents, PDF quote meta, customer change and tour.
 
+## Copy cleanup (2026-06, round 6)
+- Removed yellow Synthetic tags/banners everywhere; demo tour + reset now in a plain toolbar (data-testid demo-toolbar).
+- Removed the practice-login explainer line; practice logins hidden on the Create account tab.
+- "(Synthetic)" is removed from names by the frontend API layer (lib/api.js), except on /auth/demo-accounts (login page only). Removed the "Project sheet · customer" eyebrow.
+
+
 ## Backlog
 - Publish, then re-run the acceptance checks on the live URL.
 - OCR for scanned PDFs (currently refused with a clear message).

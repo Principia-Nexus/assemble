@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, errText } from "@/lib/api";
 import { useAuth, homeFor } from "@/context/AuthContext";
 import { Brand } from "@/components/AppHeader";
-import { SyntheticTag } from "@/components/StatusPill";
 
 function GoogleButton({ next }) {
   const go = () => {
@@ -41,15 +40,7 @@ function DemoAccounts({ onUse, busy }) {
   if (!demo) return <p className="text-xs text-slate-500">Loading demo accounts…</p>;
   return (
     <div data-testid="demo-accounts-panel" className="space-y-3">
-      <div className="flex items-center gap-2">
-        <span className="eyebrow">Practice logins</span>
-        <SyntheticTag />
-      </div>
-      <p className="text-xs leading-relaxed text-slate-600">
-        Invented firms and figures only. Shared password{" "}
-        <code data-testid="demo-password" className="rounded bg-slate-100 px-1 py-0.5 text-slate-900">{demo.password}</code>.
-        Each browser gets its own demo copy; resetting it never touches anyone else's.
-      </p>
+      <span className="eyebrow">Practice logins</span>
       <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
         {demo.accounts.map((a) => (
           <li key={a.key} className="flex items-center justify-between gap-3 px-3 py-2.5">
@@ -76,6 +67,7 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "", name: "", firm_name: "" });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState("signin");
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   if (user) return <Navigate to={next || homeFor(user)} replace />;
@@ -94,27 +86,27 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-[1.1fr_1fr]">
-      <section className="sheet-paper relative hidden flex-col justify-between border-r border-slate-200 bg-white p-12 lg:flex">
-        <Brand />
+    <div className="min-h-screen bg-[#E8DCC4] lg:grid lg:grid-cols-[1.1fr_1fr]">
+      <section className="relative m-6 hidden flex-col justify-between border border-[#3A4A5E] bg-[#1B2838] p-12 text-[#EDE3CF] lg:flex">
+        <Brand light />
         <div className="max-w-md rise">
-          <p className="eyebrow mb-4">One job · a few trusted partners</p>
-          <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-slate-900 xl:text-5xl">
+          <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-[#C9BB9E]">One job · a few trusted partners</p>
+          <h1 className="text-5xl font-normal leading-[1.02] tracking-tight text-[#EDE3CF] xl:text-6xl">
             Does this job work on the terms proposed?
           </h1>
-          <p className="mt-6 text-base leading-relaxed text-slate-600">
+          <p className="mt-6 text-lg font-light leading-relaxed text-[#D9CDB4]">
             Check the job, prepare a draft, ask each partner privately, then decide. An independent checker shows what fits and what does not.
           </p>
-          <ol className="mt-10 space-y-3 font-mono text-xs text-slate-500">
+          <ol className="mt-10 space-y-3 font-mono text-xs uppercase tracking-[0.14em] text-[#C9BB9E]">
             {["Check this job", "Prepare a draft", "Ask each partner", "Decide next action"].map((t, i) => (
               <li key={t} className="flex items-center gap-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-sm border border-slate-300 bg-white text-slate-900">{i + 1}</span>
+                <span className="flex h-6 w-6 items-center justify-center rounded-sm border border-[#6B7B90] text-[#EDE3CF]">{i + 1}</span>
                 {t}
               </li>
             ))}
           </ol>
         </div>
-        <p className="text-xs text-slate-400">A confirmation covers proposal-stage terms only. It is not an award, contract or crew hold.</p>
+        <p className="text-xs font-light text-[#B5A88E]">A confirmation covers proposal-stage terms only. It is not an award, contract or crew hold.</p>
       </section>
 
       <section className="mx-auto flex w-full max-w-md flex-col justify-center gap-8 px-5 py-10 sm:px-8">
@@ -124,7 +116,7 @@ export default function Login() {
             Sign in with the email the organizer invited to open your private review.
           </p>
         )}
-        <Tabs defaultValue="signin">
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="signin" data-testid="signin-tab">Sign in</TabsTrigger>
             <TabsTrigger value="register" data-testid="register-tab">Create account</TabsTrigger>
@@ -152,7 +144,7 @@ export default function Login() {
         </Tabs>
         {error && <p data-testid="signin-error" className="-mt-4 text-sm text-red-700">{error}</p>}
         <GoogleButton next={next} />
-        <DemoAccounts busy={busy} onUse={(email, pw) => run(() => login(email, pw))} />
+        {tab === "signin" && <DemoAccounts busy={busy} onUse={(email, pw) => run(() => login(email, pw))} />}
       </section>
     </div>
   );

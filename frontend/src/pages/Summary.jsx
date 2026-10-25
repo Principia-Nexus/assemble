@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Printer, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SyntheticTag } from "@/components/StatusPill";
 import { api, errText } from "@/lib/api";
 import { CHECK, OVERALL, STATUS, money, fmtDate, fmtTime } from "@/lib/format";
 import { Loading } from "@/App";
@@ -91,7 +90,7 @@ export default function Summary() {
       </div>
       <article data-testid="summary-document" className="mx-auto max-w-4xl space-y-6 bg-white p-8 shadow-sm print:max-w-none print:p-0 print:shadow-none sm:p-12">
         <header className="space-y-1">
-          <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Assemble · organizer summary · not for partners {sheet.project.synthetic && <SyntheticTag />}</p>
+          <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Assemble · organizer summary · not for partners</p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">{it.job_name || sheet.project.name}</h1>
           <p className="text-sm text-slate-600">Customer: {it.customer_name || "Unknown"} · Starts {fmtDate(it.start_date)} · {it.weeks ?? "?"} weeks · Ceiling {money(it.budget_ceiling_cents)}</p>
           <p data-testid="summary-date" className="text-xs text-slate-500">Prepared {fmtTime(printedAt, true)}{cur ? ` · current plan v${cur.version.number}` : ""}{sheet.preview ? ` · amendment preview v${sheet.preview.version.number} open (not included)` : ""}</p>
@@ -114,7 +113,6 @@ export default function Summary() {
         </Section>
         <footer className="border-t border-slate-300 pt-4 text-[11px] leading-relaxed text-slate-500">
           Confirmations cover proposal-stage terms only. They do not hold crews, award the job, form a contract or start mobilization. Full history is kept in Assemble.
-          {sheet.project.synthetic && " All firms, sites and figures are synthetic."}
         </footer>
       </article>
     </div>

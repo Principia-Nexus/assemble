@@ -79,7 +79,9 @@ def render(text, fx, start_iso, offset_days):
     from datetime import date
     start = date.fromisoformat(start_iso)
     ctx = {**dates(fx, start), "doc_date": (start + timedelta(days=offset_days)).isoformat()}
-    return text.format_map(ctx), ctx["doc_date"]
+    for k, v in ctx.items():
+        text = text.replace("{" + k + "}", v)
+    return text, ctx["doc_date"]
 
 
 def documents(fx, start_iso):

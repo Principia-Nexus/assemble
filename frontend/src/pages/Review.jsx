@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import AppHeader from "@/components/AppHeader";
-import { StatusPill, SyntheticTag } from "@/components/StatusPill";
+import { StatusPill } from "@/components/StatusPill";
 import { ErrorList } from "@/components/sheet/Stepper";
 import { api, errList, newKey, visitorId } from "@/lib/api";
 import { STATUS, money, fmtDate, fmtTime } from "@/lib/format";
@@ -144,10 +144,10 @@ export default function Review() {
     <div className="min-h-screen bg-slate-50">
       <AppHeader />
       {user?.sandbox_id && (
-        <div className="border-b border-amber-200 bg-amber-50">
-          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-xs text-amber-900 sm:px-6">
-            <span className="flex items-center gap-2"><SyntheticTag /> Signed in as {user.email}</span>
-            <Button size="sm" variant="ghost" className="h-7 text-amber-900" onClick={backToOrganizer} data-testid="review-back-to-organizer-button">Sign in as organizer (demo)</Button>
+        <div>
+          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-xs text-slate-600 sm:px-6">
+            <span>Signed in as {user.email}</span>
+            <Button size="sm" variant="ghost" className="h-7" onClick={backToOrganizer} data-testid="review-back-to-organizer-button">Sign in as organizer (demo)</Button>
           </div>
         </div>
       )}
@@ -157,7 +157,7 @@ export default function Review() {
         {data && (
           <>
             <div className="rise">
-              <p className="eyebrow flex items-center gap-2">Private review · from {data.job.organizer_firm} {data.job.synthetic && <SyntheticTag />}</p>
+              <p className="eyebrow flex items-center gap-2">Private review · from {data.job.organizer_firm}</p>
               <h1 data-testid="review-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{data.partner.name}: your part of {data.job.job_name}</h1>
               <p className="mt-1 text-sm text-slate-600">Customer: {data.job.customer_name || "Unknown"}. You see only your own sites and terms.</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">

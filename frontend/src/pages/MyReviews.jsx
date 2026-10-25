@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
-import { StatusPill, SyntheticTag } from "@/components/StatusPill";
+import { StatusPill } from "@/components/StatusPill";
 import { api, errText } from "@/lib/api";
 import { STATUS } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
@@ -37,7 +37,7 @@ export default function MyReviews() {
             <Link key={r.token} to={r.path} data-testid={`my-review-${r.token.slice(0, 8)}`}
               className="flex flex-col gap-2 rounded-md border border-slate-200 bg-white p-4 transition-colors hover:border-slate-400 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">{r.job_name || "Untitled job"} {r.synthetic && <SyntheticTag />}</p>
+                <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">{r.job_name || "Untitled job"}</p>
                 <p className="text-xs text-slate-500">Your part as {r.partner_name}</p>
               </div>
               <StatusPill tone={STATUS[r.status]?.tone} label={STATUS[r.status]?.label} />
