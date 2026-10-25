@@ -175,6 +175,7 @@ export default function GraphView({ sheet, items, edges, pkgs, conds, selectedId
   );
   const card = (it) => wrap(it.item_id, <ItemCard it={it} sheet={sheet} selected={selectedId === it.item_id} hot={hot.has(it.item_id)} onSelect={onSelect} cardRef={setRef(it.item_id)} />, true);
   const visiblePkgs = pkgs.filter((p) => filter(p));
+  const assignedPkgs = visiblePkgs.filter((p) => p.sites?.length && p.owner !== "unassigned").length;
   const empty = !groups.length && !loose.length && !pkgs.length && !conds.length;
 
   return (
@@ -185,7 +186,7 @@ export default function GraphView({ sheet, items, edges, pkgs, conds, selectedId
           <div ref={contentRef} className="relative mx-auto flex max-w-[1440px] flex-col gap-5 py-6 pb-44 pl-4 pr-16 sm:px-6" data-testid="graph-canvas">
             {empty && <p data-testid="graph-empty" className="max-w-md text-sm text-[#64748B]">Nothing here yet. Describe the job below, or use Add to enter a work item.</p>}
             {visiblePkgs.length > 0 && (
-              <Frame title={sheet.preview ? "Plan · private draft" : sheet.current ? "Plan" : "Firms and sites"} count={`${visiblePkgs.length} package${visiblePkgs.length === 1 ? "" : "s"}`} testId="graph-plan-frame" open={!closed.plan} onToggle={() => toggle("plan")}>
+              <Frame title={sheet.preview ? "Plan · private draft" : sheet.current ? "Plan" : "Firms and sites"} count={`${assignedPkgs} package${assignedPkgs === 1 ? "" : "s"}`} testId="graph-plan-frame" open={!closed.plan} onToggle={() => toggle("plan")}>
                 {visiblePkgs.map((p) => wrap(p.id, <PackageCard pkg={p} sheet={sheet} selected={selectedId === p.id} onSelect={onSelect} cardRef={setRef(p.id)} />))}
               </Frame>
             )}

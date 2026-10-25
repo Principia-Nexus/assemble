@@ -250,9 +250,10 @@ def make_fact(src, raw, it):
         issues.append(site_issue)
     if field == "site_scope" and re.search(r"\b(proposed|assigned|offered|quoted)\b|\bby\s+[A-Z]", value):
         issues.append("This says who would do the work, not the site's scope.")
-    if field in WEEKLY and not week:
-        issues.append("No week given for this capacity.")
     weeks = it.get("weeks")
+    every_week = field in WEEKLY and not week and re.search(r"\b(per|a|each|every)\s+week\b|\bweekly\b", excerpt, re.I)
+    if field in WEEKLY and not week and not every_week:
+        issues.append("No week given for this capacity.")
     if field in WEEKLY and week and weeks and not 1 <= week <= weeks:
         issues.append(f"Week {week} is outside the job's {weeks} weeks.")
     if field == "site_deadline_week" and weeks and value.isdigit() and not 1 <= int(value) <= weeks:
@@ -705,7 +706,8 @@ def apply_fact(it, f):
     if scope == "own":
         if field == "own_capacity":
             it["own_capacity"] = (it.get("own_capacity") or []) + [None] * max(0, (weeks or 0) - len(it.get("own_capacity") or []))
-            it["own_capacity"][f["week"] - 1] = val
+            for w in ([f["week"]] if f.get("week") else range(1, (weeks or 0) + 1)):
+                it["own_capacity"][w - 1] = val
         else:
             it[key] = val
         return
@@ -725,7 +727,8 @@ def apply_fact(it, f):
         it["partners"].append(p)
     if field == "capacity":
         p["capacity"] = (p.get("capacity") or []) + [None] * max(0, (weeks or 0) - len(p.get("capacity") or []))
-        p["capacity"][f["week"] - 1] = val
+        for w in ([f["week"]] if f.get("week") else range(1, (weeks or 0) + 1)):
+            p["capacity"][w - 1] = val
     else:
         if field == "conditions" and p.get("conditions") and norm(val) not in norm(p["conditions"]):
             # Conditions add to each other; a contradiction is resolved by an explicit correction, not by overwrite.

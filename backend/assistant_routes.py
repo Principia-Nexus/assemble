@@ -41,6 +41,14 @@ snapshot of ONE project and the user's message. Choose exactly one mode:
   Use "ops". Prefer a few readable groups with meaningful children. Mark suggested work as suggestions in notes when the
   sources do not state it. Splitting/merging must keep scope, site ids and notes. Never invent firms, prices or dates;
   dates only when stated or the user asks for provisional ones (then date_kind "provisional").
+- "demo": the user asks you to build or rebuild a fictional DEMO scenario (e.g. "build a California lighting-retrofit demo").
+  Return "scenario": plain text written like real job documents: a fictional customer; sites with ids (S01...), names, scope
+  with quantity and unit (e.g. "20 LED troffers"); each site's access window with full dates including the year; the job start
+  date and number of weeks (all dates after the snapshot's "today"); budget ceiling; coordination and contingency allowances;
+  the customer's payment terms; then 3-5 fictional firms whose names start with Alder, Birch, Cedar, Redwood or Dogwood, each with
+  contact email exactly <that word in lowercase>@demo.assemble.test (e.g. alder@demo.assemble.test), price per site, capacity per week, maximum sites, advance %,
+  balance terms, validity date and any conditions. Make the figures consistent (capacity covers every site by its window, total
+  under the ceiling), but never claim checks passed or licences were verified. Keep facts the user supplied exactly as given.
 - "advance": the user asks you to draft the plan, assign sites/firms, or move the job forward. Return "partner_ids" (firm ids to
   include; all firms with capacity unless the user names some or excludes some), "include_own" (true unless the user says
   not to use the organizer's own crew) and "keep_open" (site ids the user wants left unassigned, e.g. "leave roofing open"). The app then runs its solver to assign every site a qualified firm can take, runs the
@@ -118,6 +126,7 @@ def snapshot(s, items=(), edges=()):
         snap["owner_responses"] = [{"firm": p["name"], "status": p["status"]} for p in s["current"]["partners"]]
     snap["work_items"] = [{k: i.get(k) for k in ("item_id", "kind", "title", "parent_id", "firm_id", "site_ids", "status",
                                                     "start_date", "due_date", "date_kind") if i.get(k) not in (None, [])} for i in items][:300]
+    snap["today"] = L.today_pacific().isoformat()
     snap["relationships"] = [{"from": e["from_id"], "to": e["to_id"], "kind": e["kind"]} for e in edges][:300]
     snap["open_change_requests"] = [{"note": c["note"], "moves": c.get("moves")} for c in s["change_requests"] if c["status"] == "open"][:5]
     return snap
@@ -131,7 +140,7 @@ def parse(raw):
         out = json.loads(m.group(0))
     except json.JSONDecodeError:
         return None
-    return out if isinstance(out, dict) and out.get("mode") in ("explain", "revise", "intake", "question", "compose", "advance") else None
+    return out if isinstance(out, dict) and out.get("mode") in ("explain", "revise", "intake", "question", "compose", "advance", "demo") else None
 
 
 async def save_msg(p, user, role, text, **extra):
@@ -328,6 +337,17 @@ async def work(r, user):
             errors = ex.detail if isinstance(ex.detail, list) else [str(ex.detail)]
             if ex.status_code == 409:
                 errors = ["The project changed while I was working, so nothing was applied. Send your request again."]
+    if mode == "demo":
+        it = fresh["intake"]
+        if not fresh.get("demo") and (it.get("sites") or it.get("partners")):
+            errors = ["This project holds real work, so I won't add fictional data to it. Create a new project and ask me there."]
+        elif not str(result.get("scenario") or "").strip():
+            errors = ["I couldn't write the demo scenario. Ask again."]
+        else:
+            await db.projects.update_one({"project_id": fresh["project_id"]}, {"$set": {"demo": True}})
+            demo = {"source": {"kind": "other", "label": "Demo-generated scenario"}}
+            new_sheet, errors, notes = await chat_intake(fresh, user, demo, str(result["scenario"])[:20000])
+            answer = " ".join([answer, *notes]).strip()
     if mode == "intake":
         new_sheet, errors, notes = await chat_intake(fresh, user, result, r["message"])
         answer = " ".join([answer, *notes]).strip()

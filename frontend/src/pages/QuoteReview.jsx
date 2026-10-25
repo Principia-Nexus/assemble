@@ -146,7 +146,7 @@ export default function QuoteReview() {
           <article className="mt-6 space-y-4" data-testid="quote-document">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h1 className="text-xl font-bold">Quote {s.number}{s.kind === "amendment" ? ` · amendment to ${s.baseline_number}` : ""}{s.synthetic && <SynthBadge />}</h1>
+                <h1 className="text-xl font-bold">Quote {s.number}{s.kind === "amendment" ? ` · amendment to ${s.baseline_number}` : ""}{s.synthetic && <SynthBadge />}{s.demo && <span className="ml-2 align-middle rounded border border-[#B4690E]/40 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#B4690E]" data-testid="quote-demo-tag">Demo</span>}</h1>
                 <p className="text-sm text-slate-600">{s.seller} → {s.customer_name} · {s.project}</p>
               </div>
               <Button size="sm" variant="outline" className="no-print" onClick={() => window.print()} data-testid="quote-print"><Printer className="h-4 w-4" /> Print / PDF</Button>
@@ -162,6 +162,7 @@ export default function QuoteReview() {
               <div><dt className="text-xs text-slate-500">Valid until</dt><dd>{s.valid_until ? new Date(s.valid_until).toLocaleString() : ""}</dd></div>
             </dl>
             <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Scope</p><p className="mt-1 whitespace-pre-wrap text-sm">{s.scope}</p></div>
+            <List title="Work by site" items={s.line_items} testId="quote-line-items-view" />
             <List title="Included" items={s.inclusions} testId="quote-inclusions-view" />
             <List title="Excluded" items={s.exclusions} testId="quote-exclusions-view" />
             {s.not_covered?.length > 0 && <List title="Not covered by this quote" items={s.not_covered} testId="quote-not-covered-view" />}

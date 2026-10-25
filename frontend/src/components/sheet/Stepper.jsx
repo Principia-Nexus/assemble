@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const STEPS = [
-  { key: "intake", title: "Check", short: "Check" },
+  { key: "intake", title: "Job details", short: "Details" },
   { key: "draft", title: "Draft", short: "Draft" },
   { key: "ask", title: "Invite", short: "Invite" },
   { key: "decide", title: "Decide", short: "Decide" },

@@ -124,7 +124,7 @@ async def sheet(project_id):
     p = await db.projects.find_one({"project_id": project_id}, {"_id": 0})
     cur, pre = await get_version(p.get("current_version_id")), await get_version(p.get("preview_version_id"))
     out = {"project": {k: p.get(k) for k in ("project_id", "name", "rev", "synthetic", "sandbox_id", "created_at",
-                                             "fixture_id", "example_key", "layout", "recording_copy")},
+                                             "fixture_id", "example_key", "layout", "recording_copy", "demo")},
            "intake": p["intake"], "gap": L.gap_analysis(p["intake"]), "current": None, "preview": None}
     jc = p["intake"].get("job_conditions") or []
     if cur:

@@ -62,7 +62,7 @@ async def review_payload(token, link, p):
     it = p["intake"]
     out = {"token": token, "partner": {"partner_id": pid, "name": link["partner_name"]},
            "job": {"job_name": it.get("job_name"), "customer_name": it.get("customer_name"),
-                   "scope_summary": it.get("scope_summary"), "synthetic": p.get("synthetic"),
+                   "scope_summary": it.get("scope_summary"), "synthetic": p.get("synthetic"), "demo": bool(p.get("demo")),
                    "organizer_firm": (firm or {}).get("name")},
            "version": None, "terms": None, "status": "removed"}
     if v and pid in L.partner_owners(v):

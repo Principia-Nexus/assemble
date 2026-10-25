@@ -192,7 +192,7 @@ export default function Review() {
           <>
             <div className="rise">
               <p className="eyebrow flex items-center gap-2">From {data.job.organizer_firm}</p>
-              <h1 data-testid="review-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{data.partner.name}: your part of {data.job.job_name}{data.job.synthetic && <SynthBadge />}</h1>
+              <h1 data-testid="review-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{data.partner.name}: your part of {data.job.job_name}{data.job.synthetic && <SynthBadge />}{data.job.demo && <span className="ml-2 align-middle rounded border border-[#B4690E]/40 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#B4690E]" data-testid="review-demo-tag">Demo</span>}</h1>
               <p className="mt-1 text-sm text-slate-600">Customer: {data.job.customer_name || "Unknown"}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {!["link_not_shared", "no_link"].includes(data.status) && <StatusPill testId="review-status" tone={s.tone} label={s.label} />}

@@ -16,7 +16,7 @@ export function ReviewAsPartner({ sheet, owner }) {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const st = (sheet.current?.partners || []).find((x) => x.partner_id === owner);
-  if (!sheet.project.synthetic || user?.demo_key !== "organizer" || !st?.link?.path) return null;
+  if (!(sheet.project.synthetic || sheet.project.demo) || user?.demo_key !== "organizer" || !st?.link?.path) return null;
   const go = async () => {
     try {
       const { acc, password } = await demoAccount((a) => a.email === st.link.invite_email);

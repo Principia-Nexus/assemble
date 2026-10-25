@@ -72,9 +72,9 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
 
   return (
     <section data-testid="task-intake" className="space-y-6">
-      <TaskHeader step={1} title={sheet.intake.sites.length ? "Check" : "Add the job details"}>
+      <TaskHeader step={1} title="Job details">
         {dirty && <span data-testid="intake-unsaved-badge" className="self-center rounded-sm bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Unsaved edits</span>}
-        <Button onClick={save} disabled={busy} data-testid="intake-save-button">{busy ? "Saving…" : "Save and check gaps"}</Button>
+        <Button onClick={save} disabled={busy} data-testid="intake-save-button">{busy ? "Saving…" : "Save"}</Button>
       </TaskHeader>
       {kept && (
         <div data-testid="intake-kept-edits" role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">

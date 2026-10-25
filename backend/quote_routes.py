@@ -169,7 +169,7 @@ def firm_aliases(partners):
 
 def snapshot_of(q, p, firm_name, ready=None):
     snap = {"number": q["number"], "kind": q["kind"], "baseline_number": q.get("baseline_number"), "project": p["intake"].get("job_name") or p["name"],
-            "seller": firm_name, "synthetic": bool(p.get("synthetic")), **{k: q.get(k) for k in DRAFT_FIELDS}}
+            "seller": firm_name, "synthetic": bool(p.get("synthetic")), "demo": bool(p.get("demo")), **{k: q.get(k) for k in DRAFT_FIELDS}}
     if ready:
         # Authorized exclusions and conditions carry into the offer; firm names, prices and internal notes never do.
         exc = list(snap.get("exclusions") or [])
@@ -185,7 +185,7 @@ def snapshot_of(q, p, firm_name, ready=None):
         email = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
         scrub = lambda t: pat.sub("the subcontractor", email.sub("the subcontractor", t)) if pat else email.sub("the subcontractor", t)  # noqa: E731
         exc, con = [scrub(x) for x in exc], [scrub(x) for x in con]
-        snap.update(exclusions=exc, conditions=con, not_covered=ready["not_covered"])
+        snap.update(exclusions=exc, conditions=con, not_covered=ready["not_covered"], line_items=ready.get("line_items") or [])
     return snap
 
 
@@ -235,7 +235,17 @@ async def readiness(p, q):
                         + "; ".join(f"{f['name']} ({f['text']})" for f in sup["missing"]) + ".")
     exclusions = [x for x in (p.get("exclusions") or []) if x["level"] == "job" or x["level"] == "firm"
                   or (x["level"] == "scope" and x["target"] not in (cur["qualification"]["coverage"]["open"] if cur else []))]
-    return {"support": sup, "blockers": blockers, "not_covered": not_covered, "conditions": conds, "exclusions": exclusions}
+    line_items = []
+    if cur:
+        for x in cur["version"]["sites"]:
+            if (cur["version"]["assignments"].get(x["site_id"]) or {}).get("owner"):
+                sc = x.get("scope") or p["intake"].get("scope_summary") or p["intake"].get("job_name")
+                line_items.append(f"{x['site_id']} {x.get('name') or ''}".strip() + (f": {sc}" if sc else ""))
+        missing = [i.split(" ")[0] for i in line_items if ":" not in i]
+        if missing:
+            blockers.append("Scope missing for included site " + ", ".join(missing) + ".")
+    return {"support": sup, "blockers": blockers, "not_covered": not_covered, "conditions": conds, "exclusions": exclusions,
+            "line_items": line_items}
 
 
 def view(q, include_private=True):

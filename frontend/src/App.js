@@ -60,8 +60,17 @@ function AppRouter() {
       <Route path="/payment/cancel" element={<Protected><PaymentCancel /></Protected>} />
       <Route path="/quote/:token" element={<QuoteReview />} />
       <Route path="/review/:token" element={<Protected><Review /></Protected>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
+  );
+}
+
+function NotFound() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#FFFFFF] text-[#1A2838]" data-testid="not-found">
+      <p className="text-2xl font-semibold">Page not found</p>
+      <a href="/" className="text-sm text-[#215273] underline" data-testid="not-found-home">Go to Assemble</a>
+    </main>
   );
 }
 
