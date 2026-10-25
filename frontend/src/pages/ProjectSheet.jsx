@@ -124,7 +124,6 @@ export default function ProjectSheet() {
               </div>
               {sheet.current && (
                 <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="font-mono">Current plan v{sheet.current.version.number}</span>
                   <StatusPill testId="project-overall-status" tone={OVERALL[overall].tone} label={OVERALL[overall].label} />
                 </div>
               )}

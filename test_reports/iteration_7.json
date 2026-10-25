@@ -1,0 +1,22 @@
+{
+  "summary": "Frontend-only check of the ScheduleGrid visual fix. All requested items PASS. (1) Signed in through 'Try the example' and reset the demo copy. On Prepare a draft I ticked Alder and Cedar and generated. In current-schedule-grid all 12 assigned cells are whole filled <td> elements with no badge child elements. They show full names: 'Alder Line Electric' in sky rgb(186,230,253) and 'Cedar Grid Services' in amber rgb(253,230,138). Each company keeps one color in all its cells. Unassigned cells are transparent. The header shows only 'SCHEDULE'; the legend chips are gone. (2) Decide amendment preview, from a sandbox seeded with A+B+C confirmed: preview-schedule-grid shows Alder in sky, Birch in amber and Cedar in emerald, all with full names and one color each. I set S01 to week 3 and saved. preview-cell-S01-week-3 then showed 'Alder Line Electric · late' with a red-100 fill and red-800 text, and the checker failed the deadline. (3) At 390px, both the draft and preview grids scroll horizontally inside their .overflow-x-auto container (scrollWidth 420, clientWidth about 320-356). documentElement and body scrollWidth are both 390, so there is no page overflow. No page errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ScheduleGrid (draft vs amendment preview)", "issues": ["A company's color comes from its order in each version's assignments (owners.indexOf). So the same company can change color between grids: Cedar was amber in the Alder+Cedar draft and emerald in the A+B+C preview, and Birch took amber. Consider a stable color per partner_id, e.g. its index in the job's partner list."]},
+      {"screen": "ScheduleGrid mobile 390px", "issues": ["Week 3 is cut off at the right edge and nothing hints that the table scrolls. The 'due wk N' text is hidden below sm, so on mobile you cannot tell from the grid that S01 is late without scrolling. This is low priority."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": ["Optional: give each partner_id a fixed color so a company has the same color in every grid", "Optional: add a scroll hint or a sticky site column on mobile"],
+  "critical_code_review_comments": ["ScheduleGrid.jsx line 10-11: the palette index depends on Object.values(assignments) order, so it is stable within one version but not across versions. Use the partner order from version.partners or the job instead."],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% of the 5 requested items"},
+  "seed_data_creation": "Sandbox visitor_id test-ui7amend00000001 was seeded with tests/seed_baseline_ui.py. Its amendment preview has an edit (S01 moved to week 3). The demo copy of one fresh visitor was reset.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Grid cells: <prefix>-cell-<site>-week-<n>, with prefix 'current' (draft) or 'preview' (amendment). To get a late cell, open the preview and use amend-week-S01 = 3, then amend-save-button.",
+  "test_credentials": "From /app/memory/test_credentials.md: organizer demo, password synthetic-demo."
+}

@@ -44,7 +44,7 @@ export default function ScheduleGrid({ version, checker, testPrefix }) {
                     const here = a.week === w;
                     const late = here && s.deadline_week != null && w > s.deadline_week;
                     return (
-                      <td key={w} className={cn("px-3 py-2 text-xs font-semibold", here && "border-x border-white", here && (late ? "bg-red-100 text-red-800" : color(a.owner)))}
+                      <td key={w} className={cn("px-3 py-2 text-xs font-semibold", here && (late ? "bg-red-100 text-red-800" : color(a.owner)))}
                         data-testid={`${testPrefix}-cell-${s.site_id}-week-${w}`}>
                         {here && `${name(a.owner)}${late ? " · late" : ""}`}
                       </td>

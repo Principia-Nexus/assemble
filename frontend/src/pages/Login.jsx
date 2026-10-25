@@ -111,7 +111,6 @@ export default function Login() {
       <section className="flex w-full max-w-md flex-col justify-center gap-8 px-5 py-10 sm:px-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <Brand />
-          <p data-testid="signin-promise" className="text-2xl font-semibold tracking-tight text-slate-900">Check the job. Agree the plan.</p>
         </div>
         {next?.startsWith("/review/") && (
           <p data-testid="signin-review-notice" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
@@ -119,7 +118,6 @@ export default function Login() {
           </p>
         )}
         {tab === "signin" && <DemoAccounts busy={busy} onUse={(email, pw) => run(() => login(email, pw))} />}
-        <div className="flex items-center gap-3 text-[11px] uppercase tracking-wider text-slate-500"><span className="h-px flex-1 bg-slate-300" />or sign in<span className="h-px flex-1 bg-slate-300" /></div>
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="signin" data-testid="signin-tab">Sign in</TabsTrigger>

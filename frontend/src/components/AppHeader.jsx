@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LogOut, History, Inbox } from "lucide-react";
+import { History, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 
@@ -31,7 +31,7 @@ export default function AppHeader({ onHistory }) {
           </Button>
           <Button variant="outline" size="sm" onClick={logout} data-testid="header-logout-button"
             className="rounded-none border-[#4A0E0E] bg-transparent font-mono text-[11px] uppercase tracking-[0.16em] text-[#4A0E0E] hover:bg-[#4A0E0E] hover:text-[#EDE3CF]">
-            <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sign out</span>
+            Sign out
           </Button>
         </div>
       </div>
