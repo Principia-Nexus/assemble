@@ -1,11 +1,8 @@
 import { cn } from "@/lib/utils";
 import { fmtDate } from "@/lib/format";
 
-const PALETTE = ["bg-sky-100 text-sky-900 border-sky-200", "bg-amber-100 text-amber-900 border-amber-200",
-  "bg-emerald-100 text-emerald-900 border-emerald-200", "bg-rose-100 text-rose-900 border-rose-200",
-  "bg-violet-100 text-violet-900 border-violet-200", "bg-lime-100 text-lime-900 border-lime-200"];
-
-const short = (name) => (name || "").replace(/\s*\(Synthetic\)/, "").split(" ")[0];
+const PALETTE = ["bg-sky-200 text-sky-950", "bg-amber-200 text-amber-950", "bg-emerald-200 text-emerald-950",
+  "bg-rose-200 text-rose-950", "bg-violet-200 text-violet-950", "bg-lime-200 text-lime-950"];
 
 export default function ScheduleGrid({ version, checker, testPrefix }) {
   const weeks = version.weeks || 0;
@@ -22,9 +19,8 @@ export default function ScheduleGrid({ version, checker, testPrefix }) {
 
   return (
     <div data-testid={`${testPrefix}-schedule-grid`} className="min-w-0 rounded-md border border-slate-200 bg-white">
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-4">
-        <p className="eyebrow mr-2">Schedule</p>
-        {owners.map((o) => <span key={o} className={cn("rounded-sm border px-2 py-0.5 text-[11px] font-semibold", color(o))}>{name(o)}</span>)}
+      <div className="border-b border-slate-200 p-4">
+        <p className="eyebrow">Schedule</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[420px] text-sm">
@@ -48,12 +44,9 @@ export default function ScheduleGrid({ version, checker, testPrefix }) {
                     const here = a.week === w;
                     const late = here && s.deadline_week != null && w > s.deadline_week;
                     return (
-                      <td key={w} className={cn("px-2 py-1.5", s.deadline_week === w && "bg-slate-50")} data-testid={`${testPrefix}-cell-${s.site_id}-week-${w}`}>
-                        {here && (
-                          <span className={cn("inline-block rounded-sm border px-1.5 py-0.5 text-[11px] font-semibold", late ? "border-red-300 bg-red-50 text-red-800" : color(a.owner))}>
-                            {short(name(a.owner))}{late ? " · late" : ""}
-                          </span>
-                        )}
+                      <td key={w} className={cn("px-3 py-2 text-xs font-semibold", here && "border-x border-white", here && (late ? "bg-red-100 text-red-800" : color(a.owner)))}
+                        data-testid={`${testPrefix}-cell-${s.site_id}-week-${w}`}>
+                        {here && `${name(a.owner)}${late ? " · late" : ""}`}
                       </td>
                     );
                   })}
