@@ -1,30 +1,18 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Copy, Link2, Send, UserCheck } from "lucide-react";
+import { Copy, Link2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/StatusPill";
-import { api, errText, visitorId } from "@/lib/api";
+import { api, errText } from "@/lib/api";
 import { STATUS, money, fmtDate, fmtTime, slug } from "@/lib/format";
-import { useAuth } from "@/context/AuthContext";
 import { TaskHeader } from "./Stepper";
 import EmailInvite from "./EmailInvite";
 
-function PartnerCard({ p, email, act, busy, demoPassword, blocked }) {
-  const { setUser } = useAuth();
-  const navigate = useNavigate();
+function PartnerCard({ p, email, act, busy, blocked }) {
   const id = slug(p.partner_id);
   const url = p.link ? window.location.origin + p.link.path : "";
   const copy = async () => {
     try { await navigator.clipboard.writeText(url); toast.success("Link copied. Creating or copying a link does not send it."); }
     catch { toast.error("Copy failed. Select the link text and copy it manually."); }
-  };
-  const reviewAsDemo = async () => {
-    try {
-      const { data } = await api.post("/auth/login", { email: p.link.invite_email, password: demoPassword, visitor_id: visitorId() });
-      setUser(data);
-      navigate(p.link.path);
-    } catch (e) { toast.error(errText(e)); }
   };
   const s = STATUS[p.status];
   return (
@@ -54,11 +42,6 @@ function PartnerCard({ p, email, act, busy, demoPassword, blocked }) {
                 <Send className="h-4 w-4" /> I've shared it myself
               </Button>
             )}
-            {demoPassword && (
-              <Button size="sm" variant="ghost" className="text-slate-600" onClick={reviewAsDemo} data-testid={`partner-card-demo-review-${id}`}>
-                <UserCheck className="h-4 w-4" /> Review as this partner (demo)
-              </Button>
-            )}
             <p className="ml-auto text-[11px] text-slate-500" data-testid={`partner-card-history-${id}`}>
               {p.status === "needs_rereview" ? "Answered previous terms; revised terms await review."
                 : p.response ? `Answered these terms ${fmtTime(p.response.created_at)}.`
@@ -73,10 +56,6 @@ function PartnerCard({ p, email, act, busy, demoPassword, blocked }) {
 }
 
 export default function PartnersTask({ sheet, act, busy, goTo }) {
-  const [demoPassword, setDemoPassword] = useState(null);
-  useEffect(() => {
-    if (sheet.project.synthetic) api.get("/auth/demo-accounts").then((r) => setDemoPassword(r.data.password)).catch(() => {});
-  }, [sheet.project.synthetic]);
   const partners = sheet.current?.partners || [];
   const blocked = sheet.current?.checker.overall === "fail";
   return (
@@ -92,7 +71,7 @@ export default function PartnersTask({ sheet, act, busy, goTo }) {
         <p data-testid="ask-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">No plan yet. Use Draft plan.</p>
       ) : (
         <div className="stagger space-y-3">
-          {partners.map((p) => <PartnerCard key={p.partner_id} p={p} email={sheet.current.version.partners.find((x) => x.partner_id === p.partner_id)?.email} act={act} busy={busy} demoPassword={demoPassword} blocked={blocked} />)}
+          {partners.map((p) => <PartnerCard key={p.partner_id} p={p} email={sheet.current.version.partners.find((x) => x.partner_id === p.partner_id)?.email} act={act} busy={busy} blocked={blocked} />)}
         </div>
       )}
     </section>

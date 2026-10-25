@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import AppHeader from "@/components/AppHeader";
 import { StatusPill, SynthBadge } from "@/components/StatusPill";
 import { ErrorList } from "@/components/sheet/Stepper";
-import { api, errList, newKey, visitorId } from "@/lib/api";
+import { api, errList, newKey } from "@/lib/api";
 import { STATUS, money, fmtDate, fmtTime } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { Loading } from "@/App";
@@ -163,8 +163,7 @@ function VerifyEmail({ onDone }) {
 
 export default function Review() {
   const { token } = useParams();
-  const { user, setUser } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const load = useCallback(async () => {
@@ -173,26 +172,10 @@ export default function Review() {
   }, [token]);
   useEffect(() => { load(); }, [load]);
 
-  const backToOrganizer = async () => {
-    const { data: demo } = await api.get("/auth/demo-accounts");
-    const org = demo.accounts.find((a) => a.role === "Organizer");
-    const { data: u } = await api.post("/auth/login", { email: org.email, password: demo.password, visitor_id: visitorId() });
-    setUser(u);
-    navigate("/projects");
-  };
-
   const s = data && STATUS[data.status];
   return (
     <div className="min-h-screen bg-slate-50">
       <AppHeader />
-      {user?.sandbox_id && (
-        <div>
-          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-xs text-slate-600 sm:px-6">
-            <span>Signed in as {user.email}</span>
-            <Button size="sm" variant="ghost" className="h-7" onClick={backToOrganizer} data-testid="review-back-to-organizer-button">Sign in as organizer (demo)</Button>
-          </div>
-        </div>
-      )}
       <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
         {error.startsWith("VERIFY_EMAIL") && <VerifyEmail onDone={load} />}
         {error && !error.startsWith("VERIFY_EMAIL") && <div data-testid="review-error" className="rounded-md border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error}</div>}

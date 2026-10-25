@@ -27,7 +27,7 @@ export const n2s = (n) => (n == null ? "" : String(n));
 export const STATUS = {
   no_link: { label: "No review link yet", tone: "unknown" },
   link_not_shared: { label: "Link created, not marked as shared", tone: "unknown" },
-  awaiting: { label: "Awaiting response (no response is not agreement)", tone: "pending" },
+  awaiting: { label: "Awaiting response", tone: "pending" },
   needs_rereview: { label: "Terms changed: must review again", tone: "pending" },
   confirmed: { label: "Confirmed proposed terms", tone: "confirmed" },
   confirmed_conditional: { label: "Confirmed with conditions", tone: "pending" },
