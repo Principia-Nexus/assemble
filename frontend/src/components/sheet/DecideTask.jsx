@@ -14,7 +14,7 @@ function nextAction(sheet) {
   const cur = sheet.current;
   if (!cur) return "Prepare a draft first.";
   if (sheet.preview) return "Review the amendment preview below, then discard it or select the revised terms.";
-  if (cur.checker.overall === "fail") return "The current plan fails a check. Start an amendment to repair it; nothing is claimed impossible.";
+  if (cur.checker.overall === "fail") return "The current plan fails";
   const open = sheet.change_requests.filter((c) => c.status === "open");
   if (open.length) return `Resolve ${open.length} open change request(s): open one as an amendment preview or close it.`;
   const st = cur.partners.map((p) => p.status);
