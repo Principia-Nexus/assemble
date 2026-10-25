@@ -185,7 +185,7 @@ def snapshot_of(q, p, firm_name, ready=None):
         email = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
         scrub = lambda t: pat.sub("the subcontractor", email.sub("the subcontractor", t)) if pat else email.sub("the subcontractor", t)  # noqa: E731
         exc, con = [scrub(x) for x in exc], [scrub(x) for x in con]
-        snap.update(exclusions=exc, conditions=con, not_covered=ready["not_covered"], line_items=ready.get("line_items") or [])
+        snap.update(exclusions=exc, conditions=con, not_covered=ready["not_covered"], line_items=[scrub(x) for x in ready.get("line_items") or []])
     return snap
 
 
@@ -314,6 +314,8 @@ async def new_quote(body: NewIn, user=Depends(current_user)):
         if base["state"] not in ("accepted", "issued", "changes_requested", "declined", "expired", "withdrawn"):
             bad("Only an issued quote can be revised.")
     accepted = await db.quotes.find_one({"project_id": p["project_id"], "state": "accepted"}, sort=[("created_at", -1)])
+    if not base and not accepted:
+        base = await db.quotes.find_one({"project_id": p["project_id"], "state": {"$in": list(OPEN)}}, sort=[("created_at", -1)])
     n = await db.quotes.count_documents({"project_id": p["project_id"]}) + 1
     seed = (accepted or base or {}).get("snapshot") or {}
     if not seed:
@@ -331,6 +333,7 @@ async def new_quote(body: NewIn, user=Depends(current_user)):
          "baseline_number": accepted["number"] if accepted else None, "replaces": base["quote_id"] if base and not accepted else None,
          "state": "draft", **{k: seed.get(k) for k in DRAFT_FIELDS}, "responses": [], "created_at": now_iso(), "created_by": user["name"]}
     q["currency"] = q.get("currency") or "USD"
+    q["condition_decisions"] = (accepted or base or {}).get("condition_decisions") or {}
     await db.quotes.insert_one(dict(q))
     return {"quote": view(q)}
 
@@ -536,6 +539,8 @@ async def respond(token: str, body: RespondIn, request: Request):
     allowed = ["issued"] if body.action != "decline" else list(OPEN)
     if body.action == "request_changes":
         allowed = ["issued"]
+    if body.action == "accept" and q["kind"] == "offer" and await db.quotes.find_one({"project_id": q["project_id"], "state": "accepted"}):
+        raise HTTPException(409, "Another version of this quote is already accepted.")
     new_state = {"accept": "accepted", "decline": "declined", "request_changes": "changes_requested"}[body.action]
     receipt = {"receipt_id": new_id("rcp"), "key": key, **payload, "email": sess["email"], "verified_at": sess["verified_at"],
                "at": now_iso(), "version": q["number"], "total_cents": q["snapshot"]["price_cents"], "policy": "quote-acceptance-1"}

@@ -251,7 +251,8 @@ def make_fact(src, raw, it):
     if field == "site_scope" and re.search(r"\b(proposed|assigned|offered|quoted)\b|\bby\s+[A-Z]", value):
         issues.append("This says who would do the work, not the site's scope.")
     weeks = it.get("weeks")
-    every_week = field in WEEKLY and not week and re.search(r"\b(per|a|each|every)\s+week\b|\bweekly\b", excerpt, re.I)
+    every_week = field in WEEKLY and not week and re.search(r"\b(per|a|each|every)\s+week\b|\bweekly\b", excerpt, re.I) \
+        and not re.search(r"\bweeks?\s+\d", excerpt, re.I)
     if field in WEEKLY and not week and not every_week:
         issues.append("No week given for this capacity.")
     if field in WEEKLY and week and weeks and not 1 <= week <= weeks:

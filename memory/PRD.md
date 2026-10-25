@@ -171,3 +171,10 @@ User overrides: keep original Assemble colours/fonts and AppHeader top bar; no l
 - UI: package cards "Confirmed for vN" / "Needs review vN"; List/Report firm names; Report Internal cost; Review as partner (example projects) + Back to organizer; wrong-account review → sign in returning to the invite; task edits serialized (useItems queue), date range validated (UI + API); schedule table scrolls with sticky site column; header aria-labels; numeric week sort.
 - Evidence: backend/tests/run_fresh.py (fresh_flow.py + fresh_flow2.py) on canonical docs tests/fresh_fixture_docs.json: $168,000 baseline / $12,000 headroom, Q1 accepted, v3 Dogwood change $172,000 / $8,000; fresh_access_gate.py; test_iter27 (7); full suite 194 passed; iteration_26.json frontend pass.
 - Not done: hiding older conditions satisfied by an exact response; removing repeated Edit plan/run-checks controls; real email delivery (Phase 2); export/200% zoom + rehearsal (Phase 3).
+
+## 2026-06 — Finish the Demo (fork session)
+- Fixed regressions: chat "capacity N per week" (no week) now fills every week (extract_routes every_week); quote line-items fall back to scope summary/job name.
+- Demo E2E working (agent + testing agent iteration_27, test_iter28_demo_e2e.py 11/11): assistant demo setup → draft → evidence → select → scoped partner confirm (.test, no email) → quote with per-site line items + Demo tag → customer code accept → amendment accept → Print/PDF.
+- Fixed: solver respects partner max_sites; a new offer replaces an open issued offer; base offer cannot be accepted when another is accepted; amendments carry condition decisions; line items scrubbed of firm names/emails; stale "stays in force" banner hidden after acceptance; demo prompt uses fixture firm names, flat price, "N sites per week", payer, scope summary, own crew capacity.
+- Full backend suite: 205 passed (agent-run).
+- Not done this round: Hesperia 29-page bid demo, revision merge rules, small UI fixes (invite return, 200% zoom dock, login tab, $99 link), public URL repeat checks.

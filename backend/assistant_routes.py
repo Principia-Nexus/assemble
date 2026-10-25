@@ -44,9 +44,12 @@ snapshot of ONE project and the user's message. Choose exactly one mode:
 - "demo": the user asks you to build or rebuild a fictional DEMO scenario (e.g. "build a California lighting-retrofit demo").
   Return "scenario": plain text written like real job documents: a fictional customer; sites with ids (S01...), names, scope
   with quantity and unit (e.g. "20 LED troffers"); each site's access window with full dates including the year; the job start
-  date and number of weeks (all dates after the snapshot's "today"); budget ceiling; coordination and contingency allowances;
-  the customer's payment terms; then 3-5 fictional firms whose names start with Alder, Birch, Cedar, Redwood or Dogwood, each with
-  contact email exactly <that word in lowercase>@demo.assemble.test (e.g. alder@demo.assemble.test), price per site, capacity per week, maximum sites, advance %,
+  date and number of weeks (all dates after the snapshot's "today"); a one-line overall scope summary; the organizer's own crew
+  capacity per week (0 if the organizer does not self-perform); budget ceiling; coordination and contingency allowances;
+  the customer's payment terms; then 3-5 of these fictional firms, named exactly: Alder Line Electric, Birch Street Power, Cedar Grid
+  Services, Redwood Circuit Co., Dogwood Field Crews; each with
+  contact email exactly <that word in lowercase>@demo.assemble.test (e.g. alder@demo.assemble.test), one flat price per site (the same for every site it takes), capacity written exactly as "Capacity: N sites per week" (sites,
+  never fixtures or crews), maximum sites, who pays the firm (the organizer), advance %,
   balance terms, validity date and any conditions. Make the figures consistent (capacity covers every site by its window, total
   under the ceiling), but never claim checks passed or licences were verified. Keep facts the user supplied exactly as given.
 - "advance": the user asks you to draft the plan, assign sites/firms, or move the job forward. Return "partner_ids" (firm ids to

@@ -1,0 +1,52 @@
+{
+ "project_id": "prj_d0ea44aca94a",
+ "visitor": "t28-71f4f06690b6",
+ "owners": [
+  "p_3a6e050d",
+  "p_5e20ca1c",
+  "p_68ff2415",
+  "p_911542db"
+ ],
+ "tokens": {
+  "p_3a6e050d": "8hubYJeYGALyCjn5K3djatGXqAppwoC8",
+  "p_5e20ca1c": "wurA-bT4VswW8U-S4lmcNUOpDofmz101",
+  "p_68ff2415": "AmvONK_hPHG4kIEDEwsOlKjQXCGHjAmI",
+  "p_911542db": "in8AeRIrKWF1NfLI9ejlorTXdmKpYGDk"
+ },
+ "qtoken": "EYdIzSVd0xRUFI7Sdt5FzBERgZbJOza_",
+ "qid": "quo_7d5b326c4115",
+ "q1_digest": "ac77d336b43acf92e078439a",
+ "q1_snap": {
+  "number": "Q1",
+  "kind": "offer",
+  "baseline_number": null,
+  "project": "Golden Valley Unified School District, California LED lighting retrofit",
+  "seller": "Brightline Electrical (Synthetic)",
+  "synthetic": false,
+  "demo": true,
+  "customer_name": "TEST Demo Buyer",
+  "customer_email": "buyer@demo.assemble.test",
+  "site": "Demo sites",
+  "scope": "Lighting retrofit",
+  "inclusions": null,
+  "exclusions": [],
+  "price_cents": 7700000,
+  "currency": "USD",
+  "tax_basis": "Sales tax extra",
+  "payment_terms": "Net 30",
+  "timing": "Per plan",
+  "valid_until": "2026-11-24T00:00:00Z",
+  "terms": null,
+  "conditions": [],
+  "not_covered": [],
+  "line_items": [
+   "S01 Lincoln Elementary School: 120 LED troffers",
+   "S02 Maple Middle School Gym: 36 LED high-bay fixtures",
+   "S03 District Office: 64 LED troffers",
+   "S04 Oak Ridge Library: 52 LED troffers",
+   "S05 Transportation Yard: 24 LED wall packs",
+   "S06 the subcontractor Hill High School Cafeteria: 40 LED troffers"
+  ]
+ },
+ "qtoken2": "bM6ofvmepH6ARn876i-VJuflyXsYiE_i"
+}

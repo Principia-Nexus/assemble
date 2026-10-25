@@ -372,6 +372,8 @@ def generate(it, partner_ids, include_own, blocked=frozenset(), keep_open=frozen
     owners += [plist[i]["partner_id"] for i in order]
     pseudo = {"own_capacity": it.get("own_capacity"), "partners": it["partners"]}
     remaining = {o: [owner_capacity(pseudo, o, w) or 0 for w in range(1, weeks + 1)] for o in owners}
+    limit = {p["partner_id"]: p.get("max_sites") for p in plist}
+    used = {o: 0 for o in owners}
     idx = {s["site_id"]: i for i, s in enumerate(it["sites"])}
     sites = sorted(it["sites"], key=lambda s: (s.get("deadline_week") or weeks + 1, idx[s["site_id"]]))
     assignments, notes = {}, []
@@ -387,8 +389,9 @@ def generate(it, partner_ids, include_own, blocked=frozenset(), keep_open=frozen
             for o in owners:
                 if (s["site_id"], o) in blocked:
                     continue
-                if remaining[o][w - 1] > 0:
+                if remaining[o][w - 1] > 0 and (limit.get(o) is None or used[o] < limit[o]):
                     remaining[o][w - 1] -= 1
+                    used[o] += 1
                     assignments[s["site_id"]] = {"owner": o, "week": w}
                     placed = True
                     break
