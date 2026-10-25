@@ -11,6 +11,7 @@ import ProjectSheet from "@/pages/ProjectSheet";
 import Review from "@/pages/Review";
 import MyReviews from "@/pages/MyReviews";
 import Summary from "@/pages/Summary";
+import QuoteReview from "@/pages/QuoteReview";
 import { PilotOffer, PaymentSuccess, PaymentCancel } from "@/pages/Pilot";
 
 export const Loading = ({ label = "Loading" }) => (
@@ -57,6 +58,7 @@ function AppRouter() {
       <Route path="/pilot" element={<Protected><PilotOffer /></Protected>} />
       <Route path="/payment/success" element={<Protected><PaymentSuccess /></Protected>} />
       <Route path="/payment/cancel" element={<Protected><PaymentCancel /></Protected>} />
+      <Route path="/quote/:token" element={<QuoteReview />} />
       <Route path="/review/:token" element={<Protected><Review /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -11,6 +11,9 @@ import auth_routes
 import project_routes
 import assistant_routes
 import graph_routes
+import items_routes
+import quote_routes
+import media_routes
 import review_routes
 import extract_routes
 import billing_routes
@@ -21,6 +24,10 @@ app.include_router(project_routes.router)
 app.include_router(project_routes.projects_router)
 app.include_router(assistant_routes.router)
 app.include_router(graph_routes.router)
+app.include_router(items_routes.router)
+app.include_router(quote_routes.router)
+app.include_router(quote_routes.public)
+app.include_router(media_routes.router)
 app.include_router(review_routes.router)
 app.include_router(extract_routes.router)
 app.include_router(billing_routes.router)

@@ -1,38 +1,53 @@
-import { SynthBadge } from "@/components/StatusPill";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MessageSquare, RotateCcw, Sparkles } from "lucide-react";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import AssistantPanel from "@/components/sheet/AssistantPanel";
-import TraceGraph from "@/components/sheet/TraceGraph";
-import AppHeader from "@/components/AppHeader";
+import { Navigate } from "react-router-dom";
+import { Eye, MoreHorizontal, Search, Sparkles } from "lucide-react";
+import { SynthBadge } from "@/components/StatusPill";
 import { Button } from "@/components/ui/button";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { api, errList } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Loading } from "@/App";
-import Stepper, { Rail, stepInfo } from "@/components/sheet/Stepper";
-import IntakeTask from "@/components/sheet/IntakeTask";
-import DraftTask from "@/components/sheet/DraftTask";
-import PartnersTask from "@/components/sheet/PartnersTask";
-import DecideTask from "@/components/sheet/DecideTask";
+import { RouteDenied } from "@/components/RouteDenied";
 import HistoryDrawer from "@/components/sheet/HistoryDrawer";
 import DemoTour from "@/components/sheet/DemoTour";
-import PlanStrip from "@/components/sheet/PlanStrip";
 import { clearDemoContent } from "@/lib/demoContent";
-import { RouteDenied } from "@/components/RouteDenied";
-import { Navigate } from "react-router-dom";
-import { confirmLeave } from "@/lib/dirty";
+import { useItems } from "@/components/ws/useItems";
+import { conditions, firmName, matches, packages, statusSentence } from "@/components/ws/derive";
+import AppHeader from "@/components/AppHeader";
+import GraphView from "@/components/ws/GraphView";
+import ListView from "@/components/ws/ListView";
+import WeekView from "@/components/ws/WeekView";
+import ReportView from "@/components/ws/ReportView";
+import Inspector from "@/components/ws/Inspector";
+import Composer from "@/components/ws/Composer";
+import ToolSheet from "@/components/ws/ToolSheet";
+
+const VIEWS = ["graph", "list", "week", "report"];
+const NEW_TITLE = { group: "New group", task: "New task", milestone: "New milestone", condition: "New question" };
+const useWidth = () => {
+  const [w, setW] = useState(window.innerWidth);
+  useEffect(() => { const f = () => setW(window.innerWidth); window.addEventListener("resize", f); return () => window.removeEventListener("resize", f); }, []);
+  return w;
+};
+const typing = (el) => !!el?.closest?.("input,textarea,select,[contenteditable=true]");
 
 export default function ProjectSheet() {
   const { user } = useAuth();
+  const width = useWidth();
   const [sheet, setSheet] = useState(undefined);
   const [loadError, setLoadError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [tool, setTool] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [assistantOpen, setAssistantOpen] = useState(false);
-  const [selected, setSelected] = useState(null);
   const [tourOpen, setTourOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [showChanges, setShowChanges] = useState(false);
+  const [q, setQ] = useState("");
+  const [view, setViewState] = useState(null);
+  const search = useRef(null), composer = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -41,20 +56,11 @@ export default function ProjectSheet() {
       setLoadError("");
     } catch (e) {
       if (e.response?.status === 402) { window.location.replace("/pilot"); return; }
-
       setLoadError(errList(e).join(" "));
     }
   }, []);
   useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    // Stop files dropped outside the read form from navigating away from the app.
-    const stop = (e) => { if (!e.target.closest?.('[data-testid="read-document-form"]')) e.preventDefault(); };
-    window.addEventListener("dragover", stop);
-    window.addEventListener("drop", stop);
-    return () => { window.removeEventListener("dragover", stop); window.removeEventListener("drop", stop); };
-  }, []);
 
-  // Runs a mutation; returns error list (empty on success). Stale saves reload the sheet.
   const act = useCallback(async (method, url, body, okMsg) => {
     setBusy(true);
     try {
@@ -64,110 +70,143 @@ export default function ProjectSheet() {
       return { ok: true, data };
     } catch (e) {
       const errs = errList(e);
-      if (e.response?.status === 409) {
-        if (url !== "/project/intake") toast.error(errs.join(" "));
-        await load();
-      } else if (e.response?.status !== 422) toast.error(errs.join(" "));
+      if (e.response?.status === 409) { if (url !== "/project/intake") toast.error(errs.join(" ")); await load(); }
+      else if (e.response?.status !== 422) toast.error(errs.join(" "));
       return { ok: false, errors: errs };
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }, [load]);
 
-  const info = useMemo(() => (sheet ? stepInfo(sheet) : null), [sheet]);
-  const stepKey = sheet ? `assemble_step_${sheet.project.project_id}` : null;
-  useEffect(() => { if (info && !selected) setSelected(sessionStorage.getItem(stepKey) || info.current); }, [info, selected, stepKey]);
-  useEffect(() => { if (selected && stepKey) sessionStorage.setItem(stepKey, selected); }, [selected, stepKey]);
+  const rev = sheet?.project.rev;
+  const { items, edges, save, lastBatch, run, undo, adopt } = useItems(rev, load);
+  const pid = sheet?.project.project_id;
+  useEffect(() => {
+    if (!pid || view) return;
+    setViewState(localStorage.getItem(`assemble_view_${pid}`) || (window.innerWidth < 720 ? "list" : "graph"));
+  }, [pid, view]);
+  const setView = (v) => { setViewState(v); localStorage.setItem(`assemble_view_${pid}`, v); };
+
+  const pkgs = useMemo(() => (sheet ? packages(sheet) : []), [sheet]);
+  const conds = useMemo(() => (sheet ? conditions(sheet) : []), [sheet]);
+  const hot = useMemo(() => new Set(showChanges && lastBatch ? lastBatch.touched : []), [showChanges, lastBatch]);
+  const filter = useCallback((x) => matches(q, x.title, x.notes, x.result, x.scope, sheet && firmName(sheet, x.firm_id || x.owner),
+    ...(x.site_ids || []), ...(x.sites || []).flatMap((s) => [s.site_id, s.name])), [q, sheet]);
+
+  useEffect(() => {
+    const key = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); search.current?.focus(); return; }
+      if (e.key === "/" && !typing(e.target)) { e.preventDefault(); composer.current?.openMenu(); return; }
+      if (e.key === "Escape" && !tool && !historyOpen) {
+        if (selectedId) setSelectedId(null);
+        else if (composer.current?.isOpen()) composer.current.close();
+      }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [selectedId, tool, historyOpen]);
 
   if (loadError) return <RouteDenied message={loadError} />;
-  if (sheet === undefined) return <Loading label="Loading your job sheet" />;
+  if (sheet === undefined || !view) return <Loading label="Loading your project" />;
   if (!sheet) return <Navigate to="/projects" replace />;
 
-  const select = (k) => { if (k === selected || confirmLeave()) setSelected(k); };
   const isCanon = sheet.project.synthetic && !!sheet.project.fixture_id;
+  const narrow = width < 720;
+  const target = selectedId && (items.find((i) => i.item_id === selectedId) || pkgs.find((p) => p.id === selectedId) || conds.find((c) => c.id === selectedId));
+  const onAdd = async (k) => {
+    if (!k.startsWith("item:")) { setTool(k); return; }
+    const kind = k.slice(5);
+    const r = await run([{ op: "create", kind, fields: { title: NEW_TITLE[kind] } }], `Added ${NEW_TITLE[kind].toLowerCase()}`);
+    if (r.ok) setSelectedId(r.batch.touched[0]); else toast.error(r.errors.join(" "));
+  };
+  const runOps = async (ops, summary) => { const r = await run(ops, summary); if (!r.ok) toast.error(r.errors.join(" ")); return r; };
+  const doUndo = async (batchId) => { const r = await undo(batchId); if (r.ok) toast.success("Undone"); else toast.error(r.errors.join(" ")); return r; };
+  const showBatch = (b) => { adopt(b); setShowChanges(true); if (b.touched[0]) setSelectedId(null); };
+  const suggestions = items.length ? ["What's still open?", "Summarize the plan"] : ["Organize this job into scope groups", conds.length ? "What's still open?" : "Summarize the plan"];
+  const state = sheet.preview ? "Private draft" : sheet.current ? "Selected for review" : null;
+  const saveText = { saving: "Saving…", saved: "Saved", failed: "Not saved" }[save] || (busy ? "Saving…" : "");
   const reset = async () => { clearDemoContent(); await act("post", "/project/demo-reset", {}, "Example reset"); };
-
-  const props = { sheet, act, busy, goTo: select, user };
+  const viewProps = { sheet, items, pkgs, conds, onSelect: setSelectedId, selectedId, hot, filter };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AppHeader onHistory={sheet ? () => setHistoryOpen(true) : null} />
-      <main className={`mx-auto max-w-[1440px] px-4 pt-6 sm:px-6 min-[1100px]:grid min-[1100px]:grid-cols-[76px_minmax(0,1fr)_288px] min-[1100px]:gap-4 xl:grid-cols-[76px_minmax(0,1fr)_336px] ${tourOpen && isCanon ? "pb-80 sm:pb-64" : "pb-24"}`}>
-        <aside className="no-print hidden min-[1100px]:block">
-          <div className="sticky top-20"><Rail sheet={sheet} info={info} selected={selected} onSelect={select} /></div>
-        </aside>
-        <div className="min-w-0">
-        <div className="flex min-h-[64px] flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 data-testid="project-title" className="mt-1 text-[28px] font-bold leading-tight tracking-tight text-slate-900">
-              {sheet.intake.job_name || sheet.project.name}{sheet.project.synthetic && <SynthBadge />}
-            </h1>
-            {sheet.intake.customer_name && <p data-testid="project-customer" className="mt-1 text-sm text-slate-500">{sheet.intake.customer_name}</p>}
+    <div className="ws flex h-[100dvh] flex-col overflow-hidden bg-slate-50 text-slate-900" data-testid="workspace">
+      <div className="no-print shrink-0"><AppHeader onHistory={() => setHistoryOpen(true)} /></div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="no-print border-b border-slate-200 bg-white" data-testid="workspace-header">
+          <div className="mx-auto flex max-w-[1440px] flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 data-testid="project-title" className="break-words text-[26px] font-bold leading-tight tracking-tight text-slate-900">{sheet.intake.job_name || sheet.project.name}</h1>
+                {sheet.project.synthetic && <SynthBadge />}
+                {state && <span data-testid="state-chip" className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${sheet.preview ? "border border-dashed border-amber-400 bg-amber-50 text-amber-900" : "bg-[#E4EFF6] text-[#215273]"}`}>{state}</span>}
+                {saveText && <span data-testid="save-state" aria-live="polite" className={`text-xs ${save === "failed" ? "text-red-700" : "text-slate-500"}`}>{saveText}</span>}
+              </div>
+              <p data-testid="status-sentence" className="mt-0.5 text-sm text-slate-500">{[sheet.intake.customer_name, statusSentence(sheet)].filter(Boolean).join(" · ")}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2" data-testid="workspace-toolbar">
+              <div className="flex rounded-md border border-slate-200 bg-slate-50 p-0.5" role="tablist" aria-label="Views">
+                {VIEWS.map((v) => (
+                  <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => setView(v)} data-testid={`toolbar-view-${v}`}
+                    className={`rounded px-3 py-1 text-[13px] font-semibold capitalize transition-colors ${view === v ? "bg-[#1A2838] text-white" : "text-slate-600 hover:text-slate-900"}`}>{v}</button>
+                ))}
+              </div>
+              <label className="flex h-8 w-[200px] items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5">
+                <Search className="h-3.5 w-3.5 text-slate-500" /><span className="sr-only">Search this project</span>
+                <input ref={search} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setQ("")} placeholder="Filter" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none" data-testid="toolbar-search" />
+                {q && <button type="button" onClick={() => setQ("")} className="text-[11px] text-[#215273]" data-testid="toolbar-search-clear">Clear</button>}
+              </label>
+              {lastBatch && (
+                <Button size="sm" variant={showChanges ? "default" : "outline"} className="h-8" aria-pressed={showChanges} onClick={() => setShowChanges(!showChanges)} data-testid="toolbar-show-changes">
+                  <Eye className="h-3.5 w-3.5" /> Show changes
+                </Button>
+              )}
+              {isCanon && <Button size="sm" variant="ghost" className="h-8" onClick={() => setTourOpen(true)} data-testid="demo-tour-open"><Sparkles className="h-3.5 w-3.5" /> Guided tour</Button>}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" variant="outline" className="h-8 w-8" aria-label="More" data-testid="header-overflow"><MoreHorizontal className="h-4 w-4" /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem onSelect={() => setTool("details")} data-testid="overflow-details">Job details</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setTool("check")} data-testid="overflow-check">Plan and checks</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setTool("review")} data-testid="overflow-review">Prepare review</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setTool("decide")} data-testid="overflow-decide">Decide on changes</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setTool("quote")} data-testid="overflow-quote">Customer quote</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => { setView("report"); setTimeout(() => window.print(), 300); }} data-testid="overflow-print">Print report</DropdownMenuItem>
+                  {sheet.project.synthetic && user?.demo_key === "organizer" && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setResetOpen(true)} data-testid="demo-reset-button">Reset this example</DropdownMenuItem></>}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-          <div className="no-print flex flex-wrap items-center gap-1">
-        <Button size="sm" variant="outline" className="h-9 min-[1100px]:hidden" onClick={() => setAssistantOpen(true)} data-testid="assistant-open">
-          <MessageSquare className="h-4 w-4" /> Assistant
-        </Button>
-        {isCanon && (
-          <Button size="sm" variant="ghost" className="h-7" onClick={() => setTourOpen(true)} data-testid="demo-tour-open">
-            <Sparkles className="h-3.5 w-3.5" /> Guided tour
-          </Button>
-        )}
-        {sheet.project.synthetic && user?.demo_key === "organizer" && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" variant="ghost" className="h-7" disabled={busy} data-testid="demo-reset-button">
-                <RotateCcw className="h-3.5 w-3.5" /> Reset this example
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Reset this example?</AlertDialogTitle>
-                <AlertDialogDescription>Only this example returns to its starting point. Your other projects are not changed.</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel data-testid="demo-reset-cancel">Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={reset} data-testid="demo-reset-confirm">Reset</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
-          </div>
+          {q && conds.length > 0 && <p className="mx-auto max-w-[1440px] px-4 pb-2 sm:px-6 text-xs text-amber-800" data-testid="filter-conditions-note">{conds.length} open condition{conds.length === 1 ? "" : "s"} in this project</p>}
         </div>
-        <div className="min-[1100px]:hidden">
-          <PlanStrip sheet={sheet} goTo={select} />
-          <Stepper info={info} selected={selected} onSelect={select} />
+        <div className="flex min-h-0 flex-1">
+          <main className="min-w-0 flex-1" data-testid={`view-${view}`}>
+            {view === "graph" && <GraphView {...viewProps} edges={edges} focus={hot.size ? hot : null} />}
+            {view === "list" && <ListView {...viewProps} run={runOps} />}
+            {view === "week" && <WeekView {...viewProps} />}
+            {view === "report" && <ReportView {...viewProps} />}
+          </main>
+          {target && (
+            <div className={narrow ? "fixed inset-0 z-40" : "no-print shrink-0"}>
+              <Inspector target={target} sheet={sheet} items={items} edges={edges} run={runOps} onClose={() => setSelectedId(null)} openTool={setTool} />
+            </div>
+          )}
         </div>
-        {sheet.preview && (
-          <div className="no-print mt-4 flex flex-wrap gap-2 text-xs" data-testid="plan-scope-chips">
-            <span className="rounded-full border border-dashed border-amber-400 bg-amber-50 px-2.5 py-1 font-semibold text-amber-900" data-testid="chip-draft">Private draft</span>
-          </div>
-        )}
-        <div className="mt-4"><TraceGraph rev={`${sheet.project.rev}:${(sheet.current?.partners || []).map((x) => x.status).join(",")}`} /></div>
-        <div key={selected} className="rise mt-4">
-          {selected === "intake" && <IntakeTask key={sheet.project.rev} {...props} />}
-          {selected === "draft" && <DraftTask {...props} />}
-          {selected === "ask" && <PartnersTask {...props} />}
-          {selected === "decide" && <DecideTask {...props} />}
-        </div>
-        </div>
-        <aside className="no-print hidden min-[1100px]:block">
-          <div className="sticky top-20 flex max-h-[calc(100vh-6rem)] flex-col gap-4 overflow-y-auto">
-            <PlanStrip sheet={sheet} goTo={select} stacked />
-            <AssistantPanel sheet={sheet} onSheet={setSheet} reload={load} className="min-h-[280px] flex-1" />
-          </div>
-        </aside>
-      </main>
-      <Sheet open={assistantOpen} onOpenChange={setAssistantOpen}>
-        <SheetContent side="right" className="flex w-full flex-col p-0 sm:max-w-md" data-testid="assistant-drawer">
-          <SheetTitle className="sr-only">Assistant</SheetTitle>
-          {assistantOpen && <AssistantPanel sheet={sheet} onSheet={setSheet} reload={load} className="m-0 flex-1 rounded-none border-0" />}
-        </SheetContent>
-      </Sheet>
+        <div className="no-print"><Composer ref={composer} sheet={sheet} onSheet={setSheet} onAdopt={(b) => adopt(b)} onUndo={doUndo} onShow={showBatch} onAdd={onAdd} suggestions={suggestions} /></div>
+      </div>
+      <ToolSheet tool={tool} onClose={() => setTool(null)} onTool={setTool} sheet={sheet} act={act} busy={busy} user={user} />
       <HistoryDrawer open={historyOpen} onOpenChange={setHistoryOpen} rev={sheet.project.rev} />
-      {isCanon && tourOpen && (
-        <DemoTour sheet={sheet} act={act} busy={busy} goTo={setSelected} onClose={() => { setTourOpen(false); localStorage.setItem("assemble_tour_closed", "1"); }} />
-      )}
+      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset this example?</AlertDialogTitle>
+            <AlertDialogDescription>Only this example returns to its starting point. Your other projects are not changed.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="demo-reset-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={reset} data-testid="demo-reset-confirm">Reset</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {isCanon && tourOpen && <DemoTour sheet={sheet} act={act} busy={busy} goTo={(step) => setTool({ intake: "details", draft: "check", ask: "review", decide: "decide" }[step] || null)} onClose={() => setTourOpen(false)} />}
     </div>
   );
 }

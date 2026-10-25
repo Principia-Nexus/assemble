@@ -142,3 +142,12 @@ h1, h2, h3 { font-weight: 500; letter-spacing: -0.01em; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
 }
+
+.ws-dots { background-color: #F8FAFC; background-image: radial-gradient(#DCE3EC 1px, transparent 1px); background-size: 16px 16px; }
+@keyframes ws-panel-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+@keyframes ws-tray-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.ws-panel-in { animation: ws-panel-in .2s ease-out; }
+.ws-tray-in { animation: ws-tray-in .2s ease-out; }
+.ws-card { animation: ws-tray-in .25s ease-out backwards; }
+@media (prefers-reduced-motion: reduce) { .ws-panel-in, .ws-tray-in, .ws-card { animation: none; } }
+@media print { .ws { height: auto !important; overflow: visible !important; background: #fff; } .ws main, .ws main > div { overflow: visible !important; height: auto !important; } }
