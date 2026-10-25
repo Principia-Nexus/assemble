@@ -1,9 +1,12 @@
 import json, os, urllib.request, urllib.error
 import stripe
 
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 base = os.environ["INTEGRATION_PROXY_URL"]
-job_id = "984f3c10-9519-4aba-98b1-236773dc9de9"
-key = "sk-emergent-4Ea7d07C76f81319aE"
+job_id = os.environ["job_id"]
+key = os.environ["EMERGENT_LLM_KEY"]
 req = urllib.request.Request(base + "/stripe/sandboxes", data=json.dumps({"job_id": job_id}).encode(),
                              headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"}, method="POST")
 try:
@@ -22,8 +25,10 @@ with open("/app/memory/.stripe_env", "w") as f:
 prod = next((p for p in stripe.Product.list(active=True).auto_paging_iter()
              if p.to_dict().get("metadata", {}).get("emergent_product_id") == "assemble_pilot"), None)
 if not prod:
-    prod = stripe.Product.create(name="Assemble pilot (90 days)", tax_code="txcd_10103001",
+    prod = stripe.Product.create(name="Assemble pilot", tax_code="txcd_10103001",
                                  metadata={"managed_by": "emergent", "emergent_product_id": "assemble_pilot"})
+elif prod.name != "Assemble pilot":
+    stripe.Product.modify(prod.id, name="Assemble pilot")
 ex = stripe.Price.list(lookup_keys=["assemble_pilot_90d"], active=True, limit=1).data
 if ex and (ex[0].unit_amount != 9900 or ex[0].currency != "usd"):
     stripe.Price.modify(ex[0].id, active=False); ex = []

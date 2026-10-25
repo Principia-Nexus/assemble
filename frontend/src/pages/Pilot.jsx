@@ -19,7 +19,6 @@ function Shell({ children, testId }) {
   );
 }
 
-const fmtDay = (iso) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
 export function PilotOffer({ notice }) {
   const { user, logout } = useAuth();
@@ -40,7 +39,7 @@ export function PilotOffer({ notice }) {
       <div className="rounded-md border border-slate-200 bg-white p-6">
         <h1 className="text-2xl font-semibold text-slate-900">Assemble pilot</h1>
         <p data-testid="pilot-price" className="mt-2 text-3xl font-bold tabular-nums text-slate-900">$99 <span className="text-base font-medium text-slate-600">one-time</span></p>
-        <p className="mt-1 text-sm text-slate-600">90 days of access for your business.</p>
+        <p className="mt-1 text-sm text-slate-600">Full access for your business.</p>
         <ul className="mt-5 space-y-2 text-sm text-slate-800">
           {BULLETS.map((b) => <li key={b} className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />{b}</li>)}
         </ul>
@@ -65,7 +64,7 @@ export function PaymentSuccess() {
       try {
         const { data } = await api.get(`/billing/status/${sid}`);
         if (stop) return;
-        if (data.payment_status === "paid" && data.access.active) return setState({ phase: "paid", until: data.access.until });
+        if (data.payment_status === "paid" && data.access.active) return setState({ phase: "paid" });
         if (["expired", "failed"].includes(data.payment_status)) return setState({ phase: "failed" });
         if (++tries.current >= 10) return setState({ phase: "pending" });
         setTimeout(poll, 2000);
@@ -82,7 +81,6 @@ export function PaymentSuccess() {
           <>
             <p className="text-xl font-semibold text-slate-900">Pilot access active</p>
             <p className="text-sm text-slate-600">Test payment complete. No money was charged.</p>
-            <p className="text-xs text-slate-500">Access until {fmtDay(state.until)}.</p>
             <Button asChild className="h-11 w-full" data-testid="payment-open-workspace"><Link to="/project">Open workspace</Link></Button>
           </>
         )}
@@ -98,7 +96,15 @@ export function PaymentSuccess() {
             <Button asChild data-testid="payment-try-again"><Link to="/pilot">Try again</Link></Button>
           </>
         )}
-        {state.phase === "error" && <p className="text-sm text-red-700">{state.msg}</p>}
+        {state.phase === "error" && (
+          <>
+            <p className="text-sm text-red-700">{state.msg}</p>
+            <div className="flex justify-center gap-2">
+              <Button asChild variant="outline" data-testid="payment-back-to-pilot"><Link to="/pilot">Back to pilot</Link></Button>
+              <Button asChild data-testid="payment-error-open-workspace"><Link to="/project">Open workspace</Link></Button>
+            </div>
+          </>
+        )}
       </div>
     </Shell>
   );

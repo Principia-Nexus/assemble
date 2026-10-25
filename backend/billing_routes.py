@@ -1,8 +1,9 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
 from core import db, current_user, now_iso
@@ -11,18 +12,16 @@ router = APIRouter(prefix="/api")
 stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET"]
 LOOKUP_KEY = "assemble_pilot_90d"
-AMOUNT, CURRENCY, DAYS = 9900, "usd", 90
+AMOUNT, CURRENCY = 9900, "usd"
 
 
 async def pilot_state(user):
     if user.get("sandbox_id"):
-        return {"required": False, "active": True, "demo": True, "until": None}
+        return {"required": False, "active": True, "demo": True}
     if not user.get("firm_id"):
-        return {"required": False, "active": False, "demo": False, "until": None}
-    f = await db.firms.find_one({"firm_id": user["firm_id"]}, {"_id": 0, "pilot_until": 1})
-    until = (f or {}).get("pilot_until")
-    active = bool(until) and until > now_iso()
-    return {"required": True, "active": active, "demo": False, "until": until}
+        return {"required": False, "active": False, "demo": False}
+    f = await db.firms.find_one({"firm_id": user["firm_id"]}, {"_id": 0, "pilot_active": 1})
+    return {"required": True, "active": bool((f or {}).get("pilot_active")), "demo": False}
 
 
 async def require_pilot(user):
@@ -44,9 +43,8 @@ async def fulfil(session):
         {"$set": {"status": "completed", "payment_status": "paid", "stripe_payment_intent_id": session.get("payment_intent"),
                   "updated_at": now_iso()}})
     if res.modified_count:
-        start = datetime.now(timezone.utc)
         await db.firms.update_one({"firm_id": tx["firm_id"]}, {"$set": {
-            "pilot_until": (start + timedelta(days=DAYS)).isoformat(), "pilot_started": start.isoformat(),
+            "pilot_active": True, "pilot_started": datetime.now(timezone.utc).isoformat(),
             "pilot_session_id": session["id"], "pilot_mode": os.environ["STRIPE_MODE"]}})
 
 
@@ -60,7 +58,10 @@ class CheckoutIn(BaseModel):
 
 
 @router.post("/billing/checkout")
-async def checkout(body: CheckoutIn, user=Depends(current_user)):
+async def checkout(body: CheckoutIn, request: Request, user=Depends(current_user)):
+    origin = body.origin_url.rstrip("/")
+    if origin != (request.headers.get("origin") or "").rstrip("/"):
+        raise HTTPException(400, "Checkout must start from this site.")
     s = await pilot_state(user)
     if not s["required"]:
         raise HTTPException(400, "This account doesn't need pilot access.")
@@ -68,17 +69,18 @@ async def checkout(body: CheckoutIn, user=Depends(current_user)):
         raise HTTPException(409, "Pilot access is already active for your business.")
     pending = await db.payment_transactions.find_one({"firm_id": user["firm_id"], "payment_status": "pending"}, sort=[("created_at", -1)])
     if pending:
-        sess = stripe.checkout.Session.retrieve(pending["session_id"])
+        sess = await run_in_threadpool(stripe.checkout.Session.retrieve, pending["session_id"])
         if sess.status == "complete":
             await fulfil(sess.to_dict())
             raise HTTPException(409, "Your earlier payment is being confirmed. Refresh the status instead of paying again.")
         if sess.status == "open":
             return {"checkout_url": sess.url, "session_id": sess.id}
-    price = stripe.Price.list(lookup_keys=[LOOKUP_KEY], active=True, limit=1).data
+        await db.payment_transactions.update_one({"session_id": sess.id}, {"$set": {"status": "expired", "payment_status": "expired"}})
+    price = (await run_in_threadpool(stripe.Price.list, lookup_keys=[LOOKUP_KEY], active=True, limit=1)).data
     if not price:
         raise HTTPException(503, "Checkout is unavailable right now. Try again shortly; the demo is still open.")
-    origin = body.origin_url.rstrip("/")
-    sess = stripe.checkout.Session.create(
+    sess = await run_in_threadpool(
+        stripe.checkout.Session.create,
         line_items=[{"price": price[0].id, "quantity": 1}], mode="payment",
         success_url=f"{origin}/payment/success?session_id={{CHECKOUT_SESSION_ID}}", cancel_url=f"{origin}/payment/cancel",
         customer_email=user.get("email"), metadata={"firm_id": user["firm_id"], "user_id": user["user_id"], "lookup_key": LOOKUP_KEY},
@@ -97,7 +99,7 @@ async def status(session_id: str, user=Depends(current_user)):
         raise HTTPException(404, "Payment not found for your business.")
     if tx["payment_status"] != "paid":
         try:
-            sess = stripe.checkout.Session.retrieve(session_id)
+            sess = await run_in_threadpool(stripe.checkout.Session.retrieve, session_id)
             await fulfil(sess.to_dict())
             if sess.status == "expired":
                 await db.payment_transactions.update_one({"session_id": session_id}, {"$set": {"status": "expired", "payment_status": "expired"}})

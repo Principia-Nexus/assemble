@@ -91,6 +91,12 @@ async def check_email(body: EmailIn, request: Request):
     email = body.email.strip().lower()
     if not EMAIL_RE.match(email):
         raise HTTPException(422, "Enter a valid email address.")
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[-1].strip()
+    window = now().strftime("%Y%m%d%H") + str(now().minute // 10)
+    r = await db.email_checks.find_one_and_update({"ip": ip, "window": window}, {"$inc": {"count": 1}, "$setOnInsert": {"at": now()}},
+                                                  upsert=True, return_document=True)
+    if r["count"] > 30:
+        raise HTTPException(429, "Too many lookups. Wait a few minutes and try again.")
     u = await db.users.find_one({"email": email}, {"_id": 0, "user_id": 1})
     return {"exists": bool(u)}
 

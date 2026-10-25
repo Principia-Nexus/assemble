@@ -76,10 +76,12 @@ function DemoAccounts({ onUse, busy }) {
   );
 }
 
-function Reveal({ show, children }) {
+function Reveal({ show, children, testId, pad = "pt-4" }) {
   return (
-    <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${show ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} aria-hidden={!show} inert={show ? undefined : ""}>
-      <div className="space-y-4 overflow-hidden px-px pb-px">{children}</div>
+    <div data-testid={testId} className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${show ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} aria-hidden={!show} inert={show ? undefined : ""}>
+      <div className="min-h-0 overflow-hidden">
+        <div className={`space-y-4 px-px pb-px ${pad}`}>{children}</div>
+      </div>
     </div>
   );
 }
@@ -141,22 +143,28 @@ export default function Login() {
             Sign in with the email the organizer invited to open your private review.
           </p>
         )}
-        {step === "email" && <DemoAccounts busy={busy} onUse={(email, pw) => run(() => login(email, pw))} />}
-        <form className="space-y-4" data-testid="auth-form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-          <Field id="email" label="Email" type="email" value={form.email} required data-testid="login-email-input"
+        <div>
+        <Reveal show={step === "email"} testId="demo-reveal" pad="pb-8">
+          <DemoAccounts busy={busy} onUse={(email, pw) => run(() => login(email, pw))} />
+        </Reveal>
+        <form className="flex flex-col" data-testid="auth-form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+          <Label htmlFor="email" className="sr-only">Email</Label>
+          <Input id="email" type="email" placeholder="Enter email" autoComplete="email" value={form.email} required data-testid="login-email-input"
+            className="h-12 text-center text-base placeholder:text-slate-400 sm:text-lg"
             onChange={(e) => { setForm({ ...form, email: e.target.value }); if (step !== "email") setStep("email"); }} />
           <Reveal show={step === "register"}>
+            <p data-testid="register-notice" className="text-xs text-slate-500">No account yet for this email. Add your details to create one.</p>
             <Field id="name" label="Your name" value={form.name} onChange={set("name")} required={step === "register"} data-testid="register-name-input" />
             <Field id="firm" label="Firm name" value={form.firm_name} onChange={set("firm_name")} required={step === "register"} data-testid="register-firm-input" />
           </Reveal>
           <Reveal show={step !== "email"}>
             <Field id="password" label="Password" type="password" value={form.password} onChange={set("password")} required={step !== "email"} data-testid="login-password-input" />
           </Reveal>
-          <Button type="submit" className="h-11 w-full" disabled={busy} data-testid="login-submit-button">
+          <Button type="submit" className="mt-4 h-11 w-full" disabled={busy} data-testid="login-submit-button">
             {busy ? "One moment…" : step === "email" ? "Continue" : step === "signin" ? "Sign in" : "Create account"}
           </Button>
-          {step === "register" && <p data-testid="register-notice" className="text-center text-xs text-slate-500">No account yet for this email. Add your details to create one.</p>}
         </form>
+        </div>
         {error && <p data-testid="signin-error" className="-mt-4 text-sm text-red-700">{error}</p>}
         <GoogleButton next={next} />
       </section>

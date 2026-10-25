@@ -1,6 +1,5 @@
 # Registered (non-demo) test organizers need pilot access; grant it directly in Mongo after a successful register.
 import os
-from datetime import datetime, timedelta, timezone
 
 import requests
 from dotenv import load_dotenv
@@ -16,8 +15,7 @@ def _request(self, method, url, *a, **kw):
     if method.upper() == "POST" and str(url).endswith("/api/auth/register") and r.status_code == 200:
         firm_id = r.json().get("firm_id")
         if firm_id:
-            until = (datetime.now(timezone.utc) + timedelta(days=90)).isoformat()
-            _db.firms.update_one({"firm_id": firm_id}, {"$set": {"pilot_until": until}})
+            _db.firms.update_one({"firm_id": firm_id}, {"$set": {"pilot_active": True}})
     return r
 
 

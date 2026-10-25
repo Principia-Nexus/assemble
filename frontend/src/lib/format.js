@@ -43,10 +43,4 @@ export const CHECK = {
   unknown: { label: "Unknown", tone: "unknown" },
 };
 
-export const OVERALL = {
-  pass: { label: "Passes every check", tone: "confirmed" },
-  fail: { label: "Fails at least one check", tone: "declined" },
-  unknown: { label: "Incomplete: some inputs unknown", tone: "unknown" },
-};
-
 export const slug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
