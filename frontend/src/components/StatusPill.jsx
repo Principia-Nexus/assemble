@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
 
 const TONES = {
-  confirmed: "text-emerald-700 bg-emerald-50 border-emerald-200 [--dot:#10B981]",
+  confirmed: "text-emerald-700 bg-emerald-50 border-emerald-200 [--dot:#1E7B5C]",
   pending: "text-amber-700 bg-amber-50 border-amber-200 [--dot:#F59E0B]",
-  declined: "text-red-700 bg-red-50 border-red-200 [--dot:#EF4444]",
+  declined: "text-red-700 bg-red-50 border-red-200 [--dot:#A93A3A]",
   unknown: "text-slate-600 bg-slate-100 border-slate-300 [--dot:#94A3B8]",
 };
 

@@ -95,3 +95,20 @@
 h1, h2, h3 { font-weight: 500; letter-spacing: -0.01em; }
 .font-bold, .font-extrabold { font-weight: 600; }
 .eyebrow { color: #0E5E8C; }
+
+.bg-emerald-50 { background-color: #EAF5F0; }
+.bg-emerald-200 { background-color: #BFE0D2; }
+.border-emerald-200 { border-color: #BFE0D2; }
+.border-emerald-300 { border-color: #9DCFBB; }
+.text-emerald-700 { color: #1E7B5C; }
+.text-emerald-800 { color: #17614A; }
+.bg-red-50 { background-color: #FBEFEF; }
+.bg-red-100 { background-color: #F6DFDF; }
+.border-red-200 { border-color: #EBC5C5; }
+.text-red-300 { color: #DFA5A5; }
+.text-red-700 { color: #A93A3A; }
+.text-red-800 { color: #8C2F2F; }
+.text-red-900 { color: #6E2525; }
+
+[data-sonner-toaster][data-rich-colors="true"] [data-sonner-toast][data-type="success"] { background: #EAF5F0; border-color: #BFE0D2; color: #17614A; }
+[data-sonner-toaster][data-rich-colors="true"] [data-sonner-toast][data-type="error"] { background: #FBEFEF; border-color: #EBC5C5; color: #8C2F2F; }
