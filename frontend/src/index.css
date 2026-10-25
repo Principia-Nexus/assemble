@@ -5,25 +5,25 @@
 
 @layer base {
     :root {
-        --background: 38 40% 85%;
-        --foreground: 213 35% 16%;
-        --card: 39 45% 91%;
-        --card-foreground: 213 35% 16%;
-        --popover: 39 45% 92%;
-        --popover-foreground: 213 35% 16%;
-        --primary: 213 35% 16%;
-        --primary-foreground: 38 45% 88%;
-        --secondary: 38 35% 80%;
-        --secondary-foreground: 213 35% 16%;
-        --muted: 38 30% 80%;
-        --muted-foreground: 213 15% 34%;
-        --accent: 38 35% 78%;
-        --accent-foreground: 0 68% 17%;
+        --background: 30 25% 98%;
+        --foreground: 22 30% 13%;
+        --card: 0 0% 100%;
+        --card-foreground: 22 30% 13%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 22 30% 13%;
+        --primary: 21 30% 22%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 28 30% 94%;
+        --secondary-foreground: 22 30% 13%;
+        --muted: 28 25% 93%;
+        --muted-foreground: 22 12% 40%;
+        --accent: 28 35% 91%;
+        --accent-foreground: 21 35% 25%;
         --destructive: 0 65% 38%;
-        --destructive-foreground: 38 45% 92%;
-        --border: 37 28% 70%;
-        --input: 37 28% 66%;
-        --ring: 213 35% 16%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 28 25% 87%;
+        --input: 28 22% 80%;
+        --ring: 21 30% 22%;
         --radius: 0.375rem;
     }
 }
@@ -40,8 +40,8 @@
         -webkit-font-smoothing: antialiased;
     }
     ::selection {
-        background: #fde68a;
-        color: #0f172a;
+        background: #E8D5C4;
+        color: #2B1E17;
     }
 }
 
@@ -68,7 +68,7 @@
 }
 
 .tour-focus {
-    outline: 3px solid #0f172a;
+    outline: 3px solid #4A3428;
     outline-offset: 4px;
     border-radius: 6px;
     transition: outline-color 0.3s ease;
@@ -79,19 +79,19 @@
 }
 
 /* Cream / navy / maroon theme mapped onto existing utility classes */
-.bg-white { background-color: #F2EADA; }
-.bg-slate-50, .bg-slate-100 { background-color: #E6D9BF; }
-.bg-slate-900 { background-color: #1B2838; }
-.hover\:bg-slate-50:hover { background-color: #E2D3B6; }
-.text-slate-900, .text-slate-800 { color: #1B2838; }
-.text-slate-700 { color: #2E3B4C; }
-.text-slate-600 { color: #45505E; }
-.text-slate-500 { color: #5E6672; }
-.border-slate-200, .border-slate-100 { border-color: #CDBC9C; }
-.divide-slate-100 > * + *, .divide-slate-200 > * + * { border-color: #CDBC9C; }
-.border-slate-300 { border-color: #B9A684; }
-.border-slate-900 { border-color: #1B2838; }
-.bg-slate-900.text-white, .bg-slate-900 .text-white { color: #EDE3CF; }
+.bg-white { background-color: #FFFFFF; }
+.bg-slate-50, .bg-slate-100 { background-color: #F6F1EC; }
+.bg-slate-900 { background-color: #4A3428; }
+.hover\:bg-slate-50:hover { background-color: #F1E9E1; }
+.text-slate-900, .text-slate-800 { color: #2B1E17; }
+.text-slate-700 { color: #4A3A30; }
+.text-slate-600 { color: #6B5A4E; }
+.text-slate-500 { color: #8A7769; }
+.border-slate-200, .border-slate-100 { border-color: #E6DCD3; }
+.divide-slate-100 > * + *, .divide-slate-200 > * + * { border-color: #E6DCD3; }
+.border-slate-300 { border-color: #D4C4B6; }
+.border-slate-900 { border-color: #4A3428; }
+.bg-slate-900.text-white, .bg-slate-900 .text-white { color: #FFFFFF; }
 h1, h2, h3 { font-weight: 500; letter-spacing: -0.01em; }
 .font-bold, .font-extrabold { font-weight: 600; }
-.eyebrow { color: #4A1515; }
+.eyebrow { color: #7A5240; }

@@ -113,7 +113,7 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#E8DCC4]">
+    <div className="flex min-h-screen items-center justify-center bg-[#FFFFFF]">
       <section className="flex w-full max-w-md flex-col justify-center gap-8 px-5 py-10 sm:px-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <Brand />
