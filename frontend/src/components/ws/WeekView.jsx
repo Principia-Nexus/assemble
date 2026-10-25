@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { firmName, planVersion } from "./derive";
+import { firmName, firmTone, planVersion } from "./derive";
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const addDays = (s, n) => { const d = new Date(`${s}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
@@ -9,15 +9,13 @@ const monthStart = (s) => `${s.slice(0, 7)}-01`;
 const addMonths = (s, n) => { const d = new Date(`${monthStart(s)}T00:00:00Z`); d.setUTCMonth(d.getUTCMonth() + n); return iso(d); };
 const fmt = (s, o) => new Date(`${s}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", ...o });
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const TONES = ["bg-[#E4EFF6] text-[#215273] border-[#215273]/30", "bg-[#FDF1DC] text-[#8A5208] border-[#B4690E]/30", "bg-[#E3F2EA] text-[#1E6B4F] border-[#1E7B5C]/30",
-  "bg-[#F6E6EA] text-[#8E2F45] border-[#A93A55]/30", "bg-[#ECE9F6] text-[#4B3F8A] border-[#5B4DA8]/30", "bg-[#EEF3DC] text-[#4D6114] border-[#6B8A1C]/30"];
 const TODAY = iso(new Date());
 
 function useEvents(sheet, items, filter) {
   return useMemo(() => {
     const ev = [], start = sheet.intake.start_date, v = planVersion(sheet);
     if (v && start) {
-      const m0 = monday(start), owners = [];
+      const m0 = monday(start);
       const by = {};
       for (const s of v.sites || []) {
         const a = v.assignments?.[s.site_id];
@@ -26,9 +24,8 @@ function useEvents(sheet, items, filter) {
       }
       for (const [k, sites] of Object.entries(by)) {
         const [owner, w] = k.split("|");
-        if (!owners.includes(owner)) owners.push(owner);
         const from = addDays(m0, 7 * (w - 1));
-        ev.push({ key: `plan-${k}`, from, to: addDays(from, 4), kind: "plan", tone: TONES[owners.indexOf(owner) % TONES.length], label: `${firmName(sheet, owner)} · ${sites.join(", ")}`, short: firmName(sheet, owner), select: `plan-${owner}` });
+        ev.push({ key: `plan-${k}`, from, to: addDays(from, 4), kind: "plan", tone: firmTone(sheet, owner).bar, label: `${firmName(sheet, owner)} · ${sites.join(", ")}`, short: firmName(sheet, owner), select: `plan-${owner}` });
       }
     }
     for (const it of items) {

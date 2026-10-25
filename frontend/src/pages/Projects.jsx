@@ -63,7 +63,6 @@ function ProjectRow({ p }) {
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2 text-base font-semibold text-slate-900">
             {p.name}
-            {p.synthetic && <span className="rounded-sm border border-slate-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">Example</span>}
           </p>
           <p className="mt-0.5 truncate text-sm text-slate-500">{p.customer || "Customer not set"}</p>
         </div>

@@ -186,7 +186,7 @@ export default function GraphView({ sheet, items, edges, pkgs, conds, selectedId
             {empty && <p data-testid="graph-empty" className="max-w-md text-sm text-[#64748B]">Nothing here yet. Describe the job below, or use Add to enter a work item.</p>}
             {visiblePkgs.length > 0 && (
               <Frame title={sheet.preview ? "Plan · private draft" : sheet.current ? "Plan" : "Firms and sites"} count={`${visiblePkgs.length} package${visiblePkgs.length === 1 ? "" : "s"}`} testId="graph-plan-frame" open={!closed.plan} onToggle={() => toggle("plan")}>
-                {visiblePkgs.map((p) => wrap(p.id, <PackageCard pkg={p} selected={selectedId === p.id} onSelect={onSelect} cardRef={setRef(p.id)} />))}
+                {visiblePkgs.map((p) => wrap(p.id, <PackageCard pkg={p} sheet={sheet} selected={selectedId === p.id} onSelect={onSelect} cardRef={setRef(p.id)} />))}
               </Frame>
             )}
             {conds.length > 0 && (

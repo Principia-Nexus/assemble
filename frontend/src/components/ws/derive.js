@@ -66,3 +66,22 @@ export function matches(q, ...texts) {
   const n = q.toLowerCase();
   return texts.some((t) => (t || "").toString().toLowerCase().includes(n));
 }
+
+// One colour per firm, used wherever that firm appears (card dot, site chips, calendar bars).
+export const FIRM_TONES = [
+  { dot: "bg-[#2D6A9F]", chip: "bg-[#E4EFF6] text-[#215273]", bar: "bg-[#E4EFF6] text-[#215273] border-[#2D6A9F]/30" },
+  { dot: "bg-[#C77A12]", chip: "bg-[#FDF1DC] text-[#8A5208]", bar: "bg-[#FDF1DC] text-[#8A5208] border-[#C77A12]/30" },
+  { dot: "bg-[#2E8B65]", chip: "bg-[#E3F2EA] text-[#1E6B4F]", bar: "bg-[#E3F2EA] text-[#1E6B4F] border-[#2E8B65]/30" },
+  { dot: "bg-[#B5475F]", chip: "bg-[#F6E6EA] text-[#8E2F45]", bar: "bg-[#F6E6EA] text-[#8E2F45] border-[#B5475F]/30" },
+  { dot: "bg-[#6A5BC0]", chip: "bg-[#ECE9F6] text-[#4B3F8A]", bar: "bg-[#ECE9F6] text-[#4B3F8A] border-[#6A5BC0]/30" },
+  { dot: "bg-[#7C9A24]", chip: "bg-[#EEF3DC] text-[#4D6114]", bar: "bg-[#EEF3DC] text-[#4D6114] border-[#7C9A24]/30" },
+];
+const OWN_TONE = { dot: "bg-[#1A2838]", chip: "bg-[#E2E8F0] text-[#1A2838]", bar: "bg-[#E2E8F0] text-[#1A2838] border-[#1A2838]/25" };
+const NONE_TONE = { dot: "bg-[#CBD5E1]", chip: "bg-[#F1F5F9] text-[#64748B]", bar: "bg-[#F1F5F9] text-[#64748B] border-[#CBD5E1]" };
+export function firmTone(sheet, owner) {
+  if (owner === "own") return OWN_TONE;
+  const ids = (sheet.intake.partners || []).map((p) => p.partner_id);
+  const i = ids.indexOf(owner);
+  return i < 0 ? NONE_TONE : FIRM_TONES[i % FIRM_TONES.length];
+}
+export const RESP_TONE = { confirmed: "text-[#1E7B5C]", confirmed_conditional: "text-[#1E7B5C]", declined: "text-[#A93A3A]", change_requested: "text-[#A93A3A]", expired: "text-[#A93A3A]" };
