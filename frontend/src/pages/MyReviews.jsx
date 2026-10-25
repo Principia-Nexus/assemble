@@ -27,7 +27,7 @@ export default function MyReviews() {
           {!data && !error && <p className="text-sm text-slate-500">Loading…</p>}
           {data?.length === 0 && (
             <div data-testid="my-reviews-empty" className="rounded-md border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-              No review links yet. When an organizer shares a link with you, open it and sign in with the invited email.
+              No review links yet.
             </div>
           )}
           {data?.map((r) => (
