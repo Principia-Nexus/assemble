@@ -177,6 +177,9 @@ def snapshot_of(q, p, firm_name, ready=None):
         con = list(snap.get("conditions") or [])
         con += [c["text"] for c in ready["conditions"] if c["decision"] == "in_offer" and c["text"] not in con]
         exc += [c["text"] for c in ready["conditions"] if c["decision"] == "excluded" and c["text"] not in exc]
+        key = lambda t: re.sub(r"[^a-z0-9]", "", str(t).lower())  # noqa: E731
+        settled = {key(c["text"]) for c in ready["conditions"] if c["decision"] in ("resolved", "excluded")}
+        con = [x for x in con if key(x) not in settled]
         names = sorted(firm_aliases(p["intake"].get("partners") or []), key=len, reverse=True)
         pat = re.compile(r"\b(?:" + "|".join(re.escape(n) for n in names) + r")(?:'s)?(?!\w)", re.I) if names else None
         email = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")

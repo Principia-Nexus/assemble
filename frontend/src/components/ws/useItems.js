@@ -8,8 +8,8 @@ export function useItems(rev, onChanged) {
   const [save, setSave] = useState("idle");
   const [lastBatch, setLastBatch] = useState(null);
   // Edits run one after another against the latest saved revision, so a fast second edit never loses to a stale one.
-  const revRef = useRef(rev), queue = useRef(Promise.resolve());
-  useEffect(() => { revRef.current = Math.max(revRef.current, rev); }, [rev]);
+  const revRef = useRef(rev || 0), queue = useRef(Promise.resolve());
+  useEffect(() => { if (Number.isInteger(rev)) revRef.current = rev; }, [rev]);
   const serial = useCallback((fn) => { const p = queue.current.then(fn, fn); queue.current = p.catch(() => {}); return p; }, []);
 
   const load = useCallback(async () => {

@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 26 is a frontend-only test of the 'Fresh-Project Completion Repairs' (Playwright at 1920 / 768 / 660 / 390). I found one CRITICAL frontend bug and fixed it. useItems.js started revRef as useRef(undefined), because the sheet is not loaded on first render. It then ran Math.max(undefined, rev), which gives NaN and stays NaN. Every /project/items/ops call therefore sent rev:null and got a 422 'Input should be a valid integer'. As a result Add -> Task/Group/Milestone/Condition, inspector edits and list renames all failed on every project. After the fix, all of these were verified. Fresh project prj_5f9777753751 (visitor fresh-8d08b2511c): the package cards show 'Needs review v3' for Dogwood and Alder, 'Confirmed with conditions for v2' for Birch and 'Confirmed for v2' for Cedar. List rows show firm names. Report > Internal cost reads 'Firms $148,000 + coordination $12,000 + contingency $12,000 = $172,000 ... headroom $8,000', and the scope rows show firm names. The Report title has no Synthetic badge. Year question on a NEW project (prj_ace7a502ea75, visitor t1-iter26-a): pasting the brief gave 19 usable readings, with the access windows flagged 'Needs correction: Year not stated'. Select all + Use created the 'Year?' card (card-q-year). The inspector year input stays disabled until 4 digits are entered. Entering 2026 filled start 2026-11-02, 3 weeks, deadlines 1/1/1/1/2/2/2/2/3/3/3/3 and access windows 2026-11-02..20, and open items went from 30 to 15. Job details has the coordination, contingency and customer-terms inputs (terms are prefilled from the brief). Saving 12000/12000 kept the access windows. Task editing (after the fix): title, start, due, date kind and notes all persisted after reload. The List title matches the inspector, and renaming in the List updates the inspector. Due before start shows 'The due date is before the start date.' and keeps the typed value. Calendar: the task shows on Nov 3-6, moves to Nov 17-20 after a date change, and clicking it opens the inspector. Quote amendment draft: timing 'Nov 2 – Nov 20, 2026' and payment terms are prefilled, and the price is empty. Fast clicks on 3 condition decisions all persisted after reload, with aria-pressed and a check icon. 'Saving' appeared during the save. A mocked 500 showed Retry, and Retry succeeded. I discarded the Q2 draft afterwards. ScheduleGrid: overflow-x auto, min-width 220 + 110 per week, and the site column stays sticky (td.left equals the container left after horizontal scroll). Mobile 390: History, Projects, My reviews and Sign out are icon buttons with aria-labels, and scrollWidth = 390. Review as partner on the seeded 12-branch example: draft -> select -> Request review for Alder -> package inspector -> 'Review as partner' signs in as Alder at /review/<token>. 'Back to organizer' returns to /projects/<id> as Brightline. Wrong account: Birch opening Alder's link shows the error plus 'Sign in as the invited firm', which goes to /login?next=/review/<token>; signing in as Alder returns to the same review. Customer assistant on the Q1 /quote/<token> page (synthetic code on screen) gave a correct answer about payment terms. Week order sorts numerically in the code (a-b); I could not test it in the UI with 10 or more weeks.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "brief reading / intake", "issue": "The brief says 'Scope: LED lighting retrofit and panel labeling at each branch', and this fills scope_summary, but every site's scope stays empty. That leaves 12 '<Site> scope: unknown' open items, and they are still listed under Report > Outstanding conditions even after the customer accepted. This goes against 'without retyping facts'."},
+      {"endpoint": "PUT intake (Job details save)", "issue": "Saving Job details without touching capacity adds 3 'Your crew capacity, week N: unknown' open items (15 -> 18) that did not exist before the save."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "useItems.js revRef", "issue": "FIXED by testing agent: revRef started as undefined, so Math.max produced NaN and every item op sent rev:null, which returned 422 'Input should be a valid integer'. Add Task / inspector edits / list rename were completely broken.", "selector": "[data-testid=add-item-task]", "priority": "CRITICAL"},
+      {"component": "QuotePanel preview", "issue": "After choosing Resolved / Exclude, the customer preview 'Conditions:' still lists every typed condition, so 'Brightline arranges lift rental' appears under both Excluded and Conditions. A resolved condition also still shows as a customer condition.", "selector": "[data-testid=quote-preview-conditions]", "priority": "MEDIUM"},
+      {"component": "Projects list", "issue": "data-testid is built from a name slug, so two projects named '12-branch lighting retrofit' both get project-row-12-branch-lighting-retrofit. Use the project_id instead.", "selector": "[data-testid^=project-row-]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "List view", "issues": ["The composer dock covers the last 'Work' row (the task title is hidden behind it). Add bottom padding to the list container."]},
+      {"screen": "Login", "issues": ["React warning: Received an empty string for boolean attribute 'inert' (Login.jsx inert={!showPartners}). Use inert={showPartners ? undefined : ''} or a boolean-safe pattern."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Review the useItems.js revRef fix (useRef(rev || 0) and Math.max(revRef.current || 0, rev || 0)) and keep it.",
+    "Make the quote preview / snapshot drop or annotate conditions marked Resolved / Exclude, so they are not listed again under Conditions.",
+    "Optionally apply the brief's per-branch scope to every site, so 12 'scope: unknown' items do not remain on the fresh project.",
+    "Stop the Job details save from creating 'Your crew capacity ... unknown' items when capacity was untouched (or show them consistently).",
+    "Add bottom padding to the List view so the composer does not cover the last row.",
+    "Use project_id in Projects-list data-testids."
+  ],
+  "critical_code_review_comments": [
+    "useItems.js: the serial queue used rev from props before the sheet loaded (NaN). Any ref seeded from props that can be undefined needs a numeric fallback.",
+    "QuotePanel choose(): pending[text] is cleared by the first reply even if a second click on the same condition is still saving (minor indicator race).",
+    "Inspector ItemForm: the date range check compares against saved.current, which is only refreshed when the prop 'it' changes. It works, but a rapid start+due pair depends on the order of replies."
+  ],
+  "updated_files": ["/app/frontend/src/components/ws/useItems.js"],
+  "success_rate": {"backend": "not tested (frontend only; intake spot-checked via API: start 2026-11-02, weeks 3, deadlines 1/2/3, terms saved)", "frontend": "95% (all 11 requested flows pass after the useItems fix; week >= 10 ordering verified by code only)"},
+  "seed_data_creation": "Visitor sandbox t1-iter26-a: new project prj_ace7a502ea75 (from the Harborview brief, year 2026, coordination/contingency 12000, task 'TEST Fixture walk-through B'); example 12-branch project prj_a2911a5d8f60 with plan v1 selected and an Alder review link created. On prj_5f9777753751 I created a Q2 amendment draft for testing and then discarded it.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Demo login: set localStorage assemble_visitor, then click signin-demo-organizer-button (the email form has no password field). For partners, use signin-review-as-partner-toggle then signin-demo-<key>-button. Add item: composer-add-button -> add-item-task (no force needed). Quote: open-quote -> quote-new (amendment) -> quote-price -> quote-save-preview -> quote-condition-<i>-<in_offer|resolved|excluded>. Year card: card-q-year -> inspector-year-input/save. Customer quote: GET /api/project/quotes then /api/project/quotes/<id>/link for the path; the code is shown in quote-synthetic-code.",
+  "rca of the issue": "useItems(rev) is called while sheet is undefined, so rev = undefined. useRef(undefined), then useEffect Math.max(undefined, 4) = NaN; Math.max(NaN, x) stays NaN. POST /project/items/ops {rev: NaN} is serialized as null, giving a Pydantic 422. finish() never runs, so revRef never recovers. Reproduce: open any project, then Add -> Task, and a toast shows 'Input should be a valid integer'. Fix: numeric fallback in useRef and Math.max."
+}

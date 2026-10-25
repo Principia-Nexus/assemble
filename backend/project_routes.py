@@ -462,12 +462,12 @@ async def select_preview(body: RevIn, user=Depends(current_user)):
         raise HTTPException(409, "There is no open amendment preview to select.")
     if body.expected_version_id and body.expected_version_id != pre["version_id"]:
         raise HTTPException(409, "The preview changed since you checked it. Review it again before selecting.")
-    if checked(pre, p)["overall"] == "fail":
-        raise HTTPException(409, f"Preview v{pre['number']} fails a check. Repair it and recheck before selecting it.")
     from qual_routes import selection_block
     why = await selection_block(p, pre)
     if why:
         raise HTTPException(409, why)
+    if checked(pre, p)["overall"] == "fail":
+        raise HTTPException(409, f"Preview v{pre['number']} fails a check. Repair it and recheck before selecting it.")
     await claim_rev(p, body.rev, {"current_version_id": pre["version_id"], "preview_version_id": None})
     await db.versions.update_one({"version_id": cur["version_id"]}, {"$set": {"state": "superseded"}})
     await db.versions.update_one({"version_id": pre["version_id"]}, {"$set": {"state": "current"}})

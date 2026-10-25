@@ -1,7 +1,7 @@
 {
  "project": {
-  "visitor": "fresh-8d08b2511c",
-  "project_id": "prj_5f9777753751"
+  "visitor": "fresh-1a3fce83c9",
+  "project_id": "prj_0ebcf0a575db"
  },
  "brief": [
   19,
@@ -195,84 +195,84 @@
    "2026-11-02",
    "2026-11-06",
    1,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ],
   [
    "S02",
    "2026-11-02",
    "2026-11-06",
    1,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ],
   [
    "S03",
    "2026-11-02",
    "2026-11-06",
    1,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ],
   [
    "S04",
    "2026-11-02",
    "2026-11-06",
    1,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ],
   [
    "S05",
    "2026-11-09",
    "2026-11-13",
    2,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ],
   [
    "S06",
    "2026-11-09",
    "2026-11-13",
    2,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ],
   [
    "S07",
    "2026-11-09",
    "2026-11-13",
    2,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ],
   [
    "S08",
    "2026-11-09",
    "2026-11-13",
    2,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ],
   [
    "S09",
    "2026-11-16",
    "2026-11-20",
    3,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ],
   [
    "S10",
    "2026-11-16",
    "2026-11-20",
    3,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ],
   [
    "S11",
    "2026-11-16",
    "2026-11-20",
    3,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ],
   [
    "S12",
    "2026-11-16",
    "2026-11-20",
    3,
-   null
+   "LED lighting retrofit and panel labeling at each branch. One crew-week per branch."
   ]
  ],
  "costs": [
@@ -300,7 +300,7 @@
   []
  ],
  "redwood_email": [
-  3,
+  4,
   []
  ],
  "costs_saved": {

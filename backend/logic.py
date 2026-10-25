@@ -216,7 +216,10 @@ def derive_from_access(it):
         d = date.fromisoformat(min(starts))
         it["start_date"] = (d - timedelta(days=d.weekday())).isoformat()
     if ends and it.get("start_date") and not it.get("weeks"):
-        it["weeks"] = min(12, max(1, week_no(it["start_date"], max(ends))))
+        w = it["weeks"] = min(12, max(1, week_no(it["start_date"], max(ends))))
+        it["own_capacity"] = (it.get("own_capacity") or [])[:w] + [None] * max(0, w - len(it.get("own_capacity") or []))
+        for p in it.get("partners") or []:
+            p["capacity"] = (p.get("capacity") or [])[:w] + [None] * max(0, w - len(p.get("capacity") or []))
     for s in it.get("sites") or []:
         if s.get("access_end") and it.get("start_date") and s.get("deadline_week") is None:
             s["deadline_week"] = week_no(it["start_date"], s["access_end"])

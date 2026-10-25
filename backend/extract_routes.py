@@ -170,6 +170,7 @@ def match_partner(name, it):
     return None, str(name).strip()
 
 
+EACH_RE = re.compile(r"\b(each|every|all)\s+(branch|branches|site|sites|location|locations|store|stores)\b", re.I)
 MMDD_RE = re.compile(r"\d{2}-\d{2}")
 YEAR_ISSUE = "Year not stated."
 
@@ -792,6 +793,10 @@ async def apply_readings(body: ApplyIn, user=Depends(current_user)):
         if FIELDS[f["field"]][0] in ("own", "partner") and f["field"] in WEEKLY and not it.get("weeks"):
             raise HTTPException(422, ["Set the number of weeks before using weekly capacity readings."])
         apply_fact(it, f)
+    for f in chosen:
+        if f["field"] == "scope_summary" and EACH_RE.search(f.get("excerpt") or "") and f.get("parsed"):
+            for site in it["sites"]:
+                site["scope"] = site.get("scope") or f["parsed"]
     L.derive_from_access(it)
     await claim_rev(p, body.rev, {"intake": it, "name": it.get("job_name") or p["name"], "exclusions": exclusions})
     await db.facts.update_many({"fact_id": {"$in": [f["fact_id"] for f in chosen]}}, {"$set": {"status": "applied", "applied_at": now_iso()}})

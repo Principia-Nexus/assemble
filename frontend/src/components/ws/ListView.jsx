@@ -54,7 +54,7 @@ export default function ListView({ sheet, items, pkgs, conds, run, onSelect, sel
   });
   walk(null, 0);
   return (
-    <div className="h-full overflow-auto px-4 pb-40 pt-5 sm:px-6" data-testid="list-view">
+    <div className="h-full overflow-auto px-4 pb-64 pt-5 sm:px-6" data-testid="list-view">
       <div className="mx-auto max-w-[1000px]">
         {pkgs.length > 0 && (
           <Section title={sheet.preview ? "Plan · private draft" : sheet.current ? "Plan" : "Firms and sites"} count={`${pkgs.length}`} testId="list-plan">

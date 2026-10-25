@@ -1,0 +1,11 @@
+{
+ "assign": 200,
+ "access_rule": [
+  "fail",
+  [
+   "Access conflict: S09 is in week 1; access opens 2026-11-16 (week 3)."
+  ]
+ ],
+ "select_status": 409,
+ "select_detail": "{\"detail\":\"Preview v3 fails a check. Repair it and recheck before selecting it.\"}"
+}
