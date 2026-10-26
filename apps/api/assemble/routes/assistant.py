@@ -291,11 +291,24 @@ async def advance(p, user, result, rev):
     """Drives the private steps: solver draft -> checks -> review links prepared (not sent). Human steps stay human."""
     it = p["intake"]
     known = {x["partner_id"] for x in it.get("partners") or []}
-    ids = [x for x in result.get("partner_ids") or [] if x in known] or sorted(known)
     notes, errors = [], []
+    # Every firm only when the model named none at all; a named list is used as given, and an unknown name stops the draft.
+    asked = result.get("partner_ids")
+    if asked is None:
+        ids = sorted(known)
+    elif not isinstance(asked, list) or any(x not in known for x in asked):
+        return None, ["I couldn't match the firms I was asked to include, so nothing was drafted. Name the firms again."], notes
+    else:
+        ids = list(dict.fromkeys(asked))
+    sites = {s["site_id"].upper(): s["site_id"] for s in it.get("sites") or []}
+    keep = result.get("keep_open") or []
+    keep = keep if isinstance(keep, list) else [keep]
+    unknown = [str(x) for x in keep if not (isinstance(x, str) and x.upper() in sites)]
+    if unknown:
+        return None, [f"Unknown site to leave open: {', '.join(unknown)}. Nothing was drafted."], notes
     try:
         await make_draft(DraftIn(rev=rev, partner_ids=ids, include_own=result.get("include_own", True) is not False,
-                                 keep_open=[x for x in result.get("keep_open") or [] if isinstance(x, str)]), user)
+                                 keep_open=[sites[x.upper()] for x in keep]), user)
     except HTTPException as ex:
         return None, ex.detail if isinstance(ex.detail, list) else [str(ex.detail)], notes
     s = await sheet(p["project_id"])

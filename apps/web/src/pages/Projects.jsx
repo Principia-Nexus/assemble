@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { api, errText, newKey, setProjectId } from "@/lib/api";
+import { api, errText, newKey } from "@/lib/api";
 import { fmtTime, slug } from "@/lib/format";
 import { Loading } from "@/App";
 import { RouteDenied } from "@/components/RouteDenied";
@@ -76,7 +76,6 @@ function ProjectRow({ p }) {
 }
 
 export default function Projects() {
-  setProjectId(null);
   const [rows, setRows] = useState(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);

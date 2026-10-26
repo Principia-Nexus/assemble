@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { api, errText } from "@/lib/api";
+import { errText, useProjectApi } from "@/lib/api";
 import { ErrorList } from "./Stepper";
 import ReadDocumentForm from "./ReadDocumentForm";
 import SourcesList from "./SourcesList";
 import ReadingsTable from "./ReadingsTable";
 
 export default function ExtractPanel({ sheet, act, busy }) {
+  const api = useProjectApi();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState([]);
@@ -15,13 +16,13 @@ export default function ExtractPanel({ sheet, act, busy }) {
 
   useEffect(() => {
     api.get("/project/readings").then((r) => setData(r.data)).catch((e) => setError(errText(e)));
-  }, []);
+  }, [api]);
   const reading = (data?.sources || []).some((s) => s.coverage?.queued > 0);
   useEffect(() => {
     if (!reading) return undefined;
     const t = setInterval(() => api.get("/project/readings").then((r) => setData(r.data)).catch(() => {}), 4000);
     return () => clearInterval(t);
-  }, [reading]);
+  }, [api, reading]);
 
   const onRead = (d) => {
     setData({ sources: d.sources, readings: d.readings });
@@ -44,7 +45,7 @@ export default function ExtractPanel({ sheet, act, busy }) {
       <SourcesList sources={data.sources} onRead={onRead} />
       {usable.length > 0 && (
         <div data-testid="readings-action-bar" className="sticky top-16 z-10 flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-900 bg-slate-900 p-3 text-white shadow-lg">
-          <p className="text-xs" data-testid="readings-selected-count">{selected.length} of {usable.length} reading(s) selected. Using them updates the job details and recalculates the candidate.</p>
+          <p className="text-xs" data-testid="readings-selected-count">{selected.length} of {usable.length} reading(s) selected. Using them updates the job details; an existing plan is kept until you draft it again.</p>
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => setSelected(usable.map((r) => r.reading.fact_id))} data-testid="readings-select-all">Select all</Button>
             <Button size="sm" variant="secondary" disabled={busy || !selected.length} onClick={apply} data-testid="readings-apply-button">Use selected readings</Button>

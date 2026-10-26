@@ -1,5 +1,9 @@
 # Assemble, powered by Fabric — PRD
 
+> Historical record of the Emergent build (2026-06 to 2026-10). Emergent, Google sign-in and the evidence graph are gone;
+> the code and `AGENTS.md` are authoritative where this differs.
+
+
 ## Original problem
 "review the linear plan for Assemble, lets build it out. Linear has instructions." Source: Linear project "VibeCon SF: Assemble" (ASMBL-1..12). The approved plan is followed in full.
 
@@ -24,7 +28,7 @@
 - Canonical numbers verified: 156k fail (weeks 1 and 2), 168k pass at 4/4/4, 6/4/2 with a 2-slot gap, 172k Dogwood repair, 186k stress fail.
 
 ## Implemented (Phase 2 + 3, 2026-06)
-- AI document reading (Claude Sonnet 5.5, `claude-sonnet-5-5` via EMERGENT_LLM_KEY) in `extract_routes.py`. Paste text or choose a text file (.txt/.md/.eml/.csv). Each fact gets a verbatim excerpt plus a verified line. A crew-size guard is applied. The latest dated source wins, with conflicts shown. Instructions inside documents are ignored and logged. Corrections keep the original, prior value, editor and time, and survive re-reads. "Use selected readings" updates the intake and recalculates the candidate (as a preview if links exist). Failures keep the input and offer a retry.
+- AI document reading (Claude Sonnet 5.5, `claude-sonnet-5-5` through the Anthropic SDK, `services/llm.py`) in `routes/extract.py`. Paste text or choose a text file (.txt/.md/.eml/.csv). Each fact gets a verbatim excerpt plus a verified line. A crew-size guard is applied. The latest dated source wins, with conflicts shown. Instructions inside documents are ignored and logged. Corrections keep the original, prior value, editor and time, and survive re-reads. "Use selected readings" updates the intake through the form validator and keeps the current plan, flagging it for a redraft. Failures keep the input and offer a retry.
 - Synthetic sample docs (brief, Redwood quote, Redwood "week three only" email with an injection line) in `frontend/src/lib/samples.js`.
 - Organizer-only printable summary at /summary (browser print).
 - Acceptance record: /app/memory/ACCEPTANCE.md. Deployed URL is NOT RUN until the app is published.

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChevronDown, Folder, Maximize, ZoomIn, ZoomOut } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { useProjectApi } from "@/lib/api";
 import { ConditionCard, ItemCard, PackageCard } from "./Cards";
+import { planLabel } from "./derive";
 
 const LINK_KINDS = [["prerequisite", "Must finish first"], ["uses_input", "Provides input to"], ["produces_output", "Produces output for"], ["relates_to", "Related to"]];
 const NO_PAN = "[data-movable],button,a,input,textarea,select,[role=link],[data-link-menu]";
@@ -68,6 +69,7 @@ function Movable({ id, pos, dragging, onStart, linkable, onLink, children }) {
 }
 
 export default function GraphView({ sheet, items, edges, pkgs, conds, selectedId, onSelect, hot, focus, filter, run, layout }) {
+  const api = useProjectApi();
   const scroller = useRef(null), contentRef = useRef(null), refs = useRef({});
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -186,7 +188,7 @@ export default function GraphView({ sheet, items, edges, pkgs, conds, selectedId
           <div ref={contentRef} className="relative mx-auto flex max-w-[1440px] flex-col gap-5 py-6 pb-44 pl-4 pr-16 sm:px-6" data-testid="graph-canvas">
             {empty && <p data-testid="graph-empty" className="max-w-md text-sm text-[#64748B]">Nothing here yet. Describe the job below, or use Add to enter a work item.</p>}
             {visiblePkgs.length > 0 && (
-              <Frame title={sheet.preview ? "Plan · private draft" : sheet.current ? "Plan" : "Firms and sites"} count={`${assignedPkgs} package${assignedPkgs === 1 ? "" : "s"}`} testId="graph-plan-frame" open={!closed.plan} onToggle={() => toggle("plan")}>
+              <Frame title={planLabel(sheet) || "Firms and sites"} count={`${assignedPkgs} package${assignedPkgs === 1 ? "" : "s"}`} testId="graph-plan-frame" open={!closed.plan} onToggle={() => toggle("plan")}>
                 {visiblePkgs.map((p) => wrap(p.id, <PackageCard pkg={p} sheet={sheet} selected={selectedId === p.id} onSelect={onSelect} cardRef={setRef(p.id)} />))}
               </Frame>
             )}

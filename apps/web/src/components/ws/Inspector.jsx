@@ -1,4 +1,4 @@
-import { api, errText } from "@/lib/api";
+import { errText, useProjectApi } from "@/lib/api";
 import { toast } from "sonner";
 import { useEffect, useRef, useState } from "react";
 import { Trash2, X } from "lucide-react";
@@ -15,12 +15,12 @@ const sel = "h-9 w-full rounded-md border border-[#E2E8F0] bg-white px-2 text-sm
 const Lbl = ({ children, htmlFor }) => <label htmlFor={htmlFor} className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{children}</label>;
 
 function ItemForm({ it, sheet, items, edges, run, onSheet }) {
+  const api = useProjectApi();
   const [f, setF] = useState(it);
   const [errors, setErrors] = useState([]);
   const dirty = useRef(new Set()), saved = useRef(it);
   // A reload keeps whatever is still being typed or failed to save.
   useEffect(() => { saved.current = it; setF((prev) => ({ ...it, ...Object.fromEntries([...dirty.current].map((k) => [k, prev[k]])) })); }, [it]);
-  useEffect(() => { dirty.current = new Set(); setErrors([]); }, [it.item_id]);
   const save = async (fields, label) => {
     const changed = Object.fromEntries(Object.entries(fields).filter(([k, v]) => (v ?? null) !== (saved.current[k] ?? null)));
     if (!Object.keys(changed).length) return;
@@ -40,10 +40,15 @@ function ItemForm({ it, sheet, items, edges, run, onSheet }) {
   const title = (id) => items.find((x) => x.item_id === id)?.title || id;
 
   // Site work follows the plan: changing the firm moves the site in the plan (as a private draft until you select it).
+  // An open site (no week yet) needs its week chosen with the firm; a site that has a week keeps it.
+  const noWeek = !!it.plan_site && it.plan_week == null;
+  const [week, setWeek] = useState("");
   const assign = async (owner) => {
     if (!owner) { toast.error("Planned site work needs a firm. Choose one, or remove the site from the plan in Draft plan."); return; }
+    if (noWeek && !week) { setErrors([`${it.plan_site} has no week yet. Choose the week, then the firm.`]); return; }
     try {
-      const { data } = await api.post("/project/plan/assign", { rev: sheet.project.rev, site_id: it.plan_site, owner });
+      const { data } = await api.post("/project/plan/assign", { rev: sheet.project.rev, site_id: it.plan_site, owner, ...(noWeek ? { week: Number(week) } : {}) });
+      setErrors([]);
       onSheet(data.sheet);
       toast.success(`${it.plan_site} moved in the plan`);
     } catch (e) { toast.error(errText(e)); }
@@ -60,10 +65,18 @@ function ItemForm({ it, sheet, items, edges, run, onSheet }) {
         </div>
       )}
       <div><Lbl htmlFor="insp-firm">{it.kind === "group" ? "Proposed responsible firm" : "Assignee firm"}</Lbl>
-        <select id="insp-firm" className={sel} value={f.firm_id || ""} onChange={(e) => (it.plan_site ? assign(e.target.value) : save({ firm_id: e.target.value || null }))} data-testid="inspector-firm-select">
-          <option value="">Unassigned</option><option value="own">Own crews</option>
-          {firms.map((p) => <option key={p.partner_id} value={p.partner_id}>{p.name}</option>)}
-        </select>
+        <div className="flex gap-2">
+          <select id="insp-firm" className={sel} value={f.firm_id || ""} onChange={(e) => (it.plan_site ? assign(e.target.value) : save({ firm_id: e.target.value || null }))} data-testid="inspector-firm-select">
+            <option value="">Unassigned</option><option value="own">Own crews</option>
+            {firms.map((p) => <option key={p.partner_id} value={p.partner_id}>{p.name}</option>)}
+          </select>
+          {noWeek && (
+            <select className={`${sel} w-28 shrink-0`} aria-label="Week" value={week} onChange={(e) => setWeek(e.target.value)} data-testid="inspector-week-select">
+              <option value="">Week…</option>
+              {Array.from({ length: Number(sheet.intake.weeks) || 0 }, (_, i) => <option key={i + 1} value={i + 1}>Week {i + 1}</option>)}
+            </select>
+          )}
+        </div>
       </div>
       {it.kind !== "group" && (
         <div><Lbl htmlFor="insp-parent">Group</Lbl>
@@ -132,6 +145,7 @@ function ItemForm({ it, sheet, items, edges, run, onSheet }) {
 }
 
 function YearAnswer({ sheet, onSheet }) {
+  const api = useProjectApi();
   const [y, setY] = useState("");
   const [busy, setBusy] = useState(false);
   const save = async () => {
@@ -177,7 +191,7 @@ export default function Inspector({ target, sheet, items, edges, run, onSheet, o
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {!it && <h2 className="mb-3 text-[15px] font-semibold leading-snug text-[#1A2838]">{target.title}</h2>}
-        {it ? <ItemForm it={it} sheet={sheet} items={items} edges={edges} run={run} onSheet={onSheet} />
+        {it ? <ItemForm key={it.item_id} it={it} sheet={sheet} items={items} edges={edges} run={run} onSheet={onSheet} />
           : target.kind === "package" ? <PackageDetail pkg={target} openTool={openTool} sheet={sheet} />
             : (
               <div className="space-y-3 text-sm text-[#1A2838]">

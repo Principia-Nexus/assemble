@@ -9,9 +9,10 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from pymongo import ReturnDocument
+from pymongo.errors import DuplicateKeyError
 
 from assemble.services import mailer
-from assemble.core import db, now_iso, new_id, current_user, log_event
+from assemble.core import db, now_iso, new_id, current_user, log_event, APP_URL
 from assemble.routes.projects import get_project, org, bad, sheet
 
 router = APIRouter(prefix="/api/project")
@@ -21,6 +22,8 @@ DRAFT_FIELDS = ("customer_name", "customer_email", "site", "scope", "inclusions"
                 "tax_basis", "payment_terms", "timing", "valid_until", "terms", "conditions")
 OPEN = ("issued", "changes_requested")
 CODE_TTL, CODE_TRIES, SESSION_TTL = 15, 5, 12
+# Per quote: one code a minute, five an hour, and five wrong guesses an hour shared by every code issued in it.
+CODE_GAP, CODES_PER_HOUR = 60, 5
 
 
 class DraftIn(BaseModel):
@@ -390,6 +393,12 @@ async def issue_quote(qid: str, body: IssueIn, user=Depends(current_user)):
     if ready["blockers"]:
         bad(ready["blockers"])
     support = {**ready["support"], "checked_at": now_iso(), "not_covered": ready["not_covered"]}
+    if q["kind"] == "amendment":
+        if await db.quotes.find_one({"baseline_id": q["baseline_id"], "kind": "amendment", "state": "accepted"}):
+            bad("Another amendment to this baseline was accepted meanwhile. Start a new amendment instead.")
+        # One open amendment per baseline: issuing this one retires any older one the customer could still accept.
+        await db.quotes.update_many({"baseline_id": q["baseline_id"], "kind": "amendment", "state": {"$in": list(OPEN)}},
+                                    {"$set": {"state": "superseded", "superseded_by": qid, "superseded_at": now_iso()}})
     if q.get("replaces"):
         prev = await db.quotes.find_one_and_update({"quote_id": q["replaces"], "state": {"$in": list(OPEN)}},
                                                    {"$set": {"state": "superseded", "superseded_by": qid, "superseded_at": now_iso()}})
@@ -417,21 +426,18 @@ async def quote_link(qid: str, user=Depends(current_user)):
 
 
 @router.post("/quotes/{qid}/send")
-async def send_quote(qid: str, request: Request, user=Depends(current_user)):
+async def send_quote(qid: str, user=Depends(current_user)):
     p = await get_project(user)
     q = await own_quote(p, qid)
     if q["state"] not in OPEN:
         bad("Only an open issued quote can be sent.")
     if not mailer.sendable(q["recipient"]):
         bad("This is a synthetic example address, so no email is sent. Copy the link instead.")
-    origin = (request.headers.get("origin") or "").rstrip("/")
-    if not origin:
-        bad("Send the quote from the app.")
     s = q["snapshot"]
     subject = f"Quote {s['number']} from {s['seller']}: {s['project']}"
     html = (f'<table role="presentation" width="100%"><tr><td style="padding:24px;font-family:Arial,sans-serif;color:#1A2838;font-size:15px">'
             f'<p>{mailer.escape(s["seller"])} sent you quote {s["number"]} for {mailer.escape(s["project"])}.</p>'
-            f'<p><a href="{mailer.escape(origin + "/quote/" + q["token"])}" style="display:inline-block;background:#1A2838;color:#ffffff;'
+            f'<p><a href="{mailer.escape(APP_URL + "/quote/" + q["token"])}" style="display:inline-block;background:#1A2838;color:#ffffff;'
             f'padding:10px 16px;text-decoration:none;border-radius:4px">Open quote</a></p>'
             f'<p style="font-size:12px;color:#666">You will confirm a code sent to this address before responding.</p></td></tr></table>')
     email_id = await mailer.send_email(to=q["recipient"], subject=subject, html=html)
@@ -478,13 +484,32 @@ async def quote_intro(token: str):
     return {"number": s["number"], "seller": s["seller"], "synthetic": s["synthetic"], "recipient_masked": masked}
 
 
+def code_refusal(issued, t):
+    """Why no new code may be sent, given this quote's codes from the last hour; None when one may."""
+    if any(utc(c["at"]) > t - timedelta(seconds=CODE_GAP) for c in issued):
+        return "A code was just sent. Wait a minute before asking for another."
+    if max((c.get("tries", 0) for c in issued), default=0) >= CODE_TRIES:
+        return "Too many wrong codes. Try again in an hour."
+    if len(issued) >= CODES_PER_HOUR:
+        return "Too many codes were requested for this quote. Try again in an hour."
+    return None
+
+
 @public.post("/{token}/code")
 async def send_code(token: str):
     q = await by_token(token)
+    t = now()
+    await db.quote_codes.delete_many({"quote_id": q["quote_id"], "at": {"$not": {"$gte": (t - timedelta(hours=1)).isoformat()}}})
+    issued = await db.quote_codes.find({"quote_id": q["quote_id"]}, {"_id": 0, "at": 1, "tries": 1}).to_list(50)
+    why = code_refusal(issued, t)
+    if why:
+        raise HTTPException(429, why)
     code = f"{secrets.randbelow(10**6):06d}"
-    await db.quote_codes.delete_many({"quote_id": q["quote_id"]})
-    await db.quote_codes.insert_one({"quote_id": q["quote_id"], "hash": hashlib.sha256(code.encode()).hexdigest(), "tries": 0,
-                                     "expires_at": (now() + timedelta(minutes=CODE_TTL)).isoformat()})
+    await db.quote_codes.update_many({"quote_id": q["quote_id"]}, {"$set": {"live": False}})
+    # Wrong guesses carry over to the new code, so fresh codes do not buy fresh guesses.
+    await db.quote_codes.insert_one({"quote_id": q["quote_id"], "hash": hashlib.sha256(code.encode()).hexdigest(), "live": True,
+                                     "tries": max((c.get("tries", 0) for c in issued), default=0), "at": t.isoformat(),
+                                     "expires_at": (t + timedelta(minutes=CODE_TTL)).isoformat()})
     if mailer.sendable(q["recipient"]):
         await mailer.send_email(to=q["recipient"], subject="Your Assemble code", html=mailer.code_html(code))
         return {"sent": True}
@@ -494,11 +519,12 @@ async def send_code(token: str):
 @public.post("/{token}/verify")
 async def verify_code(token: str, body: VerifyIn):
     q = await by_token(token)
-    c = await db.quote_codes.find_one_and_update({"quote_id": q["quote_id"], "tries": {"$lt": CODE_TRIES}, "expires_at": {"$gt": now_iso()}},
+    c = await db.quote_codes.find_one_and_update({"quote_id": q["quote_id"], "live": True, "tries": {"$lt": CODE_TRIES}, "expires_at": {"$gt": now_iso()}},
                                                  {"$inc": {"tries": 1}}, return_document=ReturnDocument.AFTER)
     if not c or c["hash"] != hashlib.sha256(body.code.strip().encode()).hexdigest():
         raise HTTPException(422, ["That code is not right or has expired. Request a new one."])
-    await db.quote_codes.delete_many({"quote_id": q["quote_id"]})
+    # Kept, not deleted, so the hourly cap still holds; the right code clears the wrong-guess count.
+    await db.quote_codes.update_many({"quote_id": q["quote_id"]}, {"$set": {"live": False, "tries": 0}})
     sid = secrets.token_urlsafe(24)
     await db.quote_sessions.insert_one({"session_id": sid, "quote_id": q["quote_id"], "email": q["recipient"], "verified_at": now_iso(),
                                         "expires_at": (now() + timedelta(hours=SESSION_TTL)).isoformat()})
@@ -539,14 +565,23 @@ async def respond(token: str, body: RespondIn, request: Request):
     allowed = ["issued"] if body.action != "decline" else list(OPEN)
     if body.action == "request_changes":
         allowed = ["issued"]
-    if body.action == "accept" and q["kind"] == "offer" and await db.quotes.find_one({"project_id": q["project_id"], "state": "accepted"}):
-        raise HTTPException(409, "Another version of this quote is already accepted.")
+    # One accepted offer per project and one accepted amendment per baseline. The pre-check covers quotes accepted before
+    # accept_slot existed; the unique (project_id, accept_slot) index decides between two accepts racing each other.
+    slot = "offer" if q["kind"] == "offer" else q["baseline_id"]
+    chain = {"project_id": q["project_id"]} if q["kind"] == "offer" else {"baseline_id": q["baseline_id"], "kind": "amendment"}
+    taken = HTTPException(409, "Another version of this quote is already accepted.")
+    if body.action == "accept" and await db.quotes.find_one({**chain, "state": "accepted"}):
+        raise taken
     new_state = {"accept": "accepted", "decline": "declined", "request_changes": "changes_requested"}[body.action]
     receipt = {"receipt_id": new_id("rcp"), "key": key, **payload, "email": sess["email"], "verified_at": sess["verified_at"],
                "at": now_iso(), "version": q["number"], "total_cents": q["snapshot"]["price_cents"], "policy": "quote-acceptance-1"}
-    r = await db.quotes.find_one_and_update(
-        {"quote_id": q["quote_id"], "state": {"$in": allowed}, "digest": body.digest, "snapshot.valid_until": {"$gt": stamp(now())}},
-        {"$set": {"state": new_state, f"{new_state}_at": receipt["at"]}, "$push": {"responses": receipt}}, return_document=ReturnDocument.AFTER)
+    sets = {"state": new_state, f"{new_state}_at": receipt["at"], **({"accept_slot": slot} if body.action == "accept" else {})}
+    try:
+        r = await db.quotes.find_one_and_update(
+            {"quote_id": q["quote_id"], "state": {"$in": allowed}, "digest": body.digest, "snapshot.valid_until": {"$gt": stamp(now())}},
+            {"$set": sets, "$push": {"responses": receipt}}, return_document=ReturnDocument.AFTER)
+    except DuplicateKeyError:
+        raise taken
     if not r:
         cur = await by_token(token)
         dup = next((x for x in cur.get("responses") or [] if x["key"] == key), None)

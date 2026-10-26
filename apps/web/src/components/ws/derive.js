@@ -1,9 +1,21 @@
 // Read-only views derived from the saved plan/intake (packages per firm, open conditions). Never stored separately.
 const OWN = "own";
 
+// The plan being worked on: the private amendment draft when one is open, else the current version. Wherever it is
+// shown, title it with planLabel so a draft never reads as the schedule.
 export function planVersion(sheet) {
   return sheet.preview?.version || sheet.current?.version || null;
 }
+
+// In the header's words (statusSentence): a current plan that is not selected yet is itself a private draft.
+export const isPrivateDraft = (sheet, version) => !!version && (version === sheet.preview?.version || !sheet.project.plan_selected);
+export function planLabel(sheet, version = planVersion(sheet)) {
+  if (!version) return null;
+  return isPrivateDraft(sheet, version) ? `Plan · private draft v${version.number}` : `Plan v${version.number}`;
+}
+
+// The calendar's schedule: the selected plan unless the private amendment draft is asked for.
+export const scheduleVersion = (sheet, wantDraft) => (wantDraft && sheet.preview?.version) || sheet.current?.version || null;
 
 export function firmName(sheet, id) {
   if (!id) return null;
@@ -56,14 +68,18 @@ export function packages(sheet) {
   });
 }
 
+// True when `name` appears in `text` as a whole name, not inside a longer word ("Volt" is not in "Voltline").
+const namesWhole = (text, name) =>
+  new RegExp(`(^|[^\\p{L}\\p{N}])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^\\p{L}\\p{N}])`, "u").test(text);
+
 export function conditions(sheet) {
   const out = [];
   // Omissions of firms that are not in the plan stay on their records, not in the active list.
   const pv = planVersion(sheet), inPlan = new Set(Object.values(pv?.assignments || {}).map((a) => a.owner));
-  const unused = pv ? (sheet.intake.partners || []).filter((p) => !inPlan.has(p.partner_id)).map((p) => p.name) : [];
+  const unused = pv ? (sheet.intake.partners || []).filter((p) => !inPlan.has(p.partner_id) && p.name).map((p) => p.name) : [];
   (sheet.gap?.unknowns || []).forEach((u, i) => {
     const t = typeof u === "string" ? u : u.text || u.label || JSON.stringify(u);
-    if (!unused.some((n) => t.includes(n))) out.push({ id: `unk-${i}`, derived: true, kind: "unknown", title: t });
+    if (!unused.some((n) => namesWhole(t, n))) out.push({ id: `unk-${i}`, derived: true, kind: "unknown", title: t });
   });
   (sheet.gap?.open_conditions || []).forEach((c, i) => { if (!unused.includes(c.scope)) out.push({ id: `cond-${i}`, derived: true, kind: "condition", title: c.text, scope: c.scope, source: c.source }); });
   (sheet.questions || []).forEach((q) => out.push({ id: `q-${q.key}`, derived: true, kind: "question", question: q.key, title: `${q.field}?` }));
@@ -111,11 +127,12 @@ export const FIRM_TONES = [
 ];
 const OWN_TONE = { dot: "bg-[#1A2838]", chip: "bg-[#E2E8F0] text-[#1A2838]", bar: "bg-[#E2E8F0] text-[#1A2838] border-[#1A2838]/25" };
 const NONE_TONE = { dot: "bg-[#CBD5E1]", chip: "bg-[#F1F5F9] text-[#64748B]", bar: "bg-[#F1F5F9] text-[#64748B] border-[#CBD5E1]" };
+// The colour comes from the partner id, not list position, so removing a firm never recolours the others.
+const hash = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 export function firmTone(sheet, owner) {
   if (owner === "own") return OWN_TONE;
-  const ids = (sheet.intake.partners || []).map((p) => p.partner_id);
-  const i = ids.indexOf(owner);
-  return i < 0 ? NONE_TONE : FIRM_TONES[i % FIRM_TONES.length];
+  if (!(sheet.intake.partners || []).some((p) => p.partner_id === owner)) return NONE_TONE;
+  return FIRM_TONES[hash(owner) % FIRM_TONES.length];
 }
 export const RESP_TONE = { confirmed: "text-[#1E7B5C]", confirmed_conditional: "text-[#1E7B5C]", declined: "text-[#A93A3A]", change_requested: "text-[#A93A3A]", expired: "text-[#A93A3A]" };
 

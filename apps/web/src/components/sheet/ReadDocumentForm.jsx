@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { api, errList } from "@/lib/api";
+import { errList, useProjectApi } from "@/lib/api";
 import { ErrorList } from "./Stepper";
 
 const TEXT_EXT = [".txt", ".md", ".eml", ".csv"];
@@ -12,6 +12,7 @@ const ALL_EXT = [...TEXT_EXT, ".pdf"];
 const EMPTY = { kind: "brief", label: "", source_date: "", text: "", filename: null };
 
 export default function ReadDocumentForm({ intake, synthetic, onRead }) {
+  const api = useProjectApi();
   const [f, setF] = useState(EMPTY);
   const [pdf, setPdf] = useState(null);
   const [errors, setErrors] = useState([]);

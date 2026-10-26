@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import re
 from typing import List, Optional
@@ -11,7 +12,7 @@ from assemble.services import llm
 from assemble.domain import logic as L
 from assemble.domain import rule_packs as RP
 from assemble.core import db, now, now_iso, new_id, current_user, log_event, STALE_MSG, as_aware
-from assemble.routes.projects import get_project, claim_rev, generate_candidate, org
+from assemble.routes.projects import get_project, claim_rev, org
 from assemble.services.storage import APP_NAME, get_object, pdf_text, put_object
 from assemble.services.pdf_sample import make_pdf
 from assemble.demo.fixtures import DEFAULT_FIXTURE, documents, get_fixture, pdf_pages
@@ -43,6 +44,7 @@ FIELDS = {
     "valid_until": ("partner", "date", "Valid until"),
 }
 WEEKLY = {"own_capacity", "capacity"}
+PLAN_NEUTRAL = {"job_name", "customer_name", "customer_payment_terms"}
 INTAKE_KEY = {"budget_ceiling": "budget_ceiling_cents", "own_cost_per_site": "own_cost_per_site_cents",
               "site_name": "name", "site_deadline_week": "deadline_week", "site_scope": "scope",
               "site_access_start": "access_start", "site_access_end": "access_end",
@@ -150,13 +152,24 @@ def locate(src, excerpt):
     return {"offset": idx, "line": text[:idx].count("\n") + 1}
 
 
+FIRM_SUFFIX_RE = re.compile(r"\s+(inc|incorporated|llc|ltd|limited|co|corp|corporation|company)$")
+
+
+def firm_key(name):
+    """A firm's full name with case, punctuation, spacing, "(Synthetic)" and a trailing Inc/LLC/Co ignored."""
+    n = re.sub(r"[^a-z0-9]+", " ", (name or "").lower().replace("(synthetic)", "")).strip()
+    while FIRM_SUFFIX_RE.search(n):
+        n = FIRM_SUFFIX_RE.sub("", n)
+    return n
+
+
 def match_partner(name, it):
-    n = (name or "").lower().replace("(synthetic)", "").strip()
+    """The partner whose full name matches; a different name is a new firm, never a guess."""
+    n = firm_key(name)
     if not n:
         return None
     for p in it.get("partners") or []:
-        pn = (p.get("name") or "").lower().replace("(synthetic)", "").strip()
-        if pn and (pn == n or pn.split()[0] == n.split()[0]):
+        if firm_key(p.get("name")) == n:
             return p["partner_id"], p["name"]
     return None, str(name).strip()
 
@@ -176,7 +189,9 @@ def parse_value(kind, value, label):
 
 
 def site_key(name):
-    return re.sub(r"[^A-Z0-9]+", "-", name.upper().replace("(SYNTHETIC)", "")).strip("-")[:20]
+    """A stable site id from a name; long names keep a hash of the whole name so distinct sites never merge."""
+    k = re.sub(r"[^A-Z0-9]+", "-", name.upper().replace("(SYNTHETIC)", "")).strip("-")
+    return k if len(k) <= 20 else k[:13].rstrip("-") + "-" + hashlib.sha1(k.encode()).hexdigest()[:6].upper()
 
 
 def resolve_site(raw, field, value, it):
@@ -704,14 +719,14 @@ def apply_fact(it, f):
             it[key] = val
         return
     if scope == "site":
-        s = next((x for x in it["sites"] if (x["site_id"] or "").upper() == f["site_id"]), None)
+        s = next((x for x in it["sites"] if (x["site_id"] or "").upper() == (f["site_id"] or "").upper()), None)
         if not s:
             s = {"site_id": f["site_id"], "name": f.get("site_name"), "deadline_week": None, "scope": None}
             it["sites"].append(s)
         s[key] = val
         return
     p = next((x for x in it["partners"] if x["partner_id"] == f["partner_id"]), None) or \
-        next((x for x in it["partners"] if (x["name"] or "").lower() == (f["partner_name"] or "").lower()), None)
+        next((x for x in it["partners"] if firm_key(x["name"]) and firm_key(x["name"]) == firm_key(f["partner_name"])), None)
     if not p:
         p = {"partner_id": "p_" + new_id("x")[-8:], "name": f["partner_name"], "email": None, "price_per_site_cents": None,
              "capacity": [None] * (weeks or 0), "max_sites": None, "payer": None, "advance_pct": None,
@@ -787,12 +802,19 @@ async def apply_readings(body: ApplyIn, user=Depends(current_user)):
             continue
         if FIELDS[f["field"]][0] in ("own", "partner") and f["field"] in WEEKLY and not it.get("weeks"):
             raise HTTPException(422, ["Set the number of weeks before using weekly capacity readings."])
+        if f["field"] in WEEKLY and f.get("week") and not 1 <= f["week"] <= it["weeks"]:
+            raise HTTPException(422, [f"{f['label']} ({f['partner_name'] or 'your crew'}): week {f['week']} is outside "
+                                      f"the job's {it['weeks']} weeks. Correct or reject this reading."])
         apply_fact(it, f)
     for f in chosen:
         if f["field"] == "scope_summary" and EACH_RE.search(f.get("excerpt") or "") and f.get("parsed"):
             for site in it["sites"]:
                 site["scope"] = site.get("scope") or f["parsed"]
     L.derive_from_access(it)
+    # The same validator as the job-details form: a reading never stores what the form would refuse.
+    it, e = L.validate_intake(L.intake_form(it))
+    if e:
+        raise HTTPException(422, e)
     await claim_rev(p, body.rev, {"intake": it, "name": it.get("job_name") or p["name"], "exclusions": exclusions})
     await db.facts.update_many({"fact_id": {"$in": [f["fact_id"] for f in chosen]}}, {"$set": {"status": "applied", "applied_at": now_iso()}})
     await log_event(p["project_id"], org(user), "apply", f"{len(chosen)} reading(s) used in the job details.",
@@ -800,15 +822,12 @@ async def apply_readings(body: ApplyIn, user=Depends(current_user)):
     recalc = f"Applied {len(chosen)} reading{'s' if len(chosen) != 1 else ''} to the job details."
     p2 = await db.projects.find_one({"project_id": p["project_id"]}, {"_id": 0})
     cur = await db.versions.find_one({"version_id": p2.get("current_version_id")}, {"_id": 0}) if p2.get("current_version_id") else None
-    if cur and all(f["scope"] in ("job_condition", "job_exclusion") for f in chosen):
-        recalc += " Job-wide conditions and exclusions don't change any partner's terms, so the plan was not recalculated."
-        cur = None
-    if cur:
-        owners = [x for x in L.partner_owners(cur) if x in {q["partner_id"] for q in it["partners"]}]
-        try:
-            doc = await generate_candidate(p2, user, owners, True, p2["rev"], reason=" after using new readings")
-            recalc += f" Plan v{doc['number']} recalculated" + (" as a private draft." if doc["state"] == "preview" else ".")
-        except HTTPException as ex:
-            recalc += f" Plan not recalculated: {ex.detail}"
+    if cur and all(f["scope"] in ("job_condition", "job_exclusion") or f["field"] in PLAN_NEUTRAL for f in chosen):
+        recalc += " These readings don't change any site, firm or week, so the plan is unchanged."
+    elif cur:
+        # A redraft would drop the organizer's firm choices, open sites and manual moves, so the plan is kept and marked instead.
+        await db.projects.update_one({"project_id": p["project_id"]}, {"$set": {"needs_redraft": True}})
+        recalc += (f" Plan v{cur['number']} is unchanged and still uses the earlier details. "
+                   "Use Draft plan when you want a plan that uses these readings.")
     from assemble.routes.projects import sheet
     return {"sheet": await sheet(p["project_id"]), "recalc": recalc, **await readings_payload(p["project_id"])}

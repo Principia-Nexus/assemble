@@ -1,5 +1,6 @@
 import copy
 import secrets
+from datetime import timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -11,7 +12,7 @@ from assemble.domain import logic as L
 from assemble.domain import rule_packs as RP
 from assemble.domain import qualify as Q
 from assemble.services import mailer
-from assemble.core import db, now_iso, new_id, current_user, log_event, STALE_MSG, PROJECT_CTX
+from assemble.core import db, now, now_iso, new_id, current_user, log_event, STALE_MSG, PROJECT_CTX, APP_URL
 from assemble.demo.sandbox import reset_project
 from assemble.domain.state import partner_statuses, link_public
 from assemble.routes.billing import require_pilot
@@ -126,7 +127,6 @@ async def sheet(project_id):
     out = {"project": {k: p.get(k) for k in ("project_id", "name", "rev", "synthetic", "sandbox_id", "created_at",
                                              "fixture_id", "example_key", "layout", "recording_copy", "demo")},
            "intake": p["intake"], "gap": L.gap_analysis(p["intake"]), "current": None, "preview": None}
-    jc = p["intake"].get("job_conditions") or []
     if cur:
         out["current"] = {"version": cur, "checker": checked(cur, p),
                           "partners": await partner_statuses(p, cur)}
@@ -153,6 +153,7 @@ async def sheet(project_id):
                 if "open_count" in r:
                     r["open_count"] = len(ch["open_conditions"])
     out["project"]["plan_selected"] = bool(cur) and p.get("plan_selected", True)
+    out["project"]["needs_redraft"] = bool(cur) and bool(p.get("needs_redraft"))
     acc = await db.quotes.find_one({"project_id": project_id, "state": "accepted"}, {"_id": 0, "number": 1}, sort=[("created_at", -1)])
     out["quotes"] = {"accepted": acc["number"] if acc else None}
     out["links_count"] = await db.links.count_documents({"project_id": project_id})
@@ -289,15 +290,24 @@ async def generate_candidate(p, user, partner_ids, include_own, rev, reason="", 
     doc = version_doc(p, it, 0, "preview" if as_preview else "current", "draft", user,
                       copy.deepcopy(it["sites"]), copy.deepcopy(it["partners"]), assignments, {}, notes)
     doc["narrowed"] = sorted(keep_open)
-    await claim_rev(p, rev, {vid_field: doc["version_id"], **({} if as_preview else {"plan_selected": False})})
+    # A redraft that replaces the current plan also ends any private draft built on the old one, so it cannot be selected back.
+    stale = None if as_preview else await get_version(p.get("preview_version_id"))
+    await claim_rev(p, rev, {vid_field: doc["version_id"], "needs_redraft": False,
+                             **({} if as_preview else {"plan_selected": False, "preview_version_id": None})})
     doc["number"] = await next_number(p["project_id"])
     if not as_preview and p.get("current_version_id"):
         await db.versions.update_one({"version_id": p["current_version_id"]}, {"$set": {"state": "replaced"}})
+    if stale:
+        await db.versions.update_one({"version_id": stale["version_id"]}, {"$set": {"state": "superseded"}})
+        if stale.get("change_request_id"):
+            await db.change_requests.update_one({"cr_id": stale["change_request_id"], "status": "in_preview"},
+                                                {"$set": {"status": "open"}})
     await db.versions.insert_one(doc)
     chk = L.check(doc)
     where = "as an amendment preview (partners already have links)" if as_preview else "as the current draft"
     await log_event(p["project_id"], org(user), "draft",
-                    f"Candidate v{doc['number']} generated {where}{reason}. Checker: {chk['overall'].upper()}.",
+                    f"Candidate v{doc['number']} generated {where}{reason}. Checker: {chk['overall'].upper()}." +
+                    (f" Private draft v{stale['number']} was built on the replaced plan, so it was discarded." if stale else ""),
                     details=[r["label"] + ": " + r["status"] for r in chk["rules"]])
     return doc
 
@@ -419,21 +429,29 @@ async def assign_site(body: AssignIn, user=Depends(current_user)):
         bad(f"{body.site_id} is not a site in this plan.")
     if body.owner and body.owner != L.OWN and body.owner not in {x["partner_id"] for x in base["partners"]}:
         bad("Choose a firm that is part of this plan.")
-    if not p.get("preview_version_id"):
+    # A firm change keeps the site's week; a site with no week yet needs one chosen, never a silent week 1.
+    week = body.week if body.week is not None else (base["assignments"][body.site_id] or {}).get("week")
+    if body.owner and L.blank(week):
+        bad(f"{body.site_id} has no week yet. Choose the week for this firm.")
+    opened = not p.get("preview_version_id")
+    if opened:
         await start_preview(PreviewIn(rev=rev), user)
         rev = (await get_project(user))["rev"]
     pre = await get_version((await get_project(user))["preview_version_id"])
-    if body.site_id not in pre["assignments"]:
-        bad(f"{body.site_id} is not a site in this plan.")
     sites = []
     for s in pre["sites"]:
         a = pre["assignments"].get(s["site_id"]) or {}
-        mine = s["site_id"] == body.site_id
-        sites.append(SiteEdit(site_id=s["site_id"], owner=body.owner if mine else a.get("owner"),
-                              week=None if (body.owner is None if mine else not a.get("owner")) else
-                              ((body.week if mine and body.week is not None else a.get("week")) or 1)))
+        if s["site_id"] == body.site_id:
+            sites.append(SiteEdit(site_id=s["site_id"], owner=body.owner, week=week if body.owner else None))
+        else:
+            sites.append(SiteEdit(site_id=s["site_id"], owner=a.get("owner"), week=a.get("week") if a.get("owner") else None))
     adj = {k: f"{v / 100:.2f}" for k, v in (pre.get("adjustments") or {}).items()}
-    return await edit_preview(PreviewEditIn(rev=rev, sites=sites, adjustments=adj), user)
+    try:
+        return await edit_preview(PreviewEditIn(rev=rev, sites=sites, adjustments=adj), user)
+    except HTTPException:
+        if opened:
+            await discard_preview(RevIn(rev=rev), user)
+        raise
 
 
 @router.post("/preview/discard")
@@ -514,8 +532,17 @@ async def create_link(body: LinkIn, user=Depends(current_user)):
         bad(f"Add a contact email for {partner['name']} in Check first. The link only opens for that email.")
     existing = await db.links.find_one({"project_id": p["project_id"], "partner_id": body.partner_id, "revoked": False},
                                        {"_id": 0})
-    if existing:
+    if existing and existing["invite_email"] == partner["email"].lower():
         return {"link": link_public(existing), "sheet": await sheet(p["project_id"])}
+    if existing:
+        # The contact changed: the old link stops opening and whoever claimed it loses access to this partner's review.
+        await db.links.update_one({"token": existing["token"]}, {"$set": {"revoked": True, "revoked_at": now_iso()}})
+        if existing.get("claimed_by"):
+            await db.users.update_one({"user_id": existing["claimed_by"]}, {"$pull": {"partner_access": {
+                "project_id": p["project_id"], "partner_id": body.partner_id}}})
+        await log_event(p["project_id"], org(user), "link",
+                        f"Review link for {partner['name']} revoked: the contact changed from {existing['invite_email']} "
+                        f"to {partner['email'].lower()}.", partner_id=body.partner_id)
     link = {"token": secrets.token_urlsafe(24), "project_id": p["project_id"], "partner_id": body.partner_id,
             "partner_name": partner["name"], "invite_email": partner["email"].lower(), "created_at": now_iso(),
             "created_by": user["name"], "shared_at": None, "claimed_by": None, "revoked": False}
@@ -539,35 +566,56 @@ async def mark_shared(token: str, user=Depends(current_user)):
     return {"sheet": await sheet(p["project_id"])}
 
 
-async def _invite(token, user, request):
+SANDBOX_MAIL = "The demo never sends real email. Copy the link instead."
+SYNTHETIC_MAIL = "This is a synthetic example address, so no email is sent. Copy the link instead."
+RESEND_SECONDS = 60
+
+
+async def _invite(token, user):
     p = await get_project(user)
     link = await db.links.find_one({"token": token, "project_id": p["project_id"], "revoked": False}, {"_id": 0})
     if not link:
         raise HTTPException(404, "Link not found.")
     cur = await get_version(p.get("current_version_id"))
     firm = await db.firms.find_one({"firm_id": p["firm_id"]}, {"_id": 0, "name": 1})
-    origin = (request.headers.get("origin") or "").rstrip("/")
     subject, text, html = mailer.invitation((firm or {}).get("name") or user.get("firm_name"), p["intake"].get("job_name") or p["name"],
-                                            link["partner_name"], (cur or {}).get("number"), f"{origin}/review/{token}")
+                                            link["partner_name"], (cur or {}).get("number"), f"{APP_URL}/review/{token}")
     return p, link, subject, text, html
 
 
+def _no_send(user, link):
+    if user.get("sandbox_id"):
+        return SANDBOX_MAIL
+    return None if mailer.sendable(link["invite_email"]) else SYNTHETIC_MAIL
+
+
 @router.post("/links/{token}/email-preview")
-async def email_preview(token: str, request: Request, user=Depends(current_user)):
-    _, link, subject, text, _ = await _invite(token, user, request)
-    ok = mailer.sendable(link["invite_email"])
-    return {"to": link["invite_email"], "subject": subject, "text": text, "sendable": ok, "emailed_at": link.get("emailed_at"),
-            "reason": None if ok else "This is a synthetic example address, so no email is sent. Copy the link instead."}
+async def email_preview(token: str, user=Depends(current_user)):
+    _, link, subject, text, _ = await _invite(token, user)
+    why = _no_send(user, link)
+    return {"to": link["invite_email"], "subject": subject, "text": text, "sendable": not why, "emailed_at": link.get("emailed_at"),
+            "reason": why}
 
 
 @router.post("/links/{token}/email-send")
 async def email_send(token: str, request: Request, user=Depends(current_user)):
-    p, link, subject, _, html = await _invite(token, user, request)
-    if not mailer.sendable(link["invite_email"]):
-        raise HTTPException(400, "This is a synthetic example address, so no email is sent. Copy the link instead.")
+    p, link, subject, _, html = await _invite(token, user)
+    why = _no_send(user, link)
+    if why:
+        raise HTTPException(400, why)
     if not request.headers.get("origin"):
         raise HTTPException(400, "Send the invitation from the app.")
-    email_id = await mailer.send_email(to=link["invite_email"], subject=subject, html=html)
+    # Claim the send atomically so a double click or a retry inside the cooldown never emails twice.
+    cutoff = (now() - timedelta(seconds=RESEND_SECONDS)).isoformat()
+    claimed = await db.links.update_one({"token": token, "$or": [{"emailed_at": None}, {"emailed_at": {"$lt": cutoff}}]},
+                                        {"$set": {"emailed_at": now_iso()}})
+    if not claimed.matched_count:
+        raise HTTPException(429, "The invitation was emailed less than a minute ago. Wait a moment before sending it again.")
+    try:
+        email_id = await mailer.send_email(to=link["invite_email"], subject=subject, html=html)
+    except Exception:
+        await db.links.update_one({"token": token}, {"$set": {"emailed_at": link.get("emailed_at")}})
+        raise
     await db.links.update_one({"token": token}, {"$set": {"emailed_at": now_iso(), "email_id": email_id,
                                                           "shared_at": link.get("shared_at") or now_iso()}})
     await log_event(p["project_id"], org(user), "link", f"Review invitation emailed to {link['invite_email']} for {link['partner_name']}.",

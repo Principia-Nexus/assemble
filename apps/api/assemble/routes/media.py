@@ -28,7 +28,7 @@ async def read_upload(file, allowed, limit):
     ctype = (file.content_type or "").split(";")[0].lower()
     if ctype not in allowed:
         raise HTTPException(422, [f"Unsupported file type {ctype or 'unknown'}."])
-    data = await file.read()
+    data = await file.read(limit + 1)
     if not data:
         raise HTTPException(422, ["The file is empty."])
     if len(data) > limit:

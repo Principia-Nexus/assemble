@@ -5,7 +5,7 @@ import { MoreHorizontal, Pencil, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { api, errList } from "@/lib/api";
+import { errList, useProjectApi } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Loading } from "@/App";
 import { RouteDenied } from "@/components/RouteDenied";
@@ -55,18 +55,22 @@ export default function ProjectSheet() {
   const [selectedId, setSelectedId] = useState(null);
   const [q, setQ] = useState("");
   const [view, setViewState] = useState(null);
-  const search = useRef(null), composer = useRef(null);
+  const search = useRef(null), composer = useRef(null), loaded = useRef(false);
+  const api = useProjectApi();
 
   const load = useCallback(async () => {
     try {
       const { data } = await api.get("/project");
       setSheet(data.sheet);
       setLoadError("");
+      loaded.current = true;
     } catch (e) {
       if (e.response?.status === 402) { window.location.replace("/pilot"); return; }
-      setLoadError(errList(e).join(" "));
+      // Only the first load can replace the page; a failed refresh keeps the workspace and says so.
+      if (loaded.current) toast.error(`Could not refresh this project. ${errList(e).join(" ")}`);
+      else setLoadError(errList(e).join(" "));
     }
-  }, []);
+  }, [api]);
   useEffect(() => { load(); }, [load]);
 
   const act = useCallback(async (method, url, body, okMsg) => {
@@ -82,7 +86,7 @@ export default function ProjectSheet() {
       else if (e.response?.status !== 422) toast.error(errs.join(" "));
       return { ok: false, errors: errs };
     } finally { setBusy(false); }
-  }, [load]);
+  }, [api, load]);
 
   const rev = sheet?.project.rev;
   const { items: raw, edges, save, run, undo, adopt, reload } = useItems(rev, load);
@@ -176,7 +180,13 @@ export default function ProjectSheet() {
               )}
             </div>
           </div>
-          {q && conds.length > 0 && <p className="mx-auto max-w-[1440px] px-4 pb-2 sm:px-6 text-xs text-amber-800" data-testid="filter-conditions-note">{conds.length} open item{conds.length === 1 ? "" : "s"} in this project</p>}
+          {sheet.project.needs_redraft && (
+            <div role="status" className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-2 px-4 pb-2 text-xs text-amber-800 sm:px-6" data-testid="needs-redraft-note">
+              <span>Job details changed since this plan was drafted — draft the plan again.</span>
+              <button type="button" onClick={() => setTool("check")} className="font-semibold text-[#215273] underline" data-testid="needs-redraft-action">Draft plan</button>
+            </div>
+          )}
+          {q && conds.length > 0 && <pclassName="mx-auto max-w-[1440px] px-4 pb-2 sm:px-6 text-xs text-amber-800" data-testid="filter-conditions-note">{conds.length} open item{conds.length === 1 ? "" : "s"} in this project</p>}
         </div>
         <div className="relative flex min-h-0 flex-1">
           <main key={view} className="ws-view-in min-w-0 flex-1" onPointerDown={() => composer.current?.close()} data-testid={`view-${view}`}>

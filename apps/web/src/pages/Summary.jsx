@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Printer, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { api, errText } from "@/lib/api";
+import { errText, useProjectApi } from "@/lib/api";
 import { STATUS, money, fmtDate, fmtTime } from "@/lib/format";
 import { Loading } from "@/App";
 import { RouteDenied } from "@/components/RouteDenied";
@@ -72,12 +72,13 @@ function Responses({ cur }) {
 }
 
 export default function Summary() {
+  const api = useProjectApi();
   const [sheet, setSheet] = useState(null);
   const [error, setError] = useState("");
   const [printedAt] = useState(() => new Date().toISOString());
   useEffect(() => {
     api.get("/project").then((r) => (r.data.sheet ? setSheet(r.data.sheet) : setError("No job yet."))).catch((e) => setError(errText(e)));
-  }, []);
+  }, [api]);
   if (error) return <RouteDenied message={error} />;
   if (!sheet) return <Loading label="Preparing summary" />;
   const cur = sheet.current;

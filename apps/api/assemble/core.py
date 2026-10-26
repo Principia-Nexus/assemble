@@ -14,6 +14,8 @@ from motor.motor_asyncio import AsyncIOMotorClient  # noqa: E402
 
 client = AsyncIOMotorClient(os.environ["MONGO_URL"])
 db = client[os.environ["DB_NAME"]]
+# Base of every link put in an email. Configured, never taken from a request header.
+APP_URL = (os.environ.get("APP_URL") or "http://localhost:3000").rstrip("/")
 
 JWT_ALG = "HS256"
 USER_PROJ = {"_id": 0, "password_hash": 0}
@@ -91,7 +93,7 @@ async def current_user(request: Request) -> dict:
 
 
 def public_user(u):
-    keys = ("user_id", "email", "name", "picture", "firm_id", "firm_name", "sandbox_id", "demo_key", "auth_methods")
+    keys = ("user_id", "email", "name", "firm_id", "firm_name", "sandbox_id", "demo_key", "auth_methods")
     return {k: u.get(k) for k in keys}
 
 

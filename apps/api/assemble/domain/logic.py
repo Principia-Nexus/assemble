@@ -181,6 +181,14 @@ def validate_intake(raw):
     return it, e
 
 
+def intake_form(it):
+    """A stored intake in the organizer form's shape, so validate_intake can check it again after other writers."""
+    c = lambda v: None if v is None else f"{v // 100}.{v % 100:02d}"  # noqa: E731
+    return {**it, "budget_ceiling": c(it.get("budget_ceiling_cents")), "own_cost_per_site": c(it.get("own_cost_per_site_cents")),
+            "coordination": c(it.get("coordination_cents")), "contingency": c(it.get("contingency_cents")),
+            "partners": [{**p, "price_per_site": c(p.get("price_per_site_cents"))} for p in it.get("partners") or []]}
+
+
 def open_conditions(it, v=None):
     out = [{"scope": ", ".join(c["sites"]) if c.get("sites") else "Job", "text": c["text"], "source": c.get("source")}
            for c in it.get("job_conditions") or [] if not c.get("resolved")]
@@ -375,10 +383,15 @@ def generate(it, partner_ids, include_own, blocked=frozenset(), keep_open=frozen
     limit = {p["partner_id"]: p.get("max_sites") for p in plist}
     used = {o: 0 for o in owners}
     idx = {s["site_id"]: i for i, s in enumerate(it["sites"])}
-    sites = sorted(it["sites"], key=lambda s: (s.get("deadline_week") or weeks + 1, idx[s["site_id"]]))
+
+    def last(s):
+        """The latest week a site may take: its deadline, the job's end, and the week its access closes."""
+        hi = access_weeks(s, it.get("start_date"))[1]
+        return min(s.get("deadline_week") or weeks, weeks, weeks if hi is None else hi)
+    sites = sorted(it["sites"], key=lambda s: (last(s), s.get("deadline_week") is None, idx[s["site_id"]]))
     assignments, notes = {}, []
     for s in sites:
-        dl = min(s.get("deadline_week") or weeks, weeks)
+        dl = last(s)
         placed = False
         if s["site_id"] in keep_open:
             assignments[s["site_id"]] = {"owner": None, "week": None}
@@ -399,7 +412,8 @@ def generate(it, partner_ids, include_own, blocked=frozenset(), keep_open=frozen
                 break
         if not placed:
             assignments[s["site_id"]] = {"owner": None, "week": None}
-            notes.append(f"{s['site_id']} left open: no included firm both fits its requirements and has capacity by its deadline.")
+            notes.append(f"{s['site_id']} left open: no included firm both fits its requirements and has capacity "
+                         "by its deadline and inside its access window.")
         if s.get("deadline_week") is None:
             notes.append(f"{s['site_id']} has no known deadline, so it was placed by the last week.")
     return assignments, notes

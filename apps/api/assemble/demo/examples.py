@@ -1,5 +1,10 @@
 """Two supplemental synthetic examples. Separate from the canonical twelve-site fixture; no real businesses."""
+from datetime import date, timedelta
+
 ORG = "Brightline Electrical (Synthetic)"
+# Quote validity moves with the calendar so the examples never seed already-expired terms.
+VALID = date.today() + timedelta(days=90)
+VALID_TEXT = f"{VALID:%B} {VALID.day}, {VALID.year}"
 
 
 def _partner(pid, name, email=None, price=None, capacity=None, max_sites=None, terms=True):
@@ -10,7 +15,7 @@ def _partner(pid, name, email=None, price=None, capacity=None, max_sites=None, t
             "conditions": "Customer provides store access." if t else None,
             "exclusions": "Permits, hazardous-material work" if t else None,
             "scope": "Lighting replacement and labeling at assigned stores" if t else None,
-            "valid_until": "2026-12-04" if t else None}
+            "valid_until": VALID.isoformat() if t else None}
 
 
 SIX_STORE = {
@@ -38,12 +43,12 @@ SIX_STORE = {
          "SYNTHETIC EXAMPLE. Juniper Electrical (fictional) quotes $12,000 per store, up to three stores. One crew-week "
          "available in each of the weeks of December 7, 14 and 21, declared for this opportunity only and not held. "
          "No advance; payment due 30 days after each store's accepted completion. Excludes permits and hazardous-material "
-         "work. Customer access required. Quote valid until December 4, 2026."),
+         f"work. Customer access required. Quote valid until {VALID_TEXT}."),
         ("quote", "Summit Wiring quote (Synthetic)", "2026-11-10",
          "SYNTHETIC EXAMPLE. Summit Wiring (fictional) quotes $12,000 per store, up to three stores. One crew-week "
          "available in each of the weeks of December 7, 14 and 21, declared for this opportunity only and not held. "
          "No advance; payment due 30 days after each store's accepted completion. Excludes permits and hazardous-material "
-         "work. Customer access required. Quote valid until December 4, 2026."),
+         f"work. Customer access required. Quote valid until {VALID_TEXT}."),
     ],
 }
 

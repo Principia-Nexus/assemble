@@ -22,7 +22,7 @@ export default function ToolSheet({ tool, onClose, onTool, sheet, act, busy, use
           <button type="button" onClick={onClose} aria-label="Close" className="ml-auto rounded-md p-1.5 text-[#64748B] transition-colors hover:bg-[#F1F5F9] hover:text-[#1A2838] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#215273]" data-testid="tool-sheet-close"><X className="h-4 w-4" /></button>
         </div>
         <div className="px-4 py-5 sm:px-6">
-          {tool === "details" && <IntakeTask key={sheet.project.rev} {...props} />}
+          {tool === "details" && <IntakeTask key={sheet.project.project_id} {...props} />}
           {tool === "source" && <ExtractPanel sheet={sheet} act={act} busy={busy} />}
           {tool === "check" && <DraftTask {...props} />}
           {tool === "qualify" && <QualPanel sheet={sheet} act={act} busy={busy} />}

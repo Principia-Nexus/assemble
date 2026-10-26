@@ -2,7 +2,6 @@ import { toast } from "sonner";
 import { Copy, Link2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/StatusPill";
-import { api, errText } from "@/lib/api";
 import { STATUS, money, fmtDate, fmtTime, slug } from "@/lib/format";
 import { TaskHeader } from "./Stepper";
 import EmailInvite from "./EmailInvite";

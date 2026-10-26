@@ -69,7 +69,7 @@ async def register(body: RegisterIn, response: Response):
     if await db.users.find_one({"email": email, "sandbox_id": None}):
         raise HTTPException(400, "An account with this email already exists. Sign in instead.")
     firm_id = await create_firm(body.firm_name.strip())
-    user = {"user_id": new_id("user"), "email": email, "name": body.name.strip(), "picture": None,
+    user = {"user_id": new_id("user"), "email": email, "name": body.name.strip(),
             "password_hash": hash_password(body.password), "sandbox_id": None, "demo_key": None,
             "auth_methods": ["password"], "email_verified": False, "firm_id": firm_id,
             "firm_name": body.firm_name.strip(), "partner_access": [], "created_at": now_iso()}

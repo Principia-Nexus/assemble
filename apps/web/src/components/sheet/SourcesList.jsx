@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FileDown, Loader2, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/StatusPill";
-import { api, errText } from "@/lib/api";
+import { errText, useProjectApi } from "@/lib/api";
 import { fmtDate, fmtTime } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ const ST = {
 };
 
 function SourceItem({ s, onRead }) {
+  const api = useProjectApi();
   const [busy, setBusy] = useState(false);
   const retry = async () => {
     setBusy(true);

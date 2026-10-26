@@ -80,7 +80,9 @@ def _assert_safe_email(subject, html):
         low = url.strip().lower()
         if low.startswith(("mailto:", "tel:", "cid:", "#")):
             continue
-        if not low.startswith("https://"):
+        # A logged (never sent) development email may point at http://localhost.
+        local_dev = not SMTP_HOST and low.startswith("http://") and urlparse(low).hostname == "localhost"
+        if not low.startswith("https://") and not local_dev:
             raise ValueError(f"Email links/assets must be absolute https: {url!r} (G3)")
         host = urlparse(low).hostname or ""
         if not _host_ok(host) or urlparse(low).username is not None:

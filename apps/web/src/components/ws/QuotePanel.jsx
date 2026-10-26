@@ -4,7 +4,7 @@ import { Check, Copy, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { api, errList } from "@/lib/api";
+import { errList, useProjectApi } from "@/lib/api";
 
 const STATE = { draft: "Private draft", issued: "Issued · awaiting customer", changes_requested: "Customer requested changes", declined: "Declined",
   withdrawn: "Withdrawn", expired: "Expired", accepted: "Accepted", superseded: "Replaced by a newer quote" };
@@ -12,15 +12,23 @@ const usd = (c) => (c == null ? "unknown" : `$${(c / 100).toLocaleString("en-US"
 const F = [["customer_name", "Customer"], ["customer_email", "Customer email"], ["site", "Site / address"], ["timing", "Timing"],
   ["tax_basis", "Tax treatment"], ["payment_terms", "Payment terms"]];
 const lines = (v) => (v || []).join("\n");
+// "1,200" or "$1 200.50" reads as dollars; blank is unknown (null); anything else is NaN and refused, never sent as unknown.
+const dollars = (v) => {
+  const s = String(v).replace(/[\s,$]|usd/gi, "");
+  return s === "" ? null : /^\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
+};
 
 function Draft({ q, onSaved }) {
+  const api = useProjectApi();
   const local = (v) => { if (!v) return ""; const d = new Date(v); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
   const [f, setF] = useState({ ...q, valid_until: local(q.valid_until), price: q.price_cents != null ? q.price_cents / 100 : "", inc: lines(q.inclusions), exc: lines(q.exclusions), cond: lines(q.conditions) });
   const [preview, setPreview] = useState(null);
   const [errors, setErrors] = useState([]);
   const save = async () => {
+    const price = dollars(f.price);
+    if (Number.isNaN(price)) { setErrors([`Customer price “${f.price}” is not an amount. Enter it like 1200 or 1,200.50.`]); return; }
     const fields = { ...Object.fromEntries(F.map(([k]) => [k, f[k] || null])), scope: f.scope || null, terms: f.terms || null, valid_until: f.valid_until ? new Date(f.valid_until).toISOString() : null,
-      price_cents: f.price === "" ? null : Math.round(Number(f.price) * 100), inclusions: f.inc.split("\n"), exclusions: f.exc.split("\n"), conditions: f.cond.split("\n") };
+      price_cents: price == null ? null : Math.round(price * 100), inclusions: f.inc.split("\n"), exclusions: f.exc.split("\n"), conditions: f.cond.split("\n") };
     try {
       const { data } = await api.put(`/project/quotes/${q.quote_id}`, { fields });
       setErrors([]);
@@ -133,8 +141,9 @@ function Draft({ q, onSaved }) {
 }
 
 function Issued({ q, onChange }) {
+  const api = useProjectApi();
   const [link, setLink] = useState(null);
-  useEffect(() => { api.get(`/project/quotes/${q.quote_id}/link`).then((r) => setLink(r.data)).catch(() => {}); }, [q.quote_id]);
+  useEffect(() => { api.get(`/project/quotes/${q.quote_id}/link`).then((r) => setLink(r.data)).catch(() => {}); }, [api, q.quote_id]);
   const url = link && `${window.location.origin}${link.path}`;
   const s = q.snapshot;
   const open = ["issued", "changes_requested"].includes(q.state);
@@ -161,15 +170,24 @@ function Issued({ q, onChange }) {
 }
 
 export default function QuotePanel() {
+  const api = useProjectApi();
   const [quotes, setQuotes] = useState(null);
-  const load = useCallback(() => api.get("/project/quotes").then((r) => setQuotes(r.data.quotes)), []);
+  const [error, setError] = useState("");
+  const load = useCallback(() => api.get("/project/quotes").then((r) => { setQuotes(r.data.quotes); setError(""); }, (e) => setError(errList(e).join(" "))), [api]);
   useEffect(() => { load(); }, [load]);
-  if (!quotes) return <p className="text-sm text-slate-500">Loading quotes…</p>;
+  const failed = error && (
+    <div role="alert" className="flex flex-wrap items-center gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800" data-testid="quote-load-error">
+      <span className="min-w-0 flex-1">Quotes could not be loaded. {error}</span>
+      <Button size="sm" variant="outline" onClick={load} data-testid="quote-load-retry">Try again</Button>
+    </div>
+  );
+  if (!quotes) return failed || <p className="text-sm text-slate-500">Loading quotes…</p>;
   const draft = quotes.find((q) => q.state === "draft");
   const last = [...quotes].reverse().find((q) => q.state !== "draft");
   const start = async () => { try { await api.post("/project/quotes", { amend_of: last?.quote_id || null }); load(); } catch (e) { toast.error(errList(e).join(" ")); } };
   return (
     <div className="space-y-4" data-testid="quote-panel">
+      {failed}
       <p className="text-xs text-slate-500">Internal planning totals and firm prices are not customer prices. You set and authorize the price the customer sees.</p>
       {draft ? <Draft key={draft.quote_id} q={draft} onSaved={(_, reload) => reload && load()} />
         : <Button onClick={start} data-testid="quote-new">{quotes.some((q) => q.state === "accepted") ? "Draft an amendment" : last ? "Draft a revised quote" : "Draft customer quote"}</Button>}

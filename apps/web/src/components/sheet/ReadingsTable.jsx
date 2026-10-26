@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusPill } from "@/components/StatusPill";
-import { api, errList } from "@/lib/api";
+import { errList, useProjectApi } from "@/lib/api";
 import { fmtTime } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -21,6 +21,7 @@ const done = (r) => rank(r) === 2;
 const tid = (t) => t.replace(/[^a-z0-9]+/gi, "-");
 
 function FactLine({ f, current, onRead }) {
+  const api = useProjectApi();
   const [edit, setEdit] = useState(false);
   const [val, setVal] = useState(f.value);
   const [err, setErr] = useState("");

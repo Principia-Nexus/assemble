@@ -1,17 +1,42 @@
 import axios from "axios";
+import { useLayoutEffect, useMemo } from "react";
+import { useParams } from "react-router-dom";
 
 export const api = axios.create({
   baseURL: `${process.env.REACT_APP_BACKEND_URL}/api`,
   withCredentials: true,
 });
 
-// The open project travels on every request; the server re-checks that it belongs to the signed-in firm.
-let projectId = null;
-export const currentProjectId = () => projectId;
-export function setProjectId(id) {
-  projectId = id || null;
-  if (projectId) api.defaults.headers.common["X-Project-Id"] = projectId;
-  else delete api.defaults.headers.common["X-Project-Id"];
+// Every project call carries the id of the project it was made for (the server re-checks it belongs to the signed-in
+// firm). A call or reply for a project that is no longer open is dropped and never settles, so a retry, queued edit or
+// late reply can neither land on nor report into the project the user switched to.
+let openId = null;
+export function useOpenProject(id) {
+  useLayoutEffect(() => {
+    openId = id;
+    return () => { if (openId === id) openId = null; };
+  }, [id]);
+}
+
+const dropped = () => new Promise(() => {});
+export function projectApi(pid) {
+  const send = (cfg) => {
+    if (openId !== pid) return dropped();
+    return api.request({ ...cfg, headers: { ...cfg.headers, "X-Project-Id": pid } })
+      .then((r) => (openId === pid ? r : dropped()), (e) => (openId === pid ? Promise.reject(e) : dropped()));
+  };
+  return {
+    get: (url, cfg = {}) => send({ ...cfg, method: "get", url }),
+    delete: (url, cfg = {}) => send({ ...cfg, method: "delete", url }),
+    post: (url, data, cfg = {}) => send({ ...cfg, method: "post", url, data }),
+    put: (url, data, cfg = {}) => send({ ...cfg, method: "put", url, data }),
+  };
+}
+
+// The client for the project on this route (/projects/:projectId); use it for every /project call.
+export function useProjectApi() {
+  const { projectId } = useParams();
+  return useMemo(() => projectApi(projectId), [projectId]);
 }
 
 const TAG = / ?\(Synthetic\)/g;

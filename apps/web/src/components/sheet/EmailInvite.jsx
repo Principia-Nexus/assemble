@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Loader2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { api, errText } from "@/lib/api";
+import { errText, useProjectApi } from "@/lib/api";
 import { fmtTime } from "@/lib/format";
 
 // Recipient and message are built on the server; the organizer previews and deliberately sends.
 export default function EmailInvite({ p, act, busy, id, onCopy }) {
+  const api = useProjectApi();
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState("");

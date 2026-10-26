@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, errList } from "@/lib/api";
+import { errList, useProjectApi } from "@/lib/api";
 
 // Work items + relationships for the open project. Every change goes through /items/ops (validated, undoable).
 export function useItems(rev, onChanged) {
+  const api = useProjectApi();
   const [items, setItems] = useState([]);
   const [edges, setEdges] = useState([]);
   const [save, setSave] = useState("idle");
@@ -16,7 +17,7 @@ export function useItems(rev, onChanged) {
     const { data } = await api.get("/project/items");
     setItems(data.items);
     setEdges(data.edges);
-  }, []);
+  }, [api]);
   useEffect(() => { load().catch(() => {}); }, [load]);
 
   const finish = useCallback(async (data) => {
@@ -39,13 +40,13 @@ export function useItems(rev, onChanged) {
     setSave("saving");
     try { return await finish((await api.post("/project/items/ops", { rev: revRef.current, ops, summary })).data); }
     catch (e) { return fail(e); }
-  }), [serial, finish, fail]);
+  }), [api, serial, finish, fail]);
 
   const undo = useCallback((batchId) => serial(async () => {
     setSave("saving");
     try { return await finish((await api.post("/project/items/undo", { rev: revRef.current, batch_id: batchId })).data); }
     catch (e) { return fail(e); }
-  }), [serial, finish, fail]);
+  }), [api, serial, finish, fail]);
 
   const adopt = useCallback(async (batch) => { setLastBatch(batch); await load(); }, [load]);
 

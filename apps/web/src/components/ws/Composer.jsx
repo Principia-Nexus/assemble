@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { ArrowUp, Camera, ChevronDown, ChevronUp, Loader2, Mic, Paperclip, Plus, Square } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { api, errText } from "@/lib/api";
+import { errText, useProjectApi } from "@/lib/api";
 
 function Receipt({ batch, onUndo, undone }) {
   return (
@@ -13,6 +13,7 @@ function Receipt({ batch, onUndo, undone }) {
 }
 
 const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo, onAdd, suggestions, onTrayChange, onStale }, ref) {
+  const api = useProjectApi();
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState("");
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -66,7 +67,7 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
   const cb = useRef({});
   cb.current = { onSheet, onAdopt };
 
-  useEffect(() => { api.get("/project/assistant").then((r) => { setMsgs(r.data.messages); setRuns(r.data.active_runs || []); if (r.data.active_runs?.length) setOpen(true); }).catch(() => {}); }, []);
+  useEffect(() => { api.get("/project/assistant").then((r) => { setMsgs(r.data.messages); setRuns(r.data.active_runs || []); if (r.data.active_runs?.length) setOpen(true); }).catch(() => {}); }, [api]);
   useEffect(() => { onTrayChange?.(open); }, [open, onTrayChange]);
   useEffect(() => { if (open) end.current?.scrollIntoView({ block: "end", behavior: "smooth" }); }, [msgs, open, runs]);
   useEffect(() => {
@@ -86,7 +87,7 @@ const Composer = forwardRef(function Composer({ sheet, onSheet, onAdopt, onUndo,
       }
     }, 1200);
     return () => clearInterval(t);
-  }, [runs]);
+  }, [api, runs]);
 
   const send = async (raw) => {
     const message = (raw ?? text).trim();

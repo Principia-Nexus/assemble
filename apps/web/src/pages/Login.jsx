@@ -75,7 +75,9 @@ function Reveal({ show, children, testId, pad = "pt-4 pb-px" }) {
 export default function Login() {
   const { user, login, register } = useAuth();
   const [params] = useSearchParams();
-  const next = params.get("next");
+  // Only a path on this site: "//host" and "/\host" are other sites to a browser.
+  const raw = params.get("next");
+  const next = raw && raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\") ? raw : null;
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "", name: "", firm_name: "" });
   const [error, setError] = useState("");

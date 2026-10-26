@@ -7,7 +7,7 @@ shadcn/ui. It decides nothing: every permission and rule is the API's.
 
 | Direction | Where | Through |
 |---|---|---|
-| out | `apps/api` | `src/lib/api.js`: axios on `REACT_APP_BACKEND_URL` + `/api` with credentials |
+| out | `apps/api` | `src/lib/api.js`: axios on `REACT_APP_BACKEND_URL` + `/api` with credentials; every `/project` call goes through `useProjectApi()` / `projectApi(id)`, which sends that call's own `X-Project-Id` and drops replies for a project that is no longer open |
 | in | the browser | `public/index.html`, `src/index.js`, routes in `src/App.js` |
 
 | Path | What it is |

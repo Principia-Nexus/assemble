@@ -94,8 +94,7 @@ def _site_result(owner, sid, reqs, evidence, today):
         reasons.append(msg)
         if RANK[st] > RANK[worst]:
             worst = st
-    active = {r["code"].upper() for r in reqs if _applies(r, sid, owner) and r["status"] in ACTIVE}
-    relevant = any(e["license_class"].upper() in active for e in mine)
+    # Evidence for another class never shows a firm cannot hold this one: only a lapsed or expired record does.
     for r in reqs:
         if not _applies(r, sid, owner) or r["status"] == "dismissed":
             continue
@@ -118,8 +117,6 @@ def _site_result(owner, sid, reqs, evidence, today):
             bump("evidence_needed", f"{r['label']}: an expiry date alone is not current status. Record the observed status and date from the source record.")
         elif match:
             bump("does_not_fit", f"{r['label']}: the only evidence expired on {match[0]['expires']}.")
-        elif mine and not relevant:
-            bump("does_not_fit", f"{r['label']}: evidence on file is {', '.join(sorted({e['license_class'] for e in mine}))}, not {r['code']}.")
         elif mine:
             bump("evidence_needed", f"{r['label']}: no {r['code']} evidence on file yet (has {', '.join(sorted({e['license_class'] for e in mine}))}).")
         else:

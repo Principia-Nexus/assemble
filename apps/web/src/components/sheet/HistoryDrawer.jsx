@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { api, errText } from "@/lib/api";
+import { errText, useProjectApi } from "@/lib/api";
 import { fmtTime } from "@/lib/format";
 
 export default function HistoryDrawer({ open, onOpenChange, rev }) {
+  const api = useProjectApi();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
     if (!open) return;
     api.get("/project/history").then((r) => { setData(r.data); setError(""); }).catch((e) => setError(errText(e)));
-  }, [open, rev]);
+  }, [api, open, rev]);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md" data-testid="history-drawer">

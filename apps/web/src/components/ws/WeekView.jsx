@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { firmName, firmTone, planVersion } from "./derive";
+import { firmName, firmTone, isPrivateDraft, planLabel, scheduleVersion } from "./derive";
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const addDays = (s, n) => { const d = new Date(`${s}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
@@ -11,9 +11,9 @@ const fmt = (s, o) => new Date(`${s}T12:00:00Z`).toLocaleDateString("en-US", { t
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const TODAY = iso(new Date());
 
-function useEvents(sheet, items, filter) {
+function useEvents(sheet, items, filter, v, draft) {
   return useMemo(() => {
-    const ev = [], start = sheet.intake.start_date, v = planVersion(sheet);
+    const ev = [], start = sheet.intake.start_date;
     if (v && start) {
       const m0 = monday(start);
       const by = {};
@@ -25,7 +25,8 @@ function useEvents(sheet, items, filter) {
       for (const [k, sites] of Object.entries(by)) {
         const [owner, w] = k.split("|");
         const from = addDays(m0, 7 * (w - 1));
-        ev.push({ key: `plan-${k}`, from, to: addDays(from, 4), kind: "plan", tone: firmTone(sheet, owner).bar, label: `${firmName(sheet, owner)} · ${sites.join(", ")}`, short: firmName(sheet, owner), select: `plan-${owner}` });
+        ev.push({ key: `plan-${k}`, from, to: addDays(from, 4), kind: "plan", tone: `${firmTone(sheet, owner).bar}${draft ? " border-dashed" : ""}`,
+          label: `${draft ? "Draft · " : ""}${firmName(sheet, owner)} · ${sites.join(", ")}`, short: firmName(sheet, owner), select: `plan-${owner}` });
       }
     }
     for (const it of items) {
@@ -39,7 +40,7 @@ function useEvents(sheet, items, filter) {
       key: `due-${d}`, from: d, kind: "due", select: es[0].select,
       label: es.length === 1 ? es[0].label : `${es.length} sites due · ${es.map((x) => x.label.split(" ")[0]).join(", ")}`,
     }))];
-  }, [sheet, items, filter]);
+  }, [sheet, items, filter, v, draft]);
 }
 
 function Chip({ e, day, selectedId, onSelect, compact }) {
@@ -54,7 +55,10 @@ function Chip({ e, day, selectedId, onSelect, compact }) {
 }
 
 export default function WeekView({ sheet, items, onSelect, selectedId, filter }) {
-  const events = useEvents(sheet, items, filter);
+  // The selected plan is the schedule; a private draft is shown only on request, and marked wherever it appears.
+  const [wantDraft, setWantDraft] = useState(false);
+  const v = scheduleVersion(sheet, wantDraft), draft = isPrivateDraft(sheet, v);
+  const events = useEvents(sheet, items, filter, v, draft);
   const anchor = [...events.map((e) => e.from)].sort()[0] || sheet.intake.start_date || TODAY;
   const [mode, setMode] = useState("month");
   const [cursor, setCursor] = useState(anchor);
@@ -75,6 +79,12 @@ export default function WeekView({ sheet, items, onSelect, selectedId, filter })
           <button type="button" className={navBtn} onClick={() => step(1)} aria-label="Next" data-testid="week-next"><ChevronRight className="h-4 w-4" /></button>
           <p className="ml-1 text-[15px] font-semibold text-[#1A2838]" data-testid="week-label">{title}</p>
           <button type="button" onClick={() => setCursor(TODAY)} className="ml-2 h-8 rounded-md border border-[#E2E8F0] bg-white px-3 text-[12.5px] font-medium text-[#1A2838] transition-colors hover:bg-[#F1F5F9]" data-testid="calendar-today">Today</button>
+          {v && <span className={`ml-2 rounded px-2 py-0.5 text-[11.5px] font-semibold ${draft ? "border border-dashed border-[#B4690E]/50 text-[#8A5208]" : "text-[#64748B]"}`} data-testid="calendar-plan-label">{planLabel(sheet, v)}{draft ? " · not the selected schedule" : ""}</span>}
+          {sheet.preview && sheet.current && (
+            <button type="button" aria-pressed={wantDraft} onClick={() => setWantDraft((d) => !d)} className="h-8 rounded-md border border-[#E2E8F0] bg-white px-3 text-[12.5px] font-medium text-[#1A2838] transition-colors hover:bg-[#F1F5F9]" data-testid="calendar-show-draft">
+              {wantDraft ? `Show plan v${sheet.current.version.number}` : `Show draft v${sheet.preview.version.number}`}
+            </button>
+          )}
           <div className="ml-auto flex rounded-md border border-[#E2E8F0] bg-[#F8FAFC] p-0.5" role="tablist" aria-label="Calendar range">
             {["month", "week"].map((m) => (
               <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} data-testid={`calendar-mode-${m}`}

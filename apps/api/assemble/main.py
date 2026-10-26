@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
-from assemble.core import db, client, PROJECT_CTX
+from assemble.core import db, client, PROJECT_CTX, APP_URL
 from assemble.routes import assistant, auth, billing, extract, items, media, projects, qualifications, quotes, review
 
 app = FastAPI(title="Assemble")
@@ -29,14 +29,16 @@ async def root():
     return {"app": "Assemble", "status": "ok"}
 
 
+# Configured only: a request's own Host or X-Forwarded-Host is attacker-controlled and never widens this.
+ALLOWED_HOSTS = {urlparse(o.strip()).netloc for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip() not in ("", "*")} | {urlparse(APP_URL).netloc}
+
+
 @app.middleware("http")
 async def origin_guard(request: Request, call_next):
     PROJECT_CTX.set((request.headers.get("x-project-id") or "").strip()[:40] or None)
     if request.method in ("POST", "PUT", "PATCH", "DELETE") and request.url.path.startswith("/api"):
         origin = request.headers.get("origin")
-        hosts = {h.strip() for k in ("x-forwarded-host", "host") for h in (request.headers.get(k) or "").split(",") if h.strip()}
-        hosts |= {urlparse(o.strip()).netloc for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip() not in ("", "*")}
-        if origin and hosts and urlparse(origin).netloc not in hosts:
+        if origin and urlparse(origin).netloc not in ALLOWED_HOSTS:
             return JSONResponse(status_code=403, content={"detail": "Request origin not allowed."})
     return await call_next(request)
 
@@ -70,6 +72,9 @@ async def startup():
     await db.login_attempts.create_index("identifier")
     await db.events.create_index([("project_id", 1), ("at", -1)])
     await db.fixtures.create_index("fixture_id", unique=True)
+    await db.quotes.create_index([("project_id", 1), ("accept_slot", 1)], unique=True,
+                                 partialFilterExpression={"accept_slot": {"$type": "string"}})
+    await db.quote_codes.create_index("quote_id")
     from assemble.demo.fixtures import ensure_fixtures
     await ensure_fixtures()
 

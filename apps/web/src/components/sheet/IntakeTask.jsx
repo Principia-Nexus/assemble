@@ -53,6 +53,15 @@ export default function IntakeTask({ sheet, act, busy, goTo }) {
     window.addEventListener("assemble:intake-tab", h);
     return () => window.removeEventListener("assemble:intake-tab", h);
   }, []);
+  // A newer saved revision (an assistant run, another tab) refreshes an untouched form and never wipes typed edits:
+  // those are kept, flagged, and checked against the latest values before the next save.
+  const [base, setBase] = useState(sheet);
+  if (sheet.project.rev !== base.project.rev) {
+    const same = (x) => JSON.stringify(form) === JSON.stringify(toForm(x.intake));
+    setBase(sheet);
+    if (same(base)) setForm(toForm(sheet.intake));
+    else if (!same(sheet)) setKept(true);
+  }
   const w = weeksOf(form);
   const dirty = JSON.stringify(form) !== JSON.stringify(toForm(sheet.intake));
   useEffect(() => { setDirty(dirty); return () => setDirty(false); }, [dirty]);
