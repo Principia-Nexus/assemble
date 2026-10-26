@@ -1,9 +1,8 @@
 # infra/
 
 How Assemble ships: one container image holding the API and the built web client, served from one
-origin. `.github/workflows/image.yml` publishes it to `ghcr.io/principia-nexus/assemble` (tags
-`main` and the commit sha) on every push to `main`. Nothing here deploys it or creates anything
-that costs money; choosing and paying for a host is a separate decision.
+origin. Nothing publishes or deploys it: there is no host or domain yet, and choosing and paying
+for one is a separate decision.
 
 ## Connects
 
@@ -16,4 +15,5 @@ that costs money; choosing and paying for a host is a separate decision.
 
 ## Change recipes
 
-- Run the image: `docker run -p 8000:8000 --env-file apps/api/.env -v assemble-data:/data ghcr.io/principia-nexus/assemble:main`.
+- Build the image: `docker build -f infra/assemble.Dockerfile -t assemble .` from the repository root.
+- Run it: `docker run -p 8000:8000 --env-file apps/api/.env -v assemble-data:/data assemble`.
