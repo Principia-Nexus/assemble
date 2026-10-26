@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#000000" />
+        <meta name="description" content="Assemble: plan a multi-site job with trusted partners" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <title>Assemble</title>
+    </head>
+    <body>
+        <noscript>You need to enable JavaScript to run this app.</noscript>
+        <div id="root"></div>
+        <canvas id="boot-dots" aria-hidden="true" style="position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:0"></canvas>
+        <script>
+            (function () {
+                var c = document.getElementById("boot-dots");
+                var p = location.pathname;
+                if ((p !== "/" && p !== "/login") || matchMedia("(max-width: 767px), (pointer: coarse), (prefers-reduced-motion: reduce)").matches) { c.parentNode.removeChild(c); return; }
+                var d = Math.min(2, devicePixelRatio || 1), W = innerWidth, H = innerHeight;
+                c.width = Math.round(W * d); c.height = Math.round(H * d);
+                var x = c.getContext("2d"); x.scale(d, d); x.fillStyle = "#1a2937";
+                function h(i, b) { var f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % b); i = Math.floor(i / b); } return r; }
+                var s = 7;
+                function rnd() { s = (s * 16807) % 2147483647; return s / 2147483647; }
+                for (var i = 1; i <= 3941; i++) {
+                    x.globalAlpha = 0.45 + 0.4 * rnd();
+                    x.beginPath();
+                    x.arc(W / 2 + (2 * h(i, 2) - 1) * 0.51 * W, H / 2 + (2 * h(i, 3) - 1) * 0.51 * H, 0.45 + 0.35 * rnd(), 0, 6.2832);
+                    x.fill();
+                }
+            })();
+        </script>
+    </body>
+</html>
