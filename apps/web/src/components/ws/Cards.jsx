@@ -30,7 +30,7 @@ export function ItemCard({ it, sheet, selected, hot, onSelect, cardRef }) {
         {it.kind === "ai_task" ? `AI run · ${statusText(it.status)}` : it.kind === "task" ? (it.status === "done" ? "Done" : "Task") : it.kind === "milestone" ? (it.status === "reached" ? "Reached" : "Milestone") : statusText(it.status)}
       </div>
       <p className="mt-1 text-[13px] font-medium leading-snug text-[#1A2838]">{it.title}</p>
-      {it.firm_id && <p className="mt-1 flex items-center gap-1.5 text-[11.5px] text-[#2F4A66]"><span className={`h-2 w-2 shrink-0 rounded-full ${firmTone(sheet, it.firm_id).dot}`} />{firmName(sheet, it.firm_id)}</p>}
+      {it.firm_id && <p className="mt-1 flex items-center gap-1.5 text-[11.5px] text-[#2F4A66]"><span className={`h-2 w-2 shrink-0 rounded-full ${firmTone(sheet, it.firm_id).dot}`} />{firmName(sheet, it.firm_id)}{it.plan_draft && <span className="rounded border border-dashed border-[#94A3B8] px-1 text-[10px] uppercase tracking-wide text-[#64748B]" data-testid={`card-draft-${it.item_id}`}>Draft</span>}</p>}
       {it.site_ids?.length > 0 && <p className="mt-0.5 font-mono text-[10.5px] text-[#64748B]">{it.site_ids.join(", ")}</p>}
       <DateLine it={it} />
     </button>

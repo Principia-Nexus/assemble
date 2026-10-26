@@ -77,18 +77,22 @@ class CustomerChangeIn(BaseModel):
     moves: List[MoveIn]
 
 
-async def get_project(user, required=True):
+async def require_firm(user):
+    """Refuses partner-only accounts and firms without pilot access."""
     if not user.get("firm_id"):
         raise HTTPException(403, "This account is a partner account with no organizer firm. Open the review links shared with you.")
     await require_pilot(user)
-    q, pid = {"firm_id": user["firm_id"]}, PROJECT_CTX.get()
-    if pid:
-        q["project_id"] = pid
-    p = await db.projects.find_one(q, {"_id": 0}, sort=[("position", 1), ("created_at", 1)])
-    if pid and not p:
+
+
+async def get_project(user):
+    """The project named by X-Project-Id, only if it belongs to the user's firm. There is no default project."""
+    await require_firm(user)
+    pid = PROJECT_CTX.get()
+    if not pid:
+        raise HTTPException(400, "Open a project first.")
+    p = await db.projects.find_one({"firm_id": user["firm_id"], "project_id": pid}, {"_id": 0})
+    if not p:
         raise HTTPException(404, "Project not found for your business.")
-    if required and not p:
-        raise HTTPException(404, "No job yet. Create one to start.")
     return p
 
 
@@ -168,8 +172,8 @@ def org(user):
 
 @router.get("")
 async def read_project(user=Depends(current_user)):
-    p = await get_project(user, required=False)
-    return {"sheet": await sheet(p["project_id"]) if p else None}
+    p = await get_project(user)
+    return {"sheet": await sheet(p["project_id"])}
 
 
 async def project_status(p):
@@ -183,8 +187,7 @@ async def project_status(p):
 
 @projects_router.get("")
 async def list_projects(user=Depends(current_user)):
-    PROJECT_CTX.set(None)
-    await get_project(user, required=False)
+    await require_firm(user)
     rows = await db.projects.find({"firm_id": user["firm_id"]}, {"_id": 0}).sort([("position", 1), ("created_at", 1)]).to_list(200)
     return {"projects": [{"project_id": p["project_id"], "name": p["name"], "customer": p["intake"].get("customer_name"),
                           "synthetic": bool(p.get("synthetic")), "status": await project_status(p),
@@ -193,8 +196,7 @@ async def list_projects(user=Depends(current_user)):
 
 @projects_router.post("")
 async def create_project(body: CreateIn, user=Depends(current_user)):
-    PROJECT_CTX.set(None)
-    await get_project(user, required=False)
+    await require_firm(user)
     name, customer = body.name.strip(), (body.customer or "").strip() or None
     if not name or len(name) > 200:
         bad("Give the project a name (up to 200 characters).")

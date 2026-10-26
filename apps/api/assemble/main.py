@@ -1,9 +1,10 @@
 import os
 import logging
+from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
 from assemble.core import db, client, PROJECT_CTX, APP_URL
@@ -82,3 +83,15 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     client.close()
+
+
+# The built web client, when present (the container image sets WEB_DIR), is served from this same origin, so the
+# browser needs no CORS and the auth cookies stay first-party. Registered last: every /api route matches first.
+WEB_DIR = Path(os.environ.get("WEB_DIR") or Path(__file__).resolve().parents[2] / "web" / "build").resolve()
+if (WEB_DIR / "index.html").is_file():
+    @app.get("/{path:path}", include_in_schema=False)
+    async def web(path: str):
+        if path == "api" or path.startswith("api/"):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        f = (WEB_DIR / path).resolve()
+        return FileResponse(f if WEB_DIR in f.parents and f.is_file() else WEB_DIR / "index.html")

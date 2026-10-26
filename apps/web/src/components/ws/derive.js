@@ -124,15 +124,33 @@ export const FIRM_TONES = [
   { dot: "bg-[#B5475F]", chip: "bg-[#F6E6EA] text-[#8E2F45]", bar: "bg-[#F6E6EA] text-[#8E2F45] border-[#B5475F]/30" },
   { dot: "bg-[#6A5BC0]", chip: "bg-[#ECE9F6] text-[#4B3F8A]", bar: "bg-[#ECE9F6] text-[#4B3F8A] border-[#6A5BC0]/30" },
   { dot: "bg-[#7C9A24]", chip: "bg-[#EEF3DC] text-[#4D6114]", bar: "bg-[#EEF3DC] text-[#4D6114] border-[#7C9A24]/30" },
+  { dot: "bg-[#1F8A8A]", chip: "bg-[#E0F2F2] text-[#156666]", bar: "bg-[#E0F2F2] text-[#156666] border-[#1F8A8A]/30" },
+  { dot: "bg-[#8B5E3C]", chip: "bg-[#F3EAE3] text-[#674329]", bar: "bg-[#F3EAE3] text-[#674329] border-[#8B5E3C]/30" },
+  { dot: "bg-[#A8459C]", chip: "bg-[#F5E6F3] text-[#7E2F74]", bar: "bg-[#F5E6F3] text-[#7E2F74] border-[#A8459C]/30" },
+  { dot: "bg-[#C2532F]", chip: "bg-[#FAE9E3] text-[#923B1F]", bar: "bg-[#FAE9E3] text-[#923B1F] border-[#C2532F]/30" },
+  { dot: "bg-[#2B8CB8]", chip: "bg-[#E2F1F8] text-[#1D6889]", bar: "bg-[#E2F1F8] text-[#1D6889] border-[#2B8CB8]/30" },
+  { dot: "bg-[#5E6E84]", chip: "bg-[#EAEEF3] text-[#3F4D60]", bar: "bg-[#EAEEF3] text-[#3F4D60] border-[#5E6E84]/30" },
 ];
 const OWN_TONE = { dot: "bg-[#1A2838]", chip: "bg-[#E2E8F0] text-[#1A2838]", bar: "bg-[#E2E8F0] text-[#1A2838] border-[#1A2838]/25" };
 const NONE_TONE = { dot: "bg-[#CBD5E1]", chip: "bg-[#F1F5F9] text-[#64748B]", bar: "bg-[#F1F5F9] text-[#64748B] border-[#CBD5E1]" };
-// The colour comes from the partner id, not list position, so removing a firm never recolours the others.
+// Each firm starts at the slot its id hashes to and, in id order, takes the next free one, so up to FIRM_TONES.length
+// firms never share a colour and removing a firm recolours only a firm that had collided with it.
 const hash = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+export function firmToneSlots(ids) {
+  const n = FIRM_TONES.length, taken = new Set(), slots = {};
+  for (const id of [...ids].sort()) {
+    let i = hash(id) % n;
+    if (taken.size < n) while (taken.has(i)) i = (i + 1) % n;
+    taken.add(i);
+    slots[id] = i;
+  }
+  return slots;
+}
 export function firmTone(sheet, owner) {
   if (owner === "own") return OWN_TONE;
-  if (!(sheet.intake.partners || []).some((p) => p.partner_id === owner)) return NONE_TONE;
-  return FIRM_TONES[hash(owner) % FIRM_TONES.length];
+  const ids = (sheet.intake.partners || []).map((p) => p.partner_id);
+  if (!ids.includes(owner)) return NONE_TONE;
+  return FIRM_TONES[firmToneSlots(ids)[owner]];
 }
 export const RESP_TONE = { confirmed: "text-[#1E7B5C]", confirmed_conditional: "text-[#1E7B5C]", declined: "text-[#A93A3A]", change_requested: "text-[#A93A3A]", expired: "text-[#A93A3A]" };
 
@@ -140,9 +158,10 @@ export const RESP_TONE = { confirmed: "text-[#1E7B5C]", confirmed_conditional: "
 export function withPlan(items, sheet) {
   const v = planVersion(sheet);
   if (!v) return items;
+  const draft = isPrivateDraft(sheet, v);
   return items.map((it) => {
     const sid = it.kind === "task" && it.site_ids?.length === 1 ? it.site_ids[0] : null;
     const a = sid && v.assignments?.[sid];
-    return a ? { ...it, firm_id: a.owner || null, plan_site: sid, plan_week: a.week ?? null } : it;
+    return a ? { ...it, firm_id: a.owner || null, plan_site: sid, plan_week: a.week ?? null, plan_draft: draft } : it;
   });
 }

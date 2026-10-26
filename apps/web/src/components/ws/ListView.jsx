@@ -22,7 +22,7 @@ function Row({ it, depth, sheet, run, onSelect, selectedId, hot }) {
         <input value={title} onChange={(e) => setTitle(e.target.value)} onBlur={save} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
           className={`min-w-0 flex-1 rounded bg-transparent px-1 py-0.5 text-[13px] text-[#1A2838] outline-none focus:bg-white focus:ring-1 focus:ring-[#215273] ${it.kind === "group" ? "font-semibold" : ""}`} aria-label="Title" data-testid={`list-title-${it.item_id}`} />
       </div>
-      <span className="hidden truncate text-xs text-[#2F4A66] sm:block">{firmName(sheet, it.firm_id) || ""}</span>
+      <span className="hidden truncate text-xs text-[#2F4A66] sm:block">{firmName(sheet, it.firm_id) || ""}{it.plan_draft && it.firm_id ? " · draft" : ""}</span>
       <span className="hidden font-mono text-[11px] text-[#64748B] sm:block">{it.due_date ? `${it.due_date}${it.date_kind ? ` · ${it.date_kind}` : ""}` : ""}</span>
       <button type="button" onClick={() => onSelect(it.item_id)} className="justify-self-end rounded px-2 py-0.5 text-xs text-[#215273] hover:underline" data-testid={`list-open-${it.item_id}`}>
         {it.kind === "ai_task" ? statusText(it.status) : "Details"}

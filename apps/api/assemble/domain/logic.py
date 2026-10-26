@@ -2,6 +2,7 @@ import hashlib
 import json
 import re
 import uuid
+from collections import deque
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -379,9 +380,9 @@ def generate(it, partner_ids, include_own, blocked=frozenset(), keep_open=frozen
                                                       plist[i].get("price_per_site_cents") or 0, i))
     owners += [plist[i]["partner_id"] for i in order]
     pseudo = {"own_capacity": it.get("own_capacity"), "partners": it["partners"]}
-    remaining = {o: [owner_capacity(pseudo, o, w) or 0 for w in range(1, weeks + 1)] for o in owners}
-    limit = {p["partner_id"]: p.get("max_sites") for p in plist}
-    used = {o: 0 for o in owners}
+    slot_cap = {(o, w): owner_capacity(pseudo, o, w) or 0 for o in owners for w in range(1, weeks + 1)}
+    limits = {p["partner_id"]: p.get("max_sites") for p in plist}
+    owner_cap = {o: len(it["sites"]) if limits.get(o) is None else limits[o] for o in owners}
     idx = {s["site_id"]: i for i, s in enumerate(it["sites"])}
 
     def last(s):
@@ -389,34 +390,89 @@ def generate(it, partner_ids, include_own, blocked=frozenset(), keep_open=frozen
         hi = access_weeks(s, it.get("start_date"))[1]
         return min(s.get("deadline_week") or weeks, weeks, weeks if hi is None else hi)
     sites = sorted(it["sites"], key=lambda s: (last(s), s.get("deadline_week") is None, idx[s["site_id"]]))
-    assignments, notes = {}, []
+    # Each site's (owner, week) slots in preference order: latest allowed week first, then the cheapest firm.
+    allowed = {}
     for s in sites:
-        dl = last(s)
-        placed = False
         if s["site_id"] in keep_open:
-            assignments[s["site_id"]] = {"owner": None, "week": None}
-            notes.append(f"{s['site_id']} left open as asked.")
             continue
         first = max(1, access_weeks(s, it.get("start_date"))[0] or 1)
-        for w in range(dl, first - 1, -1):
-            for o in owners:
-                if (s["site_id"], o) in blocked:
-                    continue
-                if remaining[o][w - 1] > 0 and (limit.get(o) is None or used[o] < limit[o]):
-                    remaining[o][w - 1] -= 1
-                    used[o] += 1
-                    assignments[s["site_id"]] = {"owner": o, "week": w}
-                    placed = True
-                    break
-            if placed:
-                break
-        if not placed:
-            assignments[s["site_id"]] = {"owner": None, "week": None}
-            notes.append(f"{s['site_id']} left open: no included firm both fits its requirements and has capacity "
+        allowed[s["site_id"]] = [(o, w) for w in range(last(s), first - 1, -1) for o in owners
+                                 if (s["site_id"], o) not in blocked and slot_cap[(o, w)] > 0]
+    placed = _place(allowed, slot_cap, owner_cap)
+    assignments, notes = {}, []
+    for s in sites:
+        sid = s["site_id"]
+        o, w = placed.get(sid, (None, None))
+        assignments[sid] = {"owner": o, "week": w}
+        if sid in keep_open:
+            notes.append(f"{sid} left open as asked.")
+        elif o is None:
+            notes.append(f"{sid} left open: no included firm both fits its requirements and has capacity "
                          "by its deadline and inside its access window.")
-        if s.get("deadline_week") is None:
-            notes.append(f"{s['site_id']} has no known deadline, so it was placed by the last week.")
+        if sid not in keep_open and s.get("deadline_week") is None:
+            notes.append(f"{sid} has no known deadline, so it was placed by the last week.")
     return assignments, notes
+
+
+def _place(allowed, slot_cap, owner_cap):
+    """Places as many sites as the slots and firm limits allow: {site_id: (owner, week)}.
+
+    A greedy pass gives every site its first free preferred slot. Then, for each site still open, a breadth-first
+    search looks for an augmenting path (a chain of sites each moving to another allowed slot) that frees room for it.
+    That is max flow on site -> (owner, week) -> owner, so a site is left open only when no arrangement fits it, and
+    sites the greedy pass placed move only when that is what lets another site in.
+    """
+    assign = {}
+
+    def loads():
+        slot, owner = {}, {}
+        for o, w in assign.values():
+            slot[(o, w)] = slot.get((o, w), 0) + 1
+            owner[o] = owner.get(o, 0) + 1
+        return slot, owner
+
+    for sid, prefs in allowed.items():
+        slot_load, owner_load = loads()
+        for o, w in prefs:
+            if slot_load.get((o, w), 0) < slot_cap[(o, w)] and owner_load.get(o, 0) < owner_cap[o]:
+                assign[sid] = (o, w)
+                break
+    for sid in allowed:
+        if sid in assign:
+            continue
+        slot_load, owner_load = loads()
+        in_slot = {}
+        for s2, slot in assign.items():
+            in_slot.setdefault(slot, []).append(s2)
+        prev, queue, end = {("site", sid): None}, deque([("site", sid)]), None
+        while queue and end is None:
+            node = queue.popleft()
+            kind, key = node
+            if kind == "site":
+                nxt = [("slot", slot) for slot in allowed[key] if assign.get(key) != slot]
+            elif kind == "slot":
+                nxt = [("owner", key[0])] if slot_load.get(key, 0) < slot_cap[key] else []
+                nxt += [("site", s2) for s2 in in_slot.get(key, [])]
+            else:
+                if owner_load.get(key, 0) < owner_cap[key]:
+                    end = node
+                    break
+                nxt = [("slot", slot) for slot in in_slot if slot[0] == key]
+            for n in nxt:
+                if n not in prev:
+                    prev[n] = node
+                    queue.append(n)
+        if end is None:
+            continue
+        path, node = [], end
+        while node is not None:
+            path.append(node)
+            node = prev[node]
+        path.reverse()
+        for a, b in zip(path, path[1:]):
+            if a[0] == "site" and b[0] == "slot":
+                assign[a[1]] = b[1]
+    return assign
 
 
 # ---------- checker ----------

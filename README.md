@@ -15,6 +15,7 @@ Start with `AGENTS.md`: it is the operating contract and says what to load next.
 | out | `apps/` | the two runnable roles: `apps/api` (the sole mutation surface) and `apps/web` |
 | out | `docs/` | product record, plan and build specs; loaded per the table in `AGENTS.md` |
 | out | `.github/workflows/ci.yml` | the gate: `pyflakes` and `pytest` in `apps/api`, `yarn build` in `apps/web` |
+| out | `infra/` | the one container image (API serving the built web client), published to `ghcr.io/principia-nexus/assemble` by `.github/workflows/image.yml` |
 | in | `.gitattributes` | every text file is LF in the index and the working tree |
 
 ## Run locally
