@@ -10,4 +10,3 @@ Everything that leaves the process. Each file is the one place its service is ca
 | out | SMTP | `mailer.py`: every email passes `_assert_safe_email`; without `SMTP_HOST` it is logged, not sent |
 | out | disk | `storage.py`: `put_object` / `get_object` under `STORAGE_DIR`; a path that escapes it is refused |
 | out | Claude (vision) | `ocr.py`: scanned PDF pages rendered with PyMuPDF and transcribed through `llm.py` |
-| in | demo, tests | `pdf_sample.py`: builds small PDFs |

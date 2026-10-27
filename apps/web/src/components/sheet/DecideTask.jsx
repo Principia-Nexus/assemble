@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusPill } from "@/components/StatusPill";
 import { STATUS, money, fmtTime, slug } from "@/lib/format";
 import { openConditions } from "@/lib/planState";
-import { TaskHeader, ErrorList } from "./Stepper";
+import { TaskHeader, ErrorList } from "./TaskParts";
 import { useDemoContent } from "@/lib/demoContent";
 import AmendmentPanel from "./AmendmentPanel";
 import ChangeRequests from "./ChangeRequests";

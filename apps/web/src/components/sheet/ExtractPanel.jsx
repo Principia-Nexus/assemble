@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { errText, useProjectApi } from "@/lib/api";
-import { ErrorList } from "./Stepper";
+import { ErrorList } from "./TaskParts";
 import ReadDocumentForm from "./ReadDocumentForm";
 import SourcesList from "./SourcesList";
 import ReadingsTable from "./ReadingsTable";

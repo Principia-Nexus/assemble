@@ -29,7 +29,7 @@ async def get_fixture(fixture_id=DEFAULT_FIXTURE):
         await ensure_fixtures()
         fx = await db.fixtures.find_one({"fixture_id": fixture_id}, {"_id": 0})
     if not fx:
-        raise HTTPException(503, "Demo data is not loaded in this database. Run seed_fixtures.py.")
+        raise HTTPException(503, "Demo data is not loaded in this database. Run python -m assemble.demo.seed.")
     return fx
 
 
@@ -73,26 +73,3 @@ def build_intake(fx):
             "valid_until": d["valid_until"],
         } for p in fx["partners"]],
     }
-
-
-def render(text, fx, start_iso, offset_days):
-    from datetime import date
-    start = date.fromisoformat(start_iso)
-    ctx = {**dates(fx, start), "doc_date": (start + timedelta(days=offset_days)).isoformat()}
-    for k, v in ctx.items():
-        text = text.replace("{" + k + "}", v)
-    return text, ctx["doc_date"]
-
-
-def documents(fx, start_iso):
-    out = []
-    for d in fx.get("documents", []):
-        text, doc_date = render(d["text"], fx, start_iso, d["date_offset_days"])
-        out.append({"key": d["key"], "kind": d["kind"], "label": d["label"], "source_date": doc_date, "text": text})
-    return out
-
-
-def pdf_pages(fx, start_iso):
-    q = fx["pdf_quote"]
-    pages = [[render(line, fx, start_iso, q["date_offset_days"])[0] for line in page] for page in q["pages"]]
-    return pages, render("", fx, start_iso, q["date_offset_days"])[1]

@@ -16,6 +16,6 @@ def test_unsafe_email_is_refused(html):
 
 
 def test_invitation_and_code_emails_pass():
-    subject, _, html = mailer.invitation("Acme", "Grid job", "Volt Electric", 1, "https://assemble.avorant.com/review/tok")
+    subject, _, html = mailer.invitation("Acme", "Grid job", "Volt Electric", "https://assemble.avorant.com/review/tok")
     mailer._assert_safe_email(subject, html)
     mailer._assert_safe_email("Your Assemble code", mailer.code_html("123456"))

@@ -14,9 +14,8 @@ from assemble.domain import rule_packs as RP
 from assemble.core import db, now, now_iso, new_id, current_user, log_event, STALE_MSG, as_aware
 from assemble.routes.projects import get_project, claim_rev, org
 from assemble.services.storage import APP_NAME, get_object, pdf_text, put_object
-from assemble.services.pdf_sample import make_pdf
-from assemble.demo.fixtures import DEFAULT_FIXTURE, documents, get_fixture, pdf_pages
-from assemble.services.ocr import MAX_OCR_PAGES, ocr_pages, scanned_pdf
+from assemble.demo.fixtures import get_fixture
+from assemble.services.ocr import MAX_OCR_PAGES, ocr_pages
 
 router = APIRouter(prefix="/api/project")
 MAX_PDF = 10 * 1024 * 1024
@@ -598,29 +597,8 @@ async def demo_content(user=Depends(current_user)):
     p = await get_project(user)
     if not p.get("synthetic") or not p.get("fixture_id"):
         raise HTTPException(404, "Demo content is only available in the synthetic demo.")
-    fx = await get_fixture(p.get("fixture_id") or DEFAULT_FIXTURE)
-    start = p["intake"].get("start_date") or L.today_pacific().isoformat()
-    q = fx["pdf_quote"]
-    _, pdf_date = pdf_pages(fx, start)
-    return {"fixture_id": fx["fixture_id"], "documents": documents(fx, start),
-            "pdf": {"kind": q["kind"], "label": q["label"], "scanned_label": q["scanned_label"], "filename": q["filename"],
-                    "source_date": pdf_date},
-            "customer_change": fx.get("customer_change"), "tour": fx.get("tour", [])}
-
-
-@router.get("/sample-pdf")
-async def sample_pdf(scanned: bool = False, user=Depends(current_user)):
-    p = await get_project(user)
-    if not p.get("synthetic") or not p.get("fixture_id"):
-        raise HTTPException(404, "Sample documents are only available in the synthetic demo.")
-    start = p["intake"].get("start_date") or L.today_pacific().isoformat()
-    fx = await get_fixture(p.get("fixture_id") or DEFAULT_FIXTURE)
-    pages, _ = pdf_pages(fx, start)
-    data = make_pdf(pages)
-    if scanned:
-        data = await asyncio.to_thread(scanned_pdf, data)
-    return Response(content=data, media_type="application/pdf",
-                    headers={"Content-Disposition": 'inline; filename="redwood-quote-synthetic.pdf"'})
+    fx = await get_fixture(p["fixture_id"])
+    return {"fixture_id": fx["fixture_id"], "customer_change": fx.get("customer_change")}
 
 
 @router.get("/sources/{source_id}/file")

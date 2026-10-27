@@ -4,7 +4,7 @@ import { useProjectApi } from "@/lib/api";
 
 const cache = {};
 
-// Demo documents, tour and sample change come from the fixtures collection, per project.
+// The demo's sample customer change comes from the fixtures collection, per project.
 export function useDemoContent(enabled) {
   const { projectId: pid } = useParams();
   const api = useProjectApi();

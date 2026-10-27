@@ -1,7 +1,7 @@
-"""Load demo/test fixtures from backend/fixtures/*.json into a MongoDB database.
+"""Load the demo fixtures in demo/data/*.json into a MongoDB database.
 
-Usage: python seed_fixtures.py [--db NAME] [--replace]
-Defaults to DB_NAME from backend/.env. Use --db to fill a separate test database.
+Usage, from apps/api: python -m assemble.demo.seed [--db NAME] [--replace]
+Defaults to DB_NAME from apps/api/.env. Use --replace after editing a fixture file.
 """
 import argparse
 import os

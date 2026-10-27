@@ -53,11 +53,6 @@
     @apply text-xs font-mono font-semibold text-slate-500;
 }
 
-.sheet-paper {
-    background-image: linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
-    background-size: 48px 100%;
-}
-
 @keyframes rise {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
@@ -65,13 +60,6 @@
 
 .rise {
     animation: rise 0.35s ease-out backwards;
-}
-
-.tour-focus {
-    outline: 3px solid #1A2838;
-    outline-offset: 4px;
-    border-radius: 6px;
-    transition: outline-color 0.3s ease;
 }
 
 @media print {
@@ -105,7 +93,6 @@ h1, h2, h3 { font-weight: 500; letter-spacing: -0.01em; }
 .bg-red-50 { background-color: #FBEFEF; }
 .bg-red-100 { background-color: #F6DFDF; }
 .border-red-200 { border-color: #EBC5C5; }
-.text-red-300 { color: #DFA5A5; }
 .text-red-700 { color: #A93A3A; }
 .text-red-800 { color: #8C2F2F; }
 .text-red-900 { color: #6E2525; }

@@ -100,7 +100,7 @@ def sendable(email):
     return bool(email) and not BLOCKED.search(email.strip())
 
 
-def invitation(organizer_firm, job_name, partner_name, version_number, url):
+def invitation(organizer_firm, job_name, partner_name, url):
     subject = f"Review your terms: {job_name}"
     text = f"{organizer_firm} asks {partner_name} to review sites, dates and price for {job_name}."
     html = (f'<table role="presentation" width="100%"><tr><td style="padding:24px;font-family:Arial,sans-serif;'

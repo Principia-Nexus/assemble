@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { c2s, n2s } from "@/lib/format";
 import { setDirty } from "@/lib/dirty";
-import { TaskHeader, ErrorList } from "./Stepper";
+import { TaskHeader, ErrorList } from "./TaskParts";
 import IntakeSites from "./IntakeSites";
 import IntakePartners from "./IntakePartners";
 import GapPanel from "./GapPanel";

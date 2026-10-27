@@ -3,7 +3,7 @@ import { Copy, Link2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/StatusPill";
 import { STATUS, money, fmtDate, fmtTime, slug } from "@/lib/format";
-import { TaskHeader } from "./Stepper";
+import { TaskHeader } from "./TaskParts";
 import EmailInvite from "./EmailInvite";
 
 function PartnerCard({ p, email, act, busy, blocked }) {

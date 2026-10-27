@@ -1,4 +1,3 @@
-import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth, homeFor } from "@/context/AuthContext";

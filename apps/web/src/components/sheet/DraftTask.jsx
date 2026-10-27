@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { money, slug } from "@/lib/format";
-import { ErrorList } from "./Stepper";
+import { ErrorList } from "./TaskParts";
 import ScheduleGrid from "./ScheduleGrid";
 import { openConditions } from "@/lib/planState";
 import CheckerPanel from "./CheckerPanel";

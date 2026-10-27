@@ -1,4 +1,4 @@
-"""Versioned rule packs (backend/rule_packs/*.json) built from the two appendices; selected per request and recorded."""
+"""Versioned rule packs (domain/packs/*.json) built from the two docs/spec-* appendices; selected per request and recorded."""
 import json
 import re
 from pathlib import Path
@@ -51,7 +51,3 @@ def prompt_block(packs):
         lines.append(f"[{tag(p)}] {p['title']}")
         lines += [f"- {g}" for g in p.get("guidance", [])]
     return "\n".join(lines)
-
-
-def catalog():
-    return {"files": FILES, "packs": [{k: p.get(k) for k in ("id", "version", "title", "source", "file")} for p in PACKS]}

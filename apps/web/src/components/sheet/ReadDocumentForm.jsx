@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { errList, useProjectApi } from "@/lib/api";
-import { ErrorList } from "./Stepper";
+import { ErrorList } from "./TaskParts";
 
 const TEXT_EXT = [".txt", ".md", ".eml", ".csv"];
 const ALL_EXT = [...TEXT_EXT, ".pdf"];
@@ -46,7 +46,6 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
     if (file) takeFile(file);
   };
 
-  const preparing = false;
   const [dragging, setDragging] = useState(false);
   const onDrop = (e) => {
     e.preventDefault();
@@ -122,8 +121,8 @@ export default function ReadDocumentForm({ intake, synthetic, onRead }) {
         <Textarea rows={7} className="font-mono text-xs" placeholder="Paste the document text here, or drop / choose a PDF or text file…" value={f.text} onChange={set("text")} data-testid="read-text-input" />
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={submit} disabled={busy || preparing} data-testid="read-submit-button">
-          {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Reading… (up to 2 min)</> : preparing ? <><Loader2 className="h-4 w-4 animate-spin" /> Preparing sample PDF…</> : "Read document"}
+        <Button onClick={submit} disabled={busy} data-testid="read-submit-button">
+          {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Reading… (up to 2 min)</> : "Read document"}
         </Button>
         <input ref={fileRef} type="file" accept={ALL_EXT.join(",")} className="hidden" onChange={pickFile} data-testid="read-file-input" />
         <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={busy} data-testid="read-file-button"><FileUp className="h-4 w-4" /> Choose PDF or text file</Button>

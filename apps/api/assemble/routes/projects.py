@@ -225,12 +225,6 @@ async def create_project(body: CreateIn, user=Depends(current_user)):
     return {"project_id": pid}
 
 
-@router.post("")
-async def create_project_compat(body: CreateIn, user=Depends(current_user)):
-    r = await create_project(body, user)
-    return {"project_id": r["project_id"], "sheet": await sheet(r["project_id"])}
-
-
 @router.put("/intake")
 async def save_intake(body: IntakeIn, user=Depends(current_user)):
     p = await get_project(user)
@@ -578,10 +572,9 @@ async def _invite(token, user):
     link = await db.links.find_one({"token": token, "project_id": p["project_id"], "revoked": False}, {"_id": 0})
     if not link:
         raise HTTPException(404, "Link not found.")
-    cur = await get_version(p.get("current_version_id"))
     firm = await db.firms.find_one({"firm_id": p["firm_id"]}, {"_id": 0, "name": 1})
     subject, text, html = mailer.invitation((firm or {}).get("name") or user.get("firm_name"), p["intake"].get("job_name") or p["name"],
-                                            link["partner_name"], (cur or {}).get("number"), f"{APP_URL}/review/{token}")
+                                            link["partner_name"], f"{APP_URL}/review/{token}")
     return p, link, subject, text, html
 
 

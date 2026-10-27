@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import AppHeader from "@/components/AppHeader";
 import { StatusPill, SynthBadge } from "@/components/StatusPill";
-import { ErrorList } from "@/components/sheet/Stepper";
+import { ErrorList } from "@/components/sheet/TaskParts";
 import { api, errList, newKey } from "@/lib/api";
 import { STATUS, money, fmtDate, fmtTime } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
