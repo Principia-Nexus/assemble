@@ -4,7 +4,7 @@ Assemble helps a commercial contractor with a job too large to do alone split it
 partner firms. The organizer turns briefs and documents into a plan of sites, firms and weeks;
 each partner reviews only its own sites and terms through a private link; the customer gets a
 quote they verify and accept. AI reads documents and proposes changes; deterministic checks
-decide whether a plan passes. Private and proprietary: a FastAPI + MongoDB API and a React client.
+decide whether a plan passes. A FastAPI + MongoDB API and a React client.
 
 Start with `AGENTS.md`: it is the operating contract and says what to load next.
 
