@@ -1,7 +1,7 @@
 # Assemble — Agent Contract
 
 Assemble splits one large construction job across partner firms: a plan of sites, firms and
-weeks, private partner reviews, and a customer quote. Remote `Principia-Nexus/assemble`
+weeks, private partner reviews, and a customer quote. Remote `Avorant/assemble`
 (public). It began as an Emergent-generated app and now runs from this repo alone; no Emergent
 service, package or script remains, and none comes back.
 
